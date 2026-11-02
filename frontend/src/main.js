@@ -77,7 +77,7 @@ function renderOverview(summary, list) {
     <div class="stats">
       <div class="stat"><span>Customers assessed</span><strong class="number">${count(summary.population)}</strong></div>
       <div class="stat"><span>Flagged for review</span><strong class="number">${count(summary.flagged)}</strong><small class="muted">${count(summary.below_threshold)} below the review threshold</small></div>
-      <div class="stat"><span>Flagged, awaiting review</span><strong class="number">${count(summary.flagged_review_counts.awaiting_review)}</strong><small class="muted">${count(summary.flagged_review_counts.prioritise)} prioritised for RM</small></div>
+      <div class="stat"><span>Flagged, Awaiting review</span><strong class="number">${count(summary.flagged_review_counts.awaiting_review)}</strong><small class="muted">${count(summary.flagged_review_counts.prioritise)} prioritised for RM</small></div>
     </div>
     <section class="panel"><h2>Customer review queue</h2><p class="muted">Highest predicted risk first. Consider the evidence from both Operations and Finance before deciding.</p>
       <div class="toolbar"><div class="filters" role="group" aria-label="Customer filter">
