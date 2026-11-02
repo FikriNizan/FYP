@@ -1,0 +1,95 @@
+{
+  "notebook_sha256": "be6f8d526db2ea2ead67ff8bb90212945d378815b25754e588d993e50a4df3f4",
+  "record": {
+    "schema_version": "1.0.0",
+    "model": "catboost_baseline",
+    "protocol_sha256": "6ae6d17ef0dcb7c3b0b7e090bed0dbae475024f5c0606f71ad100411adb5a4dc",
+    "cus_id": "944",
+    "cutoff_month": "2024-02-29",
+    "calibrated_risk": 0.8440919498232807,
+    "review_alert": 1,
+    "probability_cutoff": 0.2586013233784648,
+    "raw_boundary": 0.2991379097436803,
+    "raw_probability": 0.8816973219703358,
+    "explanation_units": "calibrated log-odds; not probability percentage points",
+    "base_logodds": -2.2698676996361717,
+    "reference_probability": 0.09364944118617827,
+    "probability_clip_adjustment_logodds": 4.2580352004543513e-16,
+    "higher_risk_drivers": [
+      {
+        "feature": "combined_flow_ratio_3m_to_12m",
+        "label": "Combined flow ratio 3m to 12m",
+        "group": "Combined flow",
+        "value": 0.0087046122,
+        "contribution_logodds": 0.5468599663304748
+      },
+      {
+        "feature": "inbound_flow_ratio_3m_to_12m",
+        "label": "Inbound flow ratio 3m to 12m",
+        "group": "Inbound flow",
+        "value": 0.1502325393,
+        "contribution_logodds": 0.3479348316653635
+      },
+      {
+        "feature": "outbound_failure_rate_3m",
+        "label": "Outbound failure rate 3m",
+        "group": "Outbound flow",
+        "value": 0.4,
+        "contribution_logodds": 0.3386245265036819
+      },
+      {
+        "feature": "login_failure_rate_3m",
+        "label": "Login failure rate 3m",
+        "group": "Service friction",
+        "value": 0.5,
+        "contribution_logodds": 0.28666609283206534
+      },
+      {
+        "feature": "passive_session_rate_3m",
+        "label": "Passive session rate 3m",
+        "group": "Digital engagement",
+        "value": 1.0,
+        "contribution_logodds": 0.27319810629567115
+      }
+    ],
+    "lower_risk_drivers": [
+      {
+        "feature": "inbound_share_3m",
+        "label": "Inbound share 3m",
+        "group": "Inbound flow",
+        "value": 0.7089471911,
+        "contribution_logodds": -0.10811714229804718
+      },
+      {
+        "feature": "outbound_bank_failure_rate_3m",
+        "label": "Outbound bank failure rate 3m",
+        "group": "Outbound flow",
+        "value": 0.1,
+        "contribution_logodds": -0.09529990350988009
+      },
+      {
+        "feature": "login_success_count_mean_12m",
+        "label": "Login success count mean 12m",
+        "group": "Digital engagement",
+        "value": 33.75,
+        "contribution_logodds": -0.07678342489278328
+      },
+      {
+        "feature": "non_fd_balance_myr",
+        "label": "Non fd balance MYR",
+        "group": "Accounts and deposits",
+        "value": 2016997.13,
+        "contribution_logodds": -0.04861695550776877
+      },
+      {
+        "feature": "approver_session_share_3m",
+        "label": "Approver session share 3m",
+        "group": "Digital engagement",
+        "value": 0.1428571429,
+        "contribution_logodds": -0.04256878497608387
+      }
+    ],
+    "other_features_contribution_logodds": 2.5369654096155463,
+    "interpretation": "Contributions explain this model prediction, not causal effects or guaranteed retention actions."
+  }
+}
