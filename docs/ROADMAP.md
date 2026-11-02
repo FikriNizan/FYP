@@ -28,8 +28,8 @@ Deliverable: one repository, one locally running app, one persistent committee-r
 * [x] User copies the existing database and completes the browser exercise on Windows.
 * [x] User confirms 1,000/208/792 and the verified Customer 944 values in the new app.
 * [x] User confirms save/reload/restart behaviour in the copied database.
-* [ ] Create the private GitHub repository, push and verify the first remote CI run.
-* [ ] Usability pass at desktop/mobile widths with representative users.
+* [x] Create the private GitHub repository, push and verify the first remote CI run.
+* [x] Usability pass at desktop/mobile widths with representative users.
 
 Acceptance: a user can review one actual imported customer and retrieve the same saved decision after restarting, with the original evidence preserved.
 
