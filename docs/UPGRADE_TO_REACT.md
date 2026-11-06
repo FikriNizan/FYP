@@ -80,12 +80,12 @@ If Flask's root returns `frontend_not_built`, the API is running but the React b
 
 ## 5. Complete the React checkpoint
 
-* [ ] Enriched February batch `5f30af…`: 1,000 customers, 208 flagged and 792 below threshold.
-* [ ] All three imported batches remain selectable.
-* [ ] Search Customer 944 and confirm approximately 84.4% risk, MYR 2,016,997.13 operating account balances, MYR 0 FD balance and the twelve-month observed flow trend.
-* [ ] Save a clearly labelled development review, refresh and confirm it remains.
-* [ ] Restart Flask and confirm the saved review remains with the same batch.
-* [ ] Run the checks below.
+* [x] Enriched February batch `5f30af…`: 1,000 customers, 208 flagged and 792 below threshold.
+* [x] All three imported batches remain selectable.
+* [x] Search Customer 944 and confirm approximately 84.4% risk, MYR 2,016,997.13 operating account balances, MYR 0 FD balance and the twelve-month observed flow trend.
+* [x] Save a clearly labelled development review, refresh and confirm it remains.
+* [x] Restart Flask and confirm the saved review remains with the same batch.
+* [x] Run the checks below.
 
 From the project root:
 

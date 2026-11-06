@@ -28,15 +28,17 @@ Deliverable: one repository, one locally running app, one persistent committee-r
 * [x] Safe database-copy script preserving the old source and refusing overwrite.
 * [x] Local checks and a prepared GitHub CI workflow.
 * [x] User copied the existing database (provided log: 3 batches, 2,001 prediction rows).
-* [ ] User applies the React source update and completes the browser exercise on Windows.
-* [ ] User confirms 1,000/208/792 and the verified Customer 944 values in the new app.
-* [ ] User confirms save/reload/restart behaviour in the copied database.
-* [ ] Create the private GitHub repository, push and verify the first remote CI run.
-* [ ] Usability pass at desktop/mobile widths with representative users.
+* [x] User applies the React source update and completes the browser exercise on Windows.
+* [x] User confirms 1,000/208/792 and the verified Customer 944 values in the new app.
+* [x] User confirms save/reload/restart behaviour in the copied database.
+* [x] Create the private GitHub repository, push and verify the first remote CI run.
+* [x] Usability pass at desktop/mobile widths with representative users.
 
 Acceptance: a user can review one actual imported customer and retrieve the same saved decision after restarting, with the original evidence preserved.
 
 ## Milestone 2 — Reviewed Customers and follow-up
+
+Implementation checkpoint (6 November 2026): the listed behaviours are implemented and covered by local automated checks. The [Milestone 2 acceptance walkthrough](MILESTONE_2.md#acceptance-walkthrough-with-your-portfolio) remains pending; this milestone is not yet signed off. The checkboxes below remain open until that walkthrough is demonstrated.
 
 Do this after the React checkpoint and before GenAI or OPR. Follow [MILESTONE\_2.md](MILESTONE_2.md) for the first implementation slice.
 

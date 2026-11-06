@@ -34,7 +34,7 @@ afterEach(() => { vi.restoreAllMocks(); });
 describe('React full-stack foundation', () => {
   it('shows API counts and sends the selected batch with search and filters',async()=>{
     start();
-    await screen.findByRole('heading',{name:'Monthly overview'});
+    await screen.findByRole('heading',{name:'Overview'});
     expect(screen.getByText('1,000')).toBeTruthy();
     expect(screen.getByText('792 below the review threshold')).toBeTruthy();
     fireEvent.click(screen.getByRole('button',{name:'Flagged · awaiting review'}));
@@ -49,12 +49,16 @@ describe('React full-stack foundation', () => {
     await screen.findByRole('heading',{name:'Acceptance test company'});
     expect(screen.getByText('84.4%')).toBeTruthy();
     expect(screen.getByText('99.1% lower')).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Signals to investigate'})).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab',{name:'Operations'}));
+    expect(screen.getByRole('heading',{name:'Operations perspective'})).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab',{name:'Finance'}));
     const finance=screen.getByRole('heading',{name:'Finance perspective'}).closest('section');
     expect(within(finance).getByText(/2,016,997.13/)).toBeTruthy();
     expect(within(finance).getByText('Not provided')).toBeTruthy();
     expect(within(finance).getAllByText(/0.00/)).toHaveLength(2);
-    const headings=screen.getAllByRole('heading',{level:2}).map(node=>node.textContent);
-    expect(headings.indexOf('Signals to investigate')).toBeLessThan(headings.indexOf('Operations perspective'));
+    expect(screen.getByRole('tab',{name:'Finance'}).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByText('84.4%')).toBeTruthy();
   });
   it('saves all editable fields with the expected version and reloads the accepted result',async()=>{
     start('/customer/944?batch_id=enriched');
@@ -67,8 +71,8 @@ describe('React full-stack foundation', () => {
   it('retains a draft across navigation until the user saves',async()=>{
     start('/customer/944?batch_id=enriched');
     await screen.findByLabelText('Decision'); editDecision();
-    fireEvent.click(screen.getByRole('link',{name:'Monthly overview'}));
-    await screen.findByRole('heading',{name:'Monthly overview'});
+    fireEvent.click(screen.getByRole('link',{name:'Overview'}));
+    await screen.findByRole('heading',{name:'Overview'});
     fireEvent.click(screen.getByRole('link',{name:'Open review'}));
     await screen.findByLabelText('Decision reason');
     expect(screen.getByLabelText('Decision reason').value).toBe('Committee development test');
@@ -93,6 +97,16 @@ describe('React full-stack foundation', () => {
     await screen.findByRole('alert');
     expect(api.customers).not.toHaveBeenCalled();
     expect(screen.getByRole('alert').textContent).toContain('not available');
+  });
+  it('can discard a normal decision draft without saving or changing evidence',async()=>{
+    start('/customer/944?batch_id=enriched');
+    await screen.findByLabelText('Decision');editDecision();
+    fireEvent.click(screen.getByRole('button',{name:'Discard decision changes'}));
+    expect(screen.getByLabelText('Decision').value).toBe('');
+    expect(screen.getByLabelText('Decision reason').value).toBe('');
+    expect(screen.queryByText('Unsaved changes')).toBeNull();
+    expect(api.saveReview).not.toHaveBeenCalled();
+    expect(screen.getByText('84.4%')).toBeTruthy();
   });
   it('renders a zero-flow month as observed zero alongside its exact amount',()=>{
     const history=[{snapshot_month:'2024-01-31',inbound_myr:60,outbound_success_myr:40,combined_flow_myr:100},{snapshot_month:'2024-02-29',inbound_myr:0,outbound_success_myr:0,combined_flow_myr:0}];

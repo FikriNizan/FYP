@@ -114,3 +114,9 @@ The v0.3.0 React starter uses the existing v1 table layout; copying the database
 Before adding follow-up tables or changing columns, introduce explicit versioned migrations, take a backup and test upgrading an existing database. Alembic is one possible later choice; it is not required just to use this unchanged schema. Keep migrations in Git and customer databases outside Git.
 
 React integration follows [React’s existing-project guidance](https://react.dev/learn/add-react-to-an-existing-project) and [Vite backend integration](https://vite.dev/guide/backend-integration). React performs display formatting and chart geometry; risk, model policy, SHAP and financial evidence remain sourced from the analytical/backend layer.
+
+### Milestone 2 implementation update — 6 November 2026
+
+The preceding description records the v0.3.0 foundation. Startup now applies explicit `schema_migrations` versions transactionally, with a SQLite backup before upgrading an existing database. Version 2 introduces `reviewed_cases`, `case_events`, `follow_ups` and `follow_up_events`; the original evidence/review/action tables are preserved.
+
+A case is linked to its original prediction and stores the earliest available review separately from later review revisions. Latest customer evidence is retrieved independently across imported batches, without changing the case anchor. Case state and each task event share the case version for optimistic concurrency. Actual event dates and recording timestamps remain separate, as do planned and delivered activity. See [Milestone 2](MILESTONE_2.md) for identity rules, selection order, transitions and remaining user acceptance.

@@ -1,6 +1,7 @@
 from flask import Blueprint, abort, jsonify, request
 
 from . import repository as repo
+from . import cases
 from .db import get_db
 from .constants import ACTION_STATUSES, ACTION_TYPES, DECISIONS, VERSION
 from .validation import (month_end, require, strict_json, validate_action, validate_review)
@@ -129,3 +130,37 @@ def actions(prediction_id):
 def save_action(prediction_id):
     existing_prediction(prediction_id)
     return jsonify(action=repo.save_action(prediction_id, validate_action(body()))), 201
+
+
+@api.get('/cases')
+def reviewed_cases():
+    status, decision = request.args.get('status'), request.args.get('decision')
+    require(status is None or status in ('open','deferred','closed'), 'Invalid case status')
+    require(decision is None or decision in DECISIONS[1:], 'Invalid decision filter')
+    try:
+        offset, limit = int(request.args.get('offset','0')), int(request.args.get('limit','50'))
+    except ValueError:
+        require(False, 'limit and offset must be integers')
+    require(offset >= 0 and 1 <= limit <= 100, 'Invalid pagination range')
+    return jsonify(cases.listing(request.args.get('q','').strip(), status, decision,
+                                request.args.get('owner','').strip(), offset, limit))
+
+
+@api.get('/cases/<case_id>')
+def reviewed_case(case_id):
+    return jsonify(case=cases.record(cases.case_row(case_id),True))
+
+
+@api.put('/cases/<case_id>')
+def update_case(case_id):
+    return jsonify(case=cases.update(case_id,body()))
+
+
+@api.post('/cases/<case_id>/follow-ups')
+def create_follow_up(case_id):
+    return jsonify(case=cases.follow_up(case_id,body())),201
+
+
+@api.post('/cases/<case_id>/follow-ups/<follow_up_id>/events')
+def follow_up_event(case_id,follow_up_id):
+    return jsonify(case=cases.follow_up(case_id,body(),follow_up_id)),201

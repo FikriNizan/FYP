@@ -1,4 +1,6 @@
 import sqlite3
+from contextlib import closing
+from datetime import datetime, timezone
 from pathlib import Path
 from flask import current_app, g
 
@@ -20,6 +22,41 @@ def close_db(error=None):
 def initialise():
     path = Path(current_app.config["DATABASE"])
     path.parent.mkdir(parents=True, exist_ok=True)
-    schema = (Path(__file__).parent / "schema.sql").read_text()
-    get_db().executescript(schema)
-    get_db().commit()
+    db = get_db()
+    existing = db.execute("SELECT 1 FROM sqlite_master WHERE name='predictions'").fetchone()
+    versioned = db.execute("SELECT 1 FROM sqlite_master WHERE name='schema_migrations'").fetchone()
+    version = db.execute("SELECT COALESCE(MAX(version),0) FROM schema_migrations").fetchone()[0] if versioned else 0
+    if version > 2:
+        raise RuntimeError("Database schema is newer than this application")
+    if version == 2:
+        return
+    # SQLite backup includes committed WAL pages. Never overwrite an earlier backup.
+    if existing:
+        stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
+        backup = path.with_name(path.name + '-pre-migration-' + stamp)
+        with backup.open('xb'):
+            pass
+        with closing(sqlite3.connect(backup)) as copied:
+            db.backup(copied)
+    directory = Path(__file__).parent
+    try:
+        db.execute("BEGIN IMMEDIATE")
+        db.execute("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)")
+        # A second process may have upgraded while this connection waited for the lock.
+        version = db.execute("SELECT COALESCE(MAX(version),0) FROM schema_migrations").fetchone()[0]
+        if version == 2:
+            db.commit()
+            return
+        if version < 1:
+            for statement in (directory / 'schema.sql').read_text().split(';'):
+                if statement.strip():
+                    db.execute(statement)
+            db.execute("INSERT INTO schema_migrations VALUES (1,?)", (datetime.now(timezone.utc).isoformat(),))
+        for statement in (directory / 'migrations' / '002_reviewed_cases.sql').read_text().split(';'):
+            if statement.strip():
+                db.execute(statement)
+        db.execute("INSERT INTO schema_migrations VALUES (2,?)", (datetime.now(timezone.utc).isoformat(),))
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise

@@ -153,6 +153,12 @@ def save_review(prediction_id, body):
                    "updated_at=excluded.updated_at", (prediction_id, version, encode(saved), timestamp))
         db.execute("INSERT INTO review_history(prediction_id,version,body_json,saved_at) VALUES (?,?,?,?)",
                    (prediction_id, version, encode(saved), timestamp))
+        case = db.execute("SELECT case_id FROM reviewed_cases WHERE prediction_id=?", (prediction_id,)).fetchone()
+        if case is None:
+            db.execute("INSERT INTO reviewed_cases VALUES (?,?,?,'open',?,?,1,?,?)",
+                       (prediction_id, prediction_id, encode(saved), saved['owner'], saved['next_action_date'], timestamp, timestamp))
+            db.execute("INSERT INTO case_events(case_id,version,body_json,recorded_at) VALUES (?,1,?,?)",
+                       (prediction_id, encode(dict(kind='case_created', status='open', recorded_by=saved['reviewer'], notes=saved['reason'])), timestamp))
         db.commit()
     except Exception:
         db.rollback()

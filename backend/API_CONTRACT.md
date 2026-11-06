@@ -93,3 +93,20 @@ Errors have `{"error":{"code":"validation_failed","message":"..."}}`. Typical st
 Use a Vite `/api` proxy to `http://127.0.0.1:5000` for a separate frontend dev server. This preserves same-origin requests without widening CORS. With a future same-host frontend, use relative `/api/...` paths. Escape text notes through normal frontend text rendering; do not render notes as raw HTML.
 
 Imports are CLI operations against local trusted exports. Invalid imports do not publish a batch. File integrity checks establish consistency with the supplied export manifest; this app does not rerun the original experiment or independently verify its original raw data. The research modules and their original integrity checks remain untouched.
+# Milestone 2 case API addition — 6 November 2026
+
+These endpoints span assessments; no `batch_id` is required. Existing prediction/review/action contracts remain supported.
+
+| Method/path | Behaviour |
+|---|---|
+| `GET /api/cases` | Worklist; optional `q`, `owner`, `status`, `decision`, `offset`, `limit` (1–100; default 50). Decision filters the original committee decision. Returns `items`, `total`, `offset`, `limit`. |
+| `GET /api/cases/<case_id>` | Returns `case` with original/latest customer evidence, original review, current case state, follow-ups, case events, committee review history and legacy action notes. |
+| `PUT /api/cases/<case_id>` | Replaces case-editable state: `status` (`open`, `deferred`, `closed`), `owner`, nullable `next_action_date`, required `notes`, required `recorded_by`, required integer `expected_version`. Returns updated `case`. |
+| `POST /api/cases/<case_id>/follow-ups` | Creates a task with its first event; required `action_type`, `action_status`, `action_date`, `notes`, `recorded_by`, integer `expected_version`. Returns updated `case`, HTTP 201. |
+| `POST /api/cases/<case_id>/follow-ups/<follow_up_id>/events` | Appends an event to the same task, with the same fields as creation. Returns updated `case`, HTTP 201. |
+
+Case IDs equal their original prediction IDs. A case is created atomically on the first review save; migration backfills existing reviews. Later imports do not move or close it. The original review is the earliest available saved version; `original.review` separately exposes the current committee revision. Owner/date/status are independently managed case fields.
+
+Action types retain `customer_contact`, `rm_visit`, `service_fix`, `other`. States retain `planned`, `attempted`, `delivered`, `cancelled`; the UI calls `delivered` Completed. A task may start as planned, attempted or delivered. Planned/attempted tasks accept attempted/delivered/cancelled events; terminal tasks require a new task for further work. Type cannot change on an existing task. `planned_date` is the initial plan, while each event's `action_date` is its own date. Non-planned dates cannot be in the future using the Malaysian business date; events after an attempt cannot predate that attempt. A closed case must be reopened before further task events.
+
+Every successful case/task mutation increments the shared case version and appends a case event. Version mismatches return 409 and do not change data. Invalid fields, dates, states or missing attribution/reason return 422; missing cases/tasks return 404. Same-origin write protection and the 64 KiB request limit remain enabled. No task/event write changes predictions or loads realised outcomes.

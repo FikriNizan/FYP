@@ -1,4 +1,5 @@
 import importlib.util
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -16,7 +17,7 @@ class DatabaseCopyTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.source = Path(self.temp.name) / "source.sqlite"
         self.destination = Path(self.temp.name) / "copied" / "churn.sqlite"
-        with sqlite3.connect(self.source) as connection:
+        with closing(sqlite3.connect(self.source)) as connection, connection:
             connection.executescript((ROOT / "backend" / "churn_backend" / "schema.sql").read_text())
             connection.execute("INSERT INTO batches VALUES ('batch','2024-02-29','test','protocol',1,'{}','now')")
             connection.execute("INSERT INTO predictions VALUES ('prediction','batch','944',0.84,1,'{}','{}','{}','[]')")
@@ -29,7 +30,7 @@ class DatabaseCopyTests(unittest.TestCase):
         result = module.copy_database(self.source, self.destination)
         self.assertEqual(result["tables"], dict(batches=1,predictions=1,reviews=1,review_history=1,actions=1))
         self.assertEqual(self.source.read_bytes(), before)
-        with sqlite3.connect(self.destination) as connection:
+        with closing(sqlite3.connect(self.destination)) as connection:
             self.assertEqual(connection.execute("SELECT body_json FROM reviews").fetchone()[0], '{"decision":"monitor"}')
 
     def test_refuses_overwrite(self):

@@ -28,3 +28,7 @@ artifacts/*
 Thumbs.db
 .idea/
 .upgrade-backups/
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/questions/
+**/.impeccable/config.local.json

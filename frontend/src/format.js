@@ -9,6 +9,17 @@ export const money = value => isNumber(value)
   : 'Not provided';
 export const count = value => isNumber(value) ? new Intl.NumberFormat('en-MY').format(value) : 'Not provided';
 
+export function dateLabel(value) {
+  if (!value) return 'Not scheduled';
+  const timestamp = value.includes('T');
+  const date = new Date(timestamp ? value : value.slice(0,10)+'T00:00:00Z');
+  return Number.isNaN(date.valueOf()) ? 'Not provided' : new Intl.DateTimeFormat('en-MY',{day:'numeric',month:'short',year:'numeric',timeZone:timestamp ? 'Asia/Kuala_Lumpur' : 'UTC'}).format(date);
+}
+
+export function malaysiaToday() {
+  return new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Kuala_Lumpur'}).format(new Date());
+}
+
 export function monthLabel(value) {
   if (!value) return 'Not provided';
   const date = new Date(value + 'T00:00:00Z');

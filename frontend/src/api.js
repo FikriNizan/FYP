@@ -30,6 +30,10 @@ export async function request(path, { params, method = 'GET', body, signal } = {
 }
 
 export const api = {
+  cases: params => request('/api/cases', { params }),
+  case: id => request('/api/cases/' + encodeURIComponent(id)),
+  updateCase: (id, body) => request('/api/cases/' + encodeURIComponent(id), { method: 'PUT', body }),
+  followUp: (id, task, body) => request('/api/cases/' + encodeURIComponent(id) + '/follow-ups' + (task ? '/' + encodeURIComponent(task) + '/events' : ''), { method: 'POST', body }),
   months: () => request('/api/months'),
   summary: batch => request('/api/summary', { params: { batch_id: batch } }),
   customers: (batch, params) => request('/api/customers', { params: { batch_id: batch, ...params } }),
