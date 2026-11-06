@@ -12,11 +12,13 @@ Use one current milestone at a time. Check a milestone only after its behaviour 
 * [x] User's original backend passed its 20 tests.
 * [x] Static UI used for design/usability exploration; not treated as the runtime data source.
 
-## Milestone 1 — Full-stack foundation (current)
+## Milestone 1 — React full-stack foundation (checkpoint)
 
 Deliverable: one repository, one locally running app, one persistent committee-review journey.
 
 * [x] Separate frontend, backend, scripts and documentation.
+* [x] Correct the starter to React + Vite, preserving the existing Flask API and database schema.
+* [x] Add a guarded source updater for the existing Windows project; preserve its database and Git setup.
 * [x] Serve frontend and API together from Flask.
 * [x] Read actual API summaries, customer lists, features, SHAP and flow history.
 * [x] Save reviews with backend validation and version checks.
@@ -25,17 +27,18 @@ Deliverable: one repository, one locally running app, one persistent committee-r
 * [x] Shared model signals above separate Operations and Finance perspectives.
 * [x] Safe database-copy script preserving the old source and refusing overwrite.
 * [x] Local checks and a prepared GitHub CI workflow.
-* [x] User copies the existing database and completes the browser exercise on Windows.
-* [x] User confirms 1,000/208/792 and the verified Customer 944 values in the new app.
-* [x] User confirms save/reload/restart behaviour in the copied database.
-* [x] Create the private GitHub repository, push and verify the first remote CI run.
-* [x] Usability pass at desktop/mobile widths with representative users.
+* [x] User copied the existing database (provided log: 3 batches, 2,001 prediction rows).
+* [ ] User applies the React source update and completes the browser exercise on Windows.
+* [ ] User confirms 1,000/208/792 and the verified Customer 944 values in the new app.
+* [ ] User confirms save/reload/restart behaviour in the copied database.
+* [ ] Create the private GitHub repository, push and verify the first remote CI run.
+* [ ] Usability pass at desktop/mobile widths with representative users.
 
 Acceptance: a user can review one actual imported customer and retrieve the same saved decision after restarting, with the original evidence preserved.
 
 ## Milestone 2 — Reviewed Customers and follow-up
 
-Do this before GenAI or OPR.
+Do this after the React checkpoint and before GenAI or OPR. Follow [MILESTONE\_2.md](MILESTONE_2.md) for the first implementation slice.
 
 * [ ] Introduce tested, versioned database migrations before schema changes.
 * [ ] Define a stable reviewed-case/follow-up identity so a case survives a new monthly batch.

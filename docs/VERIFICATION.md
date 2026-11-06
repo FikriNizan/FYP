@@ -1,37 +1,35 @@
-# Verification record — 2 November 2026
+# Verification record — React correction, 3 November 2026
 
-## Checks performed for this starter
+Environment: Python 3.12, Flask 3.1.3, Node.js 24.22.1 and npm 11.9.0 in the build environment. Frontend dependency versions are exact in `package.json`/`package-lock.json`; Python dependencies remain pinned.
 
-Environment: Python 3.12, Flask 3.1.3 and Node.js 24.22.1 in the build environment. Requirements are pinned to the dependency versions used for this run.
+| Check | Result | Scope |
+|---|---|---|
+| Existing backend suite | 20 passed | Export verification, leakage/protocol rejection, month isolation, persistence, review conflicts and action notes |
+| React-serving/backend integration tests | 4 passed | Built assets, explicit unbuilt response, retained API, and same-origin write under the development Host header |
+| Database copying | 4 passed | Records/history preserved, original untouched, overwrite and invalid source refused |
+| Guarded source update | 4 passed | Database/Git preserved, source backup, idempotence, local-edit conflicts and preview/tampering/protected-path handling |
+| JavaScript utility/API tests | 6 passed | Missing versus zero, probability scale, dates, escaping, scoped URLs and request errors |
+| React interaction/rendering tests | 8 passed | API-driven portfolio/search, shared signals, actual-vs-missing money, saving/version payload, draft navigation, explicit conflict resolution, unknown batch, zero-flow chart and preferred batch selection |
+| Frontend build | Passed | Vite successfully builds the React application and dependencies |
 
-| Check                                     | Result    | Scope                                                                                                                                                                                            |
-| ----------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Existing backend suite                    | 20 passed | Saved export validation, leakage/protocol rejection, month isolation, joined context, persistent/versioned reviews and dated actions                                                             |
-| Frontend-serving tests                    | 2 passed  | Flask serves the HTML/module assets and API index; empty database handled at the API boundary                                                                                                    |
-| Database-copy tests                       | 4 passed  | Data/history preserved, original untouched, overwrite refused, missing/same/unrelated source rejected                                                                                            |
-| JavaScript tests                          | 6 passed  | Missing versus zero, percentage scale, forecast/observed definitions, escaping, scoped URLs, API errors and no automatic conflict retry                                                          |
-| JavaScript syntax                         | Passed    | All three frontend JavaScript modules                                                                                                                                                            |
-| Customer 944 rendering/request simulation | Passed    | Supplied 78-feature response produces 84.4% risk, 99.1% lower observed activity, actual balances, shared SHAP and twelve flow months; save carries expected version and complete editable fields |
+Total: **46 automated tests** plus the frontend build. React tests use jsdom with mocked API responses; test fixtures are software checks rather than research findings. No real browser visual/accessibility test or Windows execution of this new React version was completed here.
 
-The rendering simulation used a minimal DOM adapter and supplied API JSON. It is a code-level check of rendering and request wiring, **not** a real browser layout/accessibility test. No desktop/mobile visual acceptance or Windows test of this new application has been completed here.
+Additional package checks verify that a full v0.2.0 source copy can receive the update while preserving existing database bytes; local edits stop the update. Built HTML/assets are checked through Flask's test client. The development proxy is checked with a real HTTP request to confirm a review save can pass the retained Origin protection.
 
-No database from the user's machine was available in this build environment. The safe-copy function was exercised on a constructed database containing the same table relationships. The user's 1,000-customer import and original backend tests were evidenced by the supplied logs/API output, not independently rerun against that full database here.
+The complete 1,000-customer database remains on the user's machine. The user's supplied import/API logs establish the reported counts and available context. Tests here use temporary databases and the existing saved demo; they do not independently re-evaluate the complete bank portfolio or run new CatBoost inference.
 
-The source starter retains the existing schema and model protocol. The original backend source folder was preserved; the new app is a separate copy. Backend changes are frontend static serving, a separate `/api` index, application version 0.2.0 and new serving tests. Existing model/evidence validation, import, review and action logic were retained.
+The frozen model policy, database schema, importer, validation and repository logic are retained. This release changes the frontend implementation and serving/build/development setup. It does not add Reviewed Customers/case migrations, GenAI, OPR, online inference or authenticated identities.
 
-## Required local acceptance
+## Local checkpoint after applying the update
 
-Use README section 4 after copying your database:
+- [ ] Both development servers start and the React page opens at port 5173.
+- [ ] Existing three batches remain selectable; enriched February shows 1,000 / 208 / 792.
+- [ ] Customer 944 shows the verified values and twelve observed monthly flows through February 2024.
+- [ ] Search, filters and pagination use the selected batch.
+- [ ] Unsaved drafts survive navigation within the tab but do not change saved counts.
+- [ ] Save, browser reload and Flask restart preserve the decision and original evidence.
+- [ ] Two tabs trigger an explicit conflict for a stale save.
+- [ ] Keyboard, desktop/narrow layouts, chart readability and error states are usable.
+- [ ] Remote GitHub CI completes after the code is pushed.
 
-* [ ] February selected batch shows 1,000 customers, 208 flagged and 792 below threshold.
-* [ ] Customer 944 is PERKASA MULIA TRADING SDN BHD, risk approximately 84.4%, operating account balances MYR 2,016,997.13 and FD balance MYR 0.
-* [ ] Twelve observed flow months end at February 2024; no future chart values are shown as observations.
-* [ ] Search, filters, pagination and assessment changes behave correctly.
-* [ ] Opening another customer and returning retains an unsaved draft within the tab; it does not change the saved status/count.
-* [ ] Saving then reloading/restarting preserves the decision and evidence.
-* [ ] Two tabs editing the same review produce a visible conflict for the stale version rather than a silent overwrite.
-* [ ] Empty/missing data states remain understandable.
-* [ ] Keyboard navigation, readable focus, desktop and narrow-width layouts are usable.
-* [ ] Remote GitHub CI completes after the first push.
-
-These are the next developer acceptance tasks, not already-completed milestones. Real-bank usefulness, causal intervention effectiveness, new-month scoring, throughput targets and deployment readiness require their own evaluation.
+Use [UPGRADE_TO_REACT.md](UPGRADE_TO_REACT.md), then [MILESTONE_2.md](MILESTONE_2.md). These unchecked items remain user acceptance work, not completed claims.

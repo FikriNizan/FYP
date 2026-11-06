@@ -5,17 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TxB Retention Studio</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='8' fill='%230b132b'/%3E%3Ctext x='8' y='27' fill='white' font-size='22'%3ETx%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/assets/src/styles.css">
-  <script type="module" src="/assets/src/main.js"></script>
 </head>
 <body>
-  <header class="app-header">
-    <div><a href="#overview" class="brand">TxB Retention Studio</a><p>Operations &amp; Finance</p></div>
-    <div class="month-control"><label for="batch-select">Assessment</label><select id="batch-select" disabled><option>Loading assessments…</option></select></div>
-  </header>
-  <nav class="app-nav" aria-label="Workspace"><a id="overview-link" href="#overview">Monthly overview</a><span id="page-context"></span></nav>
-  <main id="app" aria-busy="true"><p>Connecting to the backend…</p></main>
-  <div id="notification" role="status" aria-live="polite"></div>
+  <div id="root"></div>
   <noscript>This dashboard requires JavaScript to load its assessment data.</noscript>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

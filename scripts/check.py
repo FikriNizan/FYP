@@ -24,9 +24,11 @@ def main():
     node = shutil.which("node")
     if not node:
         parser.exit(1, "Backend checks passed. Install Node.js 24 to run frontend checks, or use --backend-only.\n")
-    for file in sorted((ROOT / "frontend" / "src").glob("*.js")):
-        run([node, "--check", str(file)], ROOT)
-    run([node, "--test", *map(str, sorted((ROOT / "frontend" / "tests").glob("*.test.mjs")))], ROOT)
+    npm = shutil.which("npm")
+    if not npm:
+        parser.exit(1, "npm is required for React checks. Install Node.js 24.15+ (24.x).\n")
+    run([npm, "test"], ROOT / "frontend")
+    run([npm, "run", "build"], ROOT / "frontend")
 
 
 if __name__ == "__main__":

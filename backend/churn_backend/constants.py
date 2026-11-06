@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 MODEL = "catboost_baseline"
 PROTOCOL_SHA256 = "6ae6d17ef0dcb7c3b0b7e090bed0dbae475024f5c0606f71ad100411adb5a4dc"
 RAW_BOUNDARY = 0.2991379097436803

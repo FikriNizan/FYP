@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 import click
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from werkzeug.exceptions import HTTPException
 
 from . import db
@@ -14,9 +14,9 @@ from .validation import ConflictError, ValidationError
 
 def create_app(test_config=None):
     root = Path(__file__).resolve().parent.parent
-    frontend = root.parent / "frontend"
+    frontend = Path((test_config or {}).get("FRONTEND_DIST", root.parent / "frontend" / "dist"))
     app = Flask(__name__, instance_path=str(root / "instance"),
-                static_folder=str(frontend), static_url_path="/assets")
+                static_folder=str(frontend / "assets"), static_url_path="/assets")
     app.config.from_mapping(DATABASE=str(Path(os.environ.get("CHURN_DB_PATH", root / "instance" / "churn.sqlite")).resolve()),
                             MAX_CONTENT_LENGTH=64 * 1024, TRUSTED_HOSTS=["localhost", "127.0.0.1", "[::1]"])
     if test_config:
@@ -60,12 +60,16 @@ def create_app(test_config=None):
 
     @app.get("/")
     def index():
-        return app.send_static_file("index.html")
+        if not (frontend / "index.html").is_file():
+            return jsonify(error=dict(code="frontend_not_built",
+                                      message="Build the React frontend with npm run build in frontend/, "
+                                              "or use the Vite development server at http://127.0.0.1:5173.")), 503
+        return send_from_directory(frontend, "index.html")
 
     @app.get("/api")
     def api_index():
         return jsonify(name="Corporate attrition backend", version=VERSION,
-                       message="Full-stack foundation. Open / for the dashboard.",
+                       message="React full-stack foundation. Open / for the built dashboard.",
                        endpoints=["/api/health", "/api/months", "/api/summary", "/api/customers"])
 
     @app.cli.command("init-demo")

@@ -1,162 +1,149 @@
-# Corporate Attrition App — Full-stack Foundation
+# Corporate Attrition App — React + Flask Foundation v0.3.0
 
-A development starting point for the Fikri Nizan FYP: an explainable decision-support dashboard for silent corporate transaction-volume attrition in Malaysian banking.
+An explainable decision-support application for silent corporate transaction-volume attrition in Malaysian banking. The frontend is **React + Vite**; Flask provides the API and SQLite stores saved assessments, committee reviews and actions.
 
-This project joins the existing Flask/SQLite backend to a modular HTML/CSS/JavaScript frontend. It serves a live monthly portfolio, customer evidence and a committee review form. Decisions are saved through the API into SQLite, not browser storage. The original research project and backend folder can remain where they are.
+This corrects the earlier v0.2.0 plain-JavaScript starter to match Part 1, Section 2.4.7 (React) and Section 2.4.6 (Flask). The existing model policy, import validation and database schema are preserved. Static HTML remains a design/usability artifact.
 
-**Start here:** complete sections 1–4 below before reorganising your research files or adding features. This README describes the new application. [Development roadmap](docs/ROADMAP.md) tracks the remaining work; this is not the complete FYP delivery.
+**Already using v0.2.0 and copied the database? Start with [UPGRADE_TO_REACT.md](docs/UPGRADE_TO_REACT.md).** Do not repeat the database import or replace your working project wholesale. The supplied updater previews changes, checks for local edits and preserves the database, virtual environment and Git repository.
 
-## What the API checks established
+## Where you are now
 
-Your February 2024 import reports 1,000 assessed customers, 208 flagged, 792 below the threshold, customer names loaded, full feature values loaded, and transaction history loaded. The supplied Customer 944 response contains 78 model inputs and twelve observed monthly flow records. These are imported historical synthetic research results, not newly generated live predictions.
+The roadmap's **Milestone 2 is Reviewed Customers and follow-up**. First verify the React foundation using the update guide. Then use [MILESTONE_2.md](docs/MILESTONE_2.md) for the next feature's scope and build order.
 
-The database contains the data. This ZIP contains application source and the existing one-case demo; it does **not** contain your 1,000-customer database or trained model binaries. Copy your current database in section 3 to retain the full portfolio and any reviews.
+Your supplied database-copy log showed three preserved batches and 2,001 prediction records. Those correspond to the one-case demo and two 1,000-customer imports. The selected enriched February batch remains a portfolio of 1,000 customers, with 208 flagged and 792 below threshold. At copying, there were zero reviews/actions; later development decisions will change those workflow counts.
 
-## 1. Understand the pieces
+## 1. Understand the stack
 
-| Location                                      | Purpose                                                                   | Edit it when…                                          |
-| --------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `frontend/index.html`                         | Browser page shell                                                        | Changing the overall page structure                    |
-| `frontend/src/main.js`                        | Portfolio, customer review and interaction behaviour                      | Changing what a user can do                            |
-| `frontend/src/styles.css`                     | Layout, colours and responsive presentation                               | Refining the design                                    |
-| `frontend/src/api.js`                         | Browser-to-Flask requests                                                 | Adding or changing API calls                           |
-| `frontend/src/format.js`                      | Shared plain-language formatting                                          | Changing display rules for percentages, money or dates |
-| `backend/app.py`                              | Starts the application                                                    | Changing local startup                                 |
-| `backend/churn_backend/api.py`                | HTTP API routes                                                           | Adding a server operation                              |
-| `backend/churn_backend/repository.py`         | Database reads and writes                                                 | Changing persistence or queries                        |
-| `backend/churn_backend/validation.py`         | Input and evidence validation                                             | Changing what the server accepts                       |
-| `backend/churn_backend/importer.py`           | Imports completed research exports                                        | Extending the prepared-batch import                    |
-| `backend/churn_backend/schema.sql`            | Current SQLite table definitions                                          | Planning a database migration                          |
-| `backend/tests/`, `tests/`, `frontend/tests/` | Automated checks                                                          | Verifying meaningful behaviour                         |
-| `scripts/`                                    | Local checks and safe database copying                                    | Automating repeatable developer tasks                  |
-| `.github/workflows/ci.yml`                    | Runs checks on GitHub                                                     | Changing continuous integration                        |
-| `docs/`                                       | Architecture, workflow and delivery checklist                             | Recording decisions and progress                       |
-| `research/`, `data/`, `artifacts/`            | Documented boundaries for research, private inputs and frozen model files | Connecting later pipeline/scoring stages               |
+| Layer | Responsibility |
+|---|---|
+| React | Composes pages/components and handles user interaction, filters and drafts |
+| Vite | Development server, React transformation and frontend build |
+| Flask | API routes, evidence/input validation and database operations |
+| SQLite | Persistent batches, immutable prediction evidence, versioned reviews and dated action notes |
+| Research pipeline | Creates/validates features and produces frozen-model predictions/explanations; training is separate from serving pages |
 
-Frontend = what users see and click. Backend = trusted server operations. Database = records that survive restarting. Together these make a full-stack application. Machine learning supplies prediction evidence; it is an additional component, not a substitute for these layers.
+Frontend = what users see and click. Backend = trusted server operations. Database = records that survive a restart. The first learning exercise is to trace one saved review through all three layers.
 
-A single repository can contain these separate responsibilities. It does not need one universal `src/` folder. There is no frontend build process at this stage: Flask serves the HTML, CSS and JavaScript directly.
+## 2. Find the right file
 
-## 2. Create a clean development folder
+| Location | Purpose |
+|---|---|
+| `frontend/src/main.jsx` | Starts React and the hash-based router |
+| `frontend/src/App.jsx` | Assessment selection, navigation and shared review/draft state |
+| `frontend/src/pages/Overview.jsx` | Portfolio counts, searching, filters and pagination |
+| `frontend/src/pages/CustomerReview.jsx` | Customer evidence and Ops/Finance layout |
+| `frontend/src/components/ReviewForm.jsx` | Editable review and explicit save/conflict handling |
+| `frontend/src/components/Signals.jsx` | Shared SHAP signals, plain-language/technical layers |
+| `frontend/src/components/FlowHistory.jsx` | Recorded monthly flows and accessible exact-value table |
+| `frontend/src/api.js`, `format.js` | API requests and consistent display rules |
+| `frontend/src/styles.css` | Presentation and responsive layout |
+| `frontend/package-lock.json` | Exact resolved frontend dependency versions |
+| `backend/churn_backend/` | Existing Flask API, importer, validation and persistence |
+| `backend/instance/churn.sqlite` | Default local database, excluded from source control |
+| `scripts/` | Checks, safe database copying and guarded React source updating |
+| `.github/workflows/ci.yml` | Backend tests, frontend tests and React build on GitHub |
 
-Keep your old folders as the reference and backup. Extract the ZIP so the project root is, for example:
+## 3. Run your existing project on Windows
 
-`C:\Projects\corporate-attrition-app`
+Use **Node.js 24.15+ within 24.x** and Python 3.12. The tested Node version is recorded in `.nvmrc` and npm version in `frontend/package.json`. Node/npm are now required for frontend development and building.
 
-The root should directly contain `README.md`, `backend`, `frontend`, `scripts` and `requirements.txt`. Avoid accidentally opening an extra parent ZIP folder. A short path outside OneDrive is convenient for source code; the research inputs can stay in their current location.
+After applying the update, install the locked dependencies once:
 
-Open that root in VS Code, open a PowerShell terminal, then run:
+```powershell
+cd "D:\Degree Life\FYP Full-Stack Development\corporate-attrition-app\frontend"
+npm ci
+```
 
-```PowerShell
-cd C:\Projects\corporate-attrition-app
+Terminal 1 — Flask:
+
+```powershell
+cd "D:\Degree Life\FYP Full-Stack Development\corporate-attrition-app"
+.\.venv\Scripts\python.exe backend\app.py
+```
+
+Terminal 2 — React development:
+
+```powershell
+cd "D:\Degree Life\FYP Full-Stack Development\corporate-attrition-app\frontend"
+npm run dev
+```
+
+Open **http://127.0.0.1:5173/**. Vite forwards `/api` to Flask at port 5000. Keep both terminals running. React changes update in the browser as you edit.
+
+For a single Flask address, run `npm run build` in `frontend` and open **http://127.0.0.1:5000/**. Flask serves the generated `frontend/dist` files. Rebuild after frontend changes when using this address. An unbuilt Flask root returns a useful 503 setup response while API endpoints remain available.
+
+## 4. New checkout only
+
+If you have no virtual environment in this checkout:
+
+```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Python 3.12 is the application runtime. Node.js 24 is only needed for local JavaScript checks; it is not required to start or use the dashboard. Git is needed when you reach the version-control exercise.
+Before first starting Flask, copy your existing database using `scripts/copy_database.py` and its actual source path:
 
-Do not recreate the virtual environment each time you start the app. Create it once per checkout and reinstall requirements when they change.
-
-## 3. Copy your current database
-
-Stop the old Flask server with Ctrl+C. **Do this before starting the new application**, since starting creates an empty destination database if none exists.
-
-The old backend defaults to `instance\churn.sqlite`. If you set `CHURN_DB_PATH`, use that actual source path instead. In the new project root:
-
-```PowerShell
-$oldBackend = "C:\Users\fikri\OneDrive - Asia Pacific University of Technology And Innovation (APU)\Degree\SEM 6\Project Module (FYP)\fyp-flask-backend-v1"
-Test-Path "$oldBackend\instance\churn.sqlite"
-.\.venv\Scripts\python.exe scripts\copy_database.py "$oldBackend\instance\churn.sqlite"
+```powershell
+.\.venv\Scripts\python.exe scripts\copy_database.py "C:\path-to-your-existing-backend\instance\churn.sqlite"
 ```
 
-`Test-Path` should return `True`. The copy script reports row counts for batches, predictions, reviews, review history and actions. It checks SQLite integrity, preserves the source and refuses an existing destination. Predictions across multiple imports can exceed 1,000; **the selected February batch** should still contain 1,000 customers.
+Replace the example path with the real one. The script checks integrity, preserves the source and refuses an existing destination. It uses SQLite's backup API. If you set `CHURN_DB_PATH`, use that actual source/destination deliberately and keep the same environment configuration between restarts.
 
-If it refuses because the new destination already exists, inspect what is in that database before replacing anything. To copy to a different new filename:
+Only when no database is available, import the bundled single saved case:
 
-```PowerShell
-.\.venv\Scripts\python.exe scripts\copy_database.py "$oldBackend\instance\churn.sqlite" --destination "C:\Projects\corporate-attrition-app\backend\instance\copied-churn.sqlite"
-$env:CHURN_DB_PATH = "C:\Projects\corporate-attrition-app\backend\instance\copied-churn.sqlite"
-```
-
-That environment variable applies to this terminal; set it again in a new terminal if you use a custom path. Do not switch back and forth between two independently edited database copies. Once the new setup is checked, use the new copy for ongoing development and keep the original as a backup.
-
-**Only if you have no existing database:** import the single saved case instead. This is an alternative, not the 1,000-customer setup:
-
-```PowerShell
+```powershell
 .\.venv\Scripts\python.exe -m flask --app backend/app.py init-demo
 ```
 
-For a fresh import of a complete monthly export, see [Architecture and data flow](docs/ARCHITECTURE.md). You do not need to reimport after copying the database.
+This supplies one customer with partial context. It is not the full 1,000-customer portfolio. For completed export imports see [Architecture](docs/ARCHITECTURE.md).
 
-## 4. Run and complete your first full-stack exercise
+## 5. Verify the React foundation
 
-From the new project root:
+1. Select the enriched February assessment beginning `5f30af…`, showing names + trends.
+2. Confirm 1,000 assessed, 208 flagged and 792 below threshold (before changing its reviews).
+3. Search for `944`; confirm PERKASA MULIA TRADING SDN BHD, about 84.4% risk, MYR 2,016,997.13 operating account balances and MYR 0 FD balance.
+4. Check twelve observed flow months through February 2024. Forecast: March–May 2024.
+5. Save a review with a clear reason such as “Development acceptance test”, then reload/restart and confirm it remains with the same batch.
+6. In two tabs, confirm a stale save produces a conflict and preserves the unsaved notes until you explicitly load the latest decision.
 
-```PowerShell
-.\.venv\Scripts\python.exe backend\app.py
-```
+These are API-derived values, not hardcoded display totals. The ZIP contains code and the existing one-case demo; the full portfolio comes from your preserved database.
 
-Open `http://127.0.0.1:5000/`. The root now serves the dashboard; the former root JSON index is at `/api`. API endpoints such as `/api/summary` remain available.
+From the project root:
 
-1. Choose the February assessment showing **1,000 customers, names + trends**. The selector includes a short batch ID so previous versions of the same month remain distinguishable.
-2. Confirm 1,000 assessed, 208 flagged and 792 below the threshold for your latest February batch. These are data checks, not hardcoded page values.
-3. Search for customer `944` and open its review.
-4. Confirm about **84.4% predicted risk**, **MYR 2,016,997.13 operating account balances**, **MYR 0 fixed deposits**, and the observed monthly trend. An older partial demo batch has missing values; select the enriched batch explicitly.
-5. Save a test committee decision with a clear reason and your reviewer name. This is a real write to the copied development database. Use a reason such as “Development acceptance test” so it is distinguishable from an actual committee decision.
-6. Reload the page, then restart Flask and revisit the same assessment. Confirm the saved decision remains and the model score has not changed.
-7. Return to the overview and confirm the relevant review count changed.
-
-This connects the whole stack: browser form → HTTP request → server validation → database transaction → refreshed browser data. Read `api.js`, `api.py`, then `save_review()` in `repository.py` to trace that one operation.
-
-No post-review action entry is required to save a committee decision. The dedicated cross-month Reviewed Customers workflow is the next feature milestone.
-
-## 5. Run checks before changing code
-
-Backend and database-copy checks require only Python:
-
-```PowerShell
-.\.venv\Scripts\python.exe scripts\check.py --backend-only
-```
-
-With Node.js 24 installed, run everything:
-
-```PowerShell
+```powershell
 .\.venv\Scripts\python.exe scripts\check.py
 ```
 
-The starter has 22 backend checks, 4 database-copy checks and 6 JavaScript checks. Tests use temporary databases. They do not open your copied development database. The test runner also checks JavaScript syntax.
+Backend-only checks:
 
-Automated coverage includes the existing evidence/import protections, review persistence and conflict handling, frontend asset serving, copying without overwrite, and display rules such as missing versus zero. This is not a substitute for the browser exercise above or user testing.
+```powershell
+.\.venv\Scripts\python.exe scripts\check.py --backend-only
+```
 
-## 6. Put the application under version control
+The complete checks run 24 backend tests, 8 database-copy/source-update tests, 6 JavaScript utility/API tests, 8 React interaction/rendering tests, and a Vite build. Tests use temporary databases and constructed fixtures. See [Verification](docs/VERIFICATION.md) for scope and remaining browser/Windows checks.
 
-Follow [Developer workflow](docs/DEVELOPMENT.md) after the local exercise works. It explains Git, branches, commits, pull requests and CI in beginner terms, with exact commands.
+## 6. Current feature boundary
 
-The included workflow runs checks on pull requests and pushes to `main`. It has been prepared and the same checks run locally; no remote GitHub repository or workflow run has been created for you. There is no deployment workflow yet. Choose a hosting target and address authentication/persistent storage before adding CD.
+Implemented: API-backed assessment selection, portfolio, customer review, saved SHAP/flow/financial evidence, in-tab drafts and versioned saved decisions. React preserves the original evidence and uses the saved flag without recalculating it from rounded percentages. SHAP is shared across Operations and Finance. Financial zeros remain distinct from missing values.
 
-## Current capability and scope
+Retained: completed-export CLI import, review history and dated action-note APIs. Reviewer names are user-entered attribution; authenticated identity is not implemented.
 
-Implemented in this starter:
+Next: Reviewed Customers and a linked follow-up lifecycle across monthly assessments. The current package does not yet implement that page or new case tables. Later milestones cover briefing/PDF, automated new-month inference, intervention-aware outcomes, grounded GenAI and an OPR scenario. See [Roadmap](docs/ROADMAP.md).
 
-* Live API-backed assessment selection, summary, searching, filtering and pagination.
-* Customer detail using saved risk, supplied SHAP signals, observed flow history, Operations and Finance evidence.
-* Shared SHAP section across both business perspectives, with plain-language labels and optional technical details.
-* Review decisions saved in SQLite, version checked to prevent silent overwrites. A conflict keeps the draft visible and requires explicitly loading the latest saved version.
-* In-tab draft preservation while navigating; draft changes are not saved to the server until **Save decision**. Closing the tab can lose unsaved drafts.
-* Original backend import, review history and action APIs retained.
-* Safe database-copy script, Git exclusions, checks and a GitHub CI workflow.
+## 7. Learn through one working change
 
-Remaining milestones: cross-month Reviewed Customers and linked follow-up tracking; briefing/PDF; a defined monthly input package and automated scoring; outcome/intervention monitoring; grounded GenAI; OPR scenario demonstration. See [Roadmap](docs/ROADMAP.md).
+Start with a label in `ReviewForm.jsx`, test the page and commit it. Then trace `api.saveReview()` → Flask review route → `repository.save_review()` → SQLite. Learn React components, props and state through those files rather than introducing more tools at once.
 
-This local foundation has no authenticated users, background job queue or deployed hosting. Reviewer names are user-entered attribution. Keep those distinctions in the final report when describing what was implemented versus planned.
+Follow [Development](docs/DEVELOPMENT.md) for Git branches, commits, pull requests and CI. The included workflow runs `npm ci`, tests and a build. It is prepared; a remote GitHub run must still be confirmed after pushing. Deployment/CD follows a hosting and persistent-storage decision.
 
-## Documentation order
+## Documentation
 
-1. This README — get the application running and understand the folders.
-2. [Architecture](docs/ARCHITECTURE.md) — research versus monthly processing versus runtime.
-3. [Development](docs/DEVELOPMENT.md) — make one small change, test and commit it.
-4. [Roadmap](docs/ROADMAP.md) — finish one milestone at a time.
-5. [Verification](docs/VERIFICATION.md) — checks performed and remaining local acceptance tests.
-6. [API contract](backend/API_CONTRACT.md) — request/response details.
+- [React update guide](docs/UPGRADE_TO_REACT.md) — preserve the project you already set up.
+- [Milestone 2](docs/MILESTONE_2.md) — immediate next feature and acceptance criteria.
+- [Architecture](docs/ARCHITECTURE.md) — research versus monthly processing versus runtime.
+- [Development](docs/DEVELOPMENT.md) — daily developer workflow.
+- [Roadmap](docs/ROADMAP.md) — overall progression.
+- [Verification](docs/VERIFICATION.md) — evidence and test limits.
+- [API contract](backend/API_CONTRACT.md) — retained request/response contracts.
 
-`docs/backend-v1-reference.md` preserves the original backend instructions as an archived reference. Its old folder commands and root JSON description do not replace this README.
+`docs/backend-v1-reference.md` is an archived original backend reference. Follow this README for current paths and frontend startup.

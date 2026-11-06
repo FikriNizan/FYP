@@ -8,7 +8,7 @@ This backend serves saved prediction evidence and stores human review decisions 
 
 Extract the ZIP, open the `fyp-flask-backend-v1` folder in VS Code, and open its terminal. Run these commands from that folder:
 
-```PowerShell
+```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m flask --app app init-demo
@@ -19,9 +19,9 @@ No activation or PowerShell execution-policy change is required. Keep the final 
 
 Open these addresses:
 
-* <http://127.0.0.1:5000/api/health>
-* <http://127.0.0.1:5000/api/summary>
-* <http://127.0.0.1:5000/api/customers/944>
+- http://127.0.0.1:5000/api/health
+- http://127.0.0.1:5000/api/summary
+- http://127.0.0.1:5000/api/customers/944
 
 JSON in the browser is the expected result at this stage. UI design and frontend implementation come separately.
 
@@ -37,7 +37,7 @@ Your completed SHAP notebook already produced the required files on your compute
 2. Replace the placeholder project path below with the folder containing your existing modeling project.
 3. Run the import command and restart the server.
 
-```PowerShell
+```powershell
 $fypProject = "C:\path\to\fyp-data-refinement"
 .\.venv\Scripts\python.exe -m flask --app app import-shap --directory "$fypProject\data\models\shap_explainability_v1" --month 2024-02 --customer-master "$fypProject\data\cleaned\company_population_clean.csv" --flows "$fypProject\data\cleaned\monthly_flows.csv"
 .\.venv\Scripts\python.exe app.py
@@ -47,12 +47,12 @@ $fypProject = "C:\path\to\fyp-data-refinement"
 
 The required files in the explanation directory are:
 
-| File                           | Used for                                                     |
-| ------------------------------ | ------------------------------------------------------------ |
+| File | Used for |
+|---|---|
 | `explainability_manifest.json` | Successful run, frozen calibration/policy and file checksums |
-| `dashboard_explanations.jsonl` | Saved probabilities, flags and compact SHAP explanations     |
-| `feature_values.csv`           | The two keys and all 78 original predictor values            |
-| `feature_catalog.csv`          | Feature labels, groups and numeric/categorical kinds         |
+| `dashboard_explanations.jsonl` | Saved probabilities, flags and compact SHAP explanations |
+| `feature_values.csv` | The two keys and all 78 original predictor values |
+| `feature_catalog.csv` | Feature labels, groups and numeric/categorical kinds |
 
 The importer validates the complete explanation export before importing the selected month. It checks matching customer-month keys, exact predictor schema, file hashes and sizes, the accepted experiment identity, saved calibration, flags and probability reconstruction. Outcome labels are not accepted as model evidence. The earlier 20-customer technical fixture has a different policy and is rejected.
 
@@ -66,7 +66,7 @@ Import another existing month by changing `--month`, for example to `2024-03`. H
 
 Keep the server running. Open a second PowerShell terminal in this folder:
 
-```PowerShell
+```powershell
 $evidence = Invoke-RestMethod "http://127.0.0.1:5000/api/customers/944?month=2024-02"
 $predictionId = $evidence.customer.prediction_id
 $reviewBody = @{
@@ -92,7 +92,7 @@ The saved prediction, threshold and explanation stay unchanged. Financial and op
 
 Use the same `$predictionId` in that second terminal:
 
-```PowerShell
+```powershell
 $actionBody = @{
     action_type = "rm_visit"
     action_status = "planned"
@@ -117,7 +117,7 @@ This is a local research prototype. The server binds to 127.0.0.1; reviewer name
 
 ## Verify the backend
 
-```PowerShell
+```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
@@ -127,8 +127,8 @@ See `API_CONTRACT.md` for the frontend integration contract and `validation/veri
 
 ## References
 
-* Flask application factories: <https://flask.palletsprojects.com/en/stable/patterns/appfactories/>
-* Flask SQLite pattern: <https://flask.palletsprojects.com/en/stable/tutorial/database/>
-* Flask testing: <https://flask.palletsprojects.com/en/stable/testing/>
+- Flask application factories: https://flask.palletsprojects.com/en/stable/patterns/appfactories/
+- Flask SQLite pattern: https://flask.palletsprojects.com/en/stable/tutorial/database/
+- Flask testing: https://flask.palletsprojects.com/en/stable/testing/
 
 The prediction and SHAP interpretation remains the one documented in your earlier model/explainability packages.

@@ -1,6 +1,6 @@
-> Full-stack foundation v0.2.0: `/` serves the browser dashboard; `/api` serves the API index. The evidence/review/action API contracts below are retained from backend v1.
+> Full-stack foundation v0.3.0: `/` serves the built React dashboard from `frontend/dist`; `/api` serves the API index. The evidence/review/action API contracts below are retained from backend v1.
 
-# Backend API contract — v0.2.0
+# Backend API contract — v0.3.0
 
 Base URL: `http://127.0.0.1:5000`. All `/api` responses are JSON. No endpoint fits or recalibrates a model.
 

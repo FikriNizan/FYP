@@ -4,7 +4,7 @@
 
 Choose one small user behaviour. Define what success looks like, change the relevant layer, run checks, test the user journey, inspect the difference and commit the change. Completing one thin journey across frontend, API and database is more useful than building every page with disconnected dummy data.
 
-The first journey is already wired: monthly overview → customer evidence → save committee decision → reload. Start by tracing it, then refine one part. You do not need to learn React, Docker and cloud deployment at the same time.
+The first journey is already wired: monthly overview → customer evidence → save committee decision → reload. Start by tracing it, then refine one part. Learn React components, props and state through this small journey. Docker and cloud deployment remain later topics.
 
 ## What each term means
 
@@ -58,7 +58,7 @@ Example: improve a label in the customer review form.
 git switch -c ui/refine-review-label
 ```
 
-1. Find the form label in `frontend/src/main.js`.
+1. Find the form label in `frontend/src/components/ReviewForm.jsx`.
 2. Make one wording change.
 3. Reload the dashboard and check desktop and narrow widths.
 4. Run `scripts/check.py` using the virtual-environment Python.
@@ -66,7 +66,7 @@ git switch -c ui/refine-review-label
 
 ```PowerShell
 git diff
-git add frontend/src/main.js
+git add frontend/src/components/ReviewForm.jsx
 git commit -m "Clarify committee review label"
 git push -u origin ui/refine-review-label
 ```
@@ -84,7 +84,7 @@ For later changes, use another small branch. Avoid one long-lived branch contain
 
 ## Continuous integration in this starter
 
-`.github/workflows/ci.yml` checks out the repository, selects Python 3.12 and Node.js 24, installs pinned requirements and runs `python scripts/check.py`. It runs on pull requests, pushes to `main`, and manual dispatch.
+`.github/workflows/ci.yml` checks out the repository, selects Python 3.12 and Node.js 24, installs pinned Python requirements and frontend dependencies with `npm ci`, then runs `python scripts/check.py` (including React tests and a production build). It runs on pull requests, pushes to `main`, and manual dispatch.
 
 The workflow does not need a customer database or model binary. Tests make temporary fixtures and the one-case demo supplies a deterministic existing evidence sample. Do not add the full dataset or credentials merely to make CI pass.
 
@@ -97,7 +97,7 @@ This follows GitHub's [Python build/test guidance](https://docs.github.com/en/ac
 * Schema changes: verify migration of an existing database and preservation of decisions/history.
 * Data/model changes: check temporal boundaries, schema/protocol and saved evaluation artifacts separately from page rendering.
 
-The current checks do not establish model quality, usability or deployment throughput. Those are separate evaluations with their own acceptance criteria.
+React interaction tests use jsdom and mocked API responses. The current checks do not establish real-browser layout/accessibility, model quality, usability or deployment throughput. Those are separate evaluations with their own acceptance criteria.
 
 ## Debugging by layer
 
