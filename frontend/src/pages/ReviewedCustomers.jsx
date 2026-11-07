@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { count, dateLabel, decisionLabel, malaysiaToday, monthLabel } from '../format.js';
+import { caseStatusLabel, count, dateLabel, decisionLabel, malaysiaToday, monthLabel } from '../format.js';
 import { ErrorNotice } from '../components/Common.jsx';
 import { ConnectionState } from '../components/Workspace.jsx';
 
@@ -50,7 +50,7 @@ export default function ReviewedCustomers({ revision }) {
           <td><span className="badge">{decisionLabel(c.original.review.decision)}</span>{c.original.review.decision !== c.original_review.decision && <p className="muted">Originally {decisionLabel(c.original_review.decision)}</p>}</td>
           <td>{monthLabel(c.original.cutoff_month)}<div className="muted">Batch {c.original.batch_id.slice(0,8)}</div></td>
           <td>{c.owner || 'Unassigned'}<div className="muted">{dateLabel(c.next_action_date)}</div>{c.next_action_date && c.next_action_date<malaysiaToday() && c.status!=='closed' && <span className="badge overdue">Overdue</span>}</td>
-          <td><span className={'badge status-'+c.status}>{c.status}</span><p><Link className="button" to={caseLink(c.case_id)}>Open case</Link></p></td>
+          <td><span className={'badge status-'+c.status}>{caseStatusLabel(c.status)}</span><p><Link className="button" to={caseLink(c.case_id)}>Open case</Link></p></td>
         </tr>)}
         {!data.items.length && <tr><td colSpan="6"><div className="empty"><h3>No reviewed cases found</h3><p>Save a committee decision in Customer Review, or adjust these filters.</p></div></td></tr>}
       </tbody></table></div>

@@ -85,7 +85,7 @@ export default function App() {
   let content;
   if (error && (assessmentScoped || location.pathname==='/assessments')) content = <><ErrorNotice message={error} /><button onClick={() => setAttempt(old => old + 1)}>Try again</button></>;
   else if (!batches && (assessmentScoped || location.pathname==='/assessments')) content = <p>Loading assessments…</p>;
-  else if (!batches?.length && assessmentScoped) content = <section className="panel empty"><h1>No assessments available</h1><p>Open Monthly Assessments to see the future package workflow.</p><Link className="button" to="/assessments">Monthly Assessments</Link></section>;
+  else if (!batches?.length && assessmentScoped) content = <section className="panel empty"><h1>No assessments available</h1><p>No assessments are saved yet. Open Monthly Assessments to see how monthly packages will be added.</p><Link className="button" to="/assessments">Monthly Assessments</Link></section>;
   else if (!validBatch && assessmentScoped) content = <ErrorNotice message="This assessment is not available. Choose another assessment above." />;
   else content = <Routes>
     <Route path="/" element={<Overview batch={batch} revision={revision} />} />

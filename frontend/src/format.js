@@ -40,6 +40,12 @@ export const decisionLabel = decision => ({
   monitor: 'Monitor', no_immediate_action: 'No immediate action',
 }[decision] || 'Not provided');
 
+export const caseStatusLabel = status => ({
+  open: 'Open',
+  deferred: 'Deferred',
+  closed: 'Closed',
+}[status] || status);
+
 export function activityChange(recent, baseline) {
   if (!isNumber(recent) || !isNumber(baseline) || baseline <= 0) return 'Not provided';
   const change = (recent / baseline - 1) * 100;

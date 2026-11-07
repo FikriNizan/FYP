@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { dateLabel, decisionLabel, malaysiaToday, monthLabel, percent } from '../format.js';
+import { caseStatusLabel, dateLabel, decisionLabel, malaysiaToday, monthLabel, percent } from '../format.js';
 import { assessmentLink } from '../navigation.js';
 import { ErrorNotice } from '../components/Common.jsx';
 import Signals from '../components/Signals.jsx';
@@ -83,7 +83,7 @@ export default function CaseDetail({ workflow }) {
   const chooseEditor=value=>{setEditor(value);requestAnimationFrame(()=>document.getElementById(value==='manage' ? 'manage-editor' : 'followup-editor')?.scrollIntoView?.({block:'nearest'}));};
   return <>
     <Link className="back-link" to={returnPath}>← Reviewed Customers</Link>
-    <div className="heading"><div><h1>{latest.customer_name || c.customer_name || 'Customer '+c.cus_id}</h1><p className="muted">Customer {c.cus_id} · Opened {timestamp(data.created_at)} · Case version {data.version}</p></div><div className="heading-actions"><span className={'badge status-'+data.status}>{data.status}</span>{c.review.decision==='prioritise' && <Link className="button" to={'/briefing?case_id='+encodeURIComponent(data.case_id)}>Prepare RM briefing</Link>}</div></div>
+    <div className="heading"><div><h1>{latest.customer_name || c.customer_name || 'Customer '+c.cus_id}</h1><p className="muted">Customer {c.cus_id} · Opened {timestamp(data.created_at)} · Case version {data.version}</p></div><div className="heading-actions"><span className={'badge status-'+data.status}>{caseStatusLabel(data.status)}</span>{c.review.decision==='prioritise' && <Link className="button" to={'/briefing?case_id='+encodeURIComponent(data.case_id)}>Prepare RM briefing</Link>}</div></div>
     <div className="case-summary"><div><span>Case owner</span><strong>{data.owner || 'Unassigned'}</strong></div><div><span>Next follow-up</span><strong>{dateLabel(data.next_action_date)}</strong></div><div><span>Current committee decision</span><strong>{decisionLabel(c.review.decision)}</strong></div><div className="case-action-tabs" role="tablist" aria-label="Case action" onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const next=event.key==='Home' ? 'followup' : event.key==='End' ? 'manage' : editor==='manage' ? 'followup' : 'manage';chooseEditor(next);document.getElementById(next==='manage' ? 'manage-tab' : 'followup-tab')?.focus();}}><button role="tab" id="followup-tab" tabIndex={editor==='followup' ? 0 : -1} aria-selected={editor==='followup'} aria-controls="followup-editor" onClick={()=>chooseEditor('followup')}>Record follow-up</button><button role="tab" id="manage-tab" tabIndex={editor==='manage' ? 0 : -1} aria-selected={editor==='manage'} aria-controls="manage-editor" onClick={()=>chooseEditor('manage')}>Manage case</button></div></div>
     <div className="context-grid assessment-comparison">
       <section className="context-card original-context"><h2>At the time of review</h2><p className="comparison-date">{monthLabel(c.cutoff_month)}</p><strong className="number">{percent(c.calibrated_risk)}</strong><p>{decisionLabel(originalReview.decision)}</p><p>{originalReview.reason}</p><p className="muted">Reviewed by {originalReview.reviewer}</p><Link className="button" to={assessmentLink('/customer/'+encodeURIComponent(c.cus_id),c.batch_id)}>Open original assessment</Link></section>
