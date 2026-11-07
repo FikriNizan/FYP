@@ -1,12 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { count, decisionLabel, forecastLabel, money, monthLabel, percent } from '../format.js';
+import { count, decisionLabel, forecastLabel, monthLabel, percent } from '../format.js';
 import { assessmentLink } from '../navigation.js';
 import { ErrorNotice, RiskBadge } from '../components/Common.jsx';
 import { ConnectionState } from '../components/Workspace.jsx';
+import FinanceCard from '../components/FinanceCard.jsx';
 
 const limit = 50;
+const financeCards = [
+  { key:'non_fd_balance_myr', label:'Operating account balances', icon:'wallet', kind:'exposure' },
+  { key:'fd_balance_myr', label:'Fixed deposit balances', icon:'deposit', kind:'exposure' },
+  { key:'estimated_monthly_fee_myr', label:'Estimated monthly fees', icon:'receipt', kind:'estimate' },
+  { key:'estimated_monthly_waiver_myr', label:'Estimated monthly waivers', icon:'waiver', kind:'estimate' },
+];
 export default function Overview({ batch, revision }) {
   const [params,setParams] = useSearchParams();
   const location = useLocation();
@@ -48,6 +55,19 @@ export default function Overview({ batch, revision }) {
       <div className="stat"><span>Flagged and awaiting review</span><strong className="number">{count(awaiting)}</strong><small className="muted">{count(summary.flagged_review_counts.prioritise)} prioritised for RM</small></div>
     </div>
     <div className="review-progress"><div><strong>Flagged review progress</strong><span>{count(reviewed)} reviewed · {count(awaiting)} awaiting</span></div><progress max={summary.flagged || 1} value={reviewed} aria-label="Reviewed flagged customers" /><small>{summary.flagged ? 'Based on all flagged customers in the selected batch.' : 'No flagged customers in this assessment.'}</small></div>
+    <section className="finance-context" aria-labelledby="finance-context-title">
+      <div className="section-heading"><div><h2 id="finance-context-title">Financial context for flagged customers</h2><p className="muted">Totals across the {count(summary.flagged)} flagged customers in this assessment.</p></div></div>
+      <div className="finance-cards">
+        {financeCards.map(({key,label,icon,kind}) => {
+          const value = summary.finance['flagged_' + key];
+          const coverage = value.records ? Math.round(value.records_with_value / value.records * 100) : 0;
+          return <FinanceCard key={key} label={label} icon={icon} kind={kind} value={value.total}>
+            <div className="finance-coverage"><span className="coverage-track" aria-hidden="true"><i style={{width:coverage+'%'}} /></span><small className="muted">{count(value.records_with_value)} of {count(value.records)} records available</small></div>
+          </FinanceCard>;
+        })}
+      </div>
+      <p className="muted finance-note">Balances are exposures. Fees and waivers are separate historical estimates; they do not establish profit or potential savings.</p>
+    </section>
     <section className="panel"><h2>Customer review queue</h2><p className="muted">Highest predicted risk first. Consider the evidence from both Operations and Finance before deciding.</p>
       <div className="toolbar"><div className="filters" role="group" aria-label="Customer filter">
         {[['flagged','Flagged'],['awaiting','Flagged · awaiting review'],['all','All customers']].map(([key,label]) => <button key={key} aria-pressed={filter === key} onClick={() => chooseFilter(key)}>{label}</button>)}
@@ -59,12 +79,5 @@ export default function Overview({ batch, revision }) {
       </tbody></table></div>
       <div className="pagination"><span className="muted">{list.items.length ? `${offset + 1}–${Math.min(offset + limit, list.total)}` : '0'} of {count(list.total)} {list.total===1 ? 'customer' : 'customers'}</span><div className="pagination-controls"><button disabled={!offset} onClick={() => update({offset:Math.max(0,offset-limit)})}>Previous</button><button disabled={offset+limit >= list.total} onClick={() => update({offset:offset+limit})}>Next</button></div></div>
     </section>
-    <section className="panel"><details><summary>Financial context for flagged customers</summary>
-      {[['non_fd_balance_myr','Operating account balances'],['fd_balance_myr','Fixed deposit balances'],['estimated_monthly_fee_myr','Estimated monthly fees'],['estimated_monthly_waiver_myr','Estimated monthly waivers']].map(([key,label]) => {
-        const value = summary.finance['flagged_' + key];
-        return <div className="signal" key={key}><span>{label}</span><span className="signal-value">{money(value.total)}<br /><small className="muted">{count(value.records_with_value)} of {count(value.records)} records available</small></span></div>;
-      })}
-      <p className="muted">Balances are exposures. Fees and waivers are separate historical estimates; they do not establish profit or potential savings.</p>
-    </details></section>
   </>;
 }

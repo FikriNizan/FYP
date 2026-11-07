@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { activityChange, decisionLabel, forecastLabel, money, monthLabel, percent } from '../format.js';
-import { Definition, ErrorNotice, RiskBadge } from '../components/Common.jsx';
+import { activityChange, decisionLabel, forecastLabel, monthLabel, percent } from '../format.js';
+import { ErrorNotice, RiskBadge } from '../components/Common.jsx';
+import FinancePerspective from '../components/FinancePerspective.jsx';
+import OperationsPerspective from '../components/OperationsPerspective.jsx';
 import Signals from '../components/Signals.jsx';
 import FlowHistory from '../components/FlowHistory.jsx';
 import ReviewForm from '../components/ReviewForm.jsx';
@@ -38,11 +40,8 @@ export default function CustomerReview({ batch, revision, workflow }) {
       <PerspectiveTabs value={perspective} onChange={setPerspective} />
       <div id="perspective-panel" role="tabpanel" aria-label={perspective+' evidence'} tabIndex={0}>
       {perspective==='Summary' && <><FlowHistory history={c.flow_history} baseline={ops.combined_flow_mean_12m_myr} cutoff={c.cutoff_month} /><Signals customer={c} /></>}
-      {perspective==='Operations' && <section className="panel"><h2>Operations perspective</h2><p className="muted">Review recorded activity and service measures before investigating an issue.</p><dl>
-        <Definition label="Combined flow · latest 3-month average" value={money(ops.combined_flow_mean_3m_myr)} /><Definition label="Combined flow · trailing 12-month average" value={money(ops.combined_flow_mean_12m_myr)} />
-        <Definition label="Login failure rate · latest 3 months" value={percent(ops.login_failure_rate_3m)} /><Definition label="Outgoing payment failure rate · latest 3 months" value={percent(ops.outbound_failure_rate_3m)} /><Definition label="Bank-attributed payment failure rate" value={percent(ops.outbound_bank_failure_rate_3m)} /><Definition label="Sessions without transactions" value={percent(ops.passive_session_rate_3m)} />
-      </dl><p className="muted spaced">Check the service experience with the customer. These measures do not establish the reason for reduced activity.</p><Explanation term="About these measures"><p>These are saved aggregate measures for this assessment. No monthly service time series is supplied, so no service trend is inferred.</p></Explanation></section>}
-      {perspective==='Finance' && <section className="panel"><h2>Finance perspective</h2><p className="muted">Balance exposure and historical monthly estimates, shown separately.</p><dl><Definition label="Operating account balances" value={money(finance.non_fd_balance_myr)} /><Definition label="Fixed deposit balances" value={money(finance.fd_balance_myr)} /><Definition label="Estimated monthly fees" value={money(finance.estimated_monthly_fee_myr)} /><Definition label="Estimated monthly waivers" value={money(finance.estimated_monthly_waiver_myr)} /></dl><Explanation term="About exposure and estimates"><p>Balances show exposure. Fees and waivers are separate historical three-month monthly estimates, not verified profit, actual invoices or retention savings.</p></Explanation></section>}
+      {perspective==='Operations' && <OperationsPerspective operations={ops} cutoff={c.cutoff_month} />}
+      {perspective==='Finance' && <FinancePerspective finance={finance} />}
       {perspective!=='Summary' && <p className="muted shared-evidence-note">Model signals and recorded flow history are shared evidence in Summary. These views do not change your role or access.</p>}
       </div>
     </div><ReviewForm key={c.prediction_id+':'+c.review.version} customer={c} workflow={workflow} /></div>

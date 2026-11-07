@@ -1,67 +1,67 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-06T16:45:35.619519+00:00",
+  "generatedAt": "2026-11-07T20:46:07.903347+00:00",
   "title": "Design System: TxB Retention Studio",
   "extensions": {
     "colorMeta": {
       "ink": {
         "role": "neutral",
         "displayName": "Ink",
-        "canonical": "#182b47",
+        "canonical": "#343a40",
         "tonalRamp": [
-          "oklch(15% 0.0344 257.97)",
-          "oklch(27% 0.0574 257.97)",
-          "oklch(39% 0.0574 257.97)",
-          "oklch(51% 0.0574 257.97)",
-          "oklch(63% 0.0574 257.97)",
-          "oklch(75% 0.0574 257.97)",
-          "oklch(87% 0.0298 257.97)",
-          "oklch(95% 0.0115 257.97)"
+          "oklch(15% 0.0080 248.21)",
+          "oklch(27% 0.0133 248.21)",
+          "oklch(39% 0.0133 248.21)",
+          "oklch(51% 0.0133 248.21)",
+          "oklch(63% 0.0133 248.21)",
+          "oklch(75% 0.0133 248.21)",
+          "oklch(87% 0.0079 248.21)",
+          "oklch(95% 0.0030 248.21)"
         ]
       },
       "muted": {
         "role": "neutral",
         "displayName": "Muted",
-        "canonical": "#53647c",
+        "canonical": "#5f6a75",
         "tonalRamp": [
-          "oklch(15% 0.0263 257.02)",
-          "oklch(27% 0.0438 257.02)",
-          "oklch(39% 0.0438 257.02)",
-          "oklch(51% 0.0438 257.02)",
-          "oklch(63% 0.0438 257.02)",
-          "oklch(75% 0.0438 257.02)",
-          "oklch(87% 0.0228 257.02)",
-          "oklch(95% 0.0088 257.02)"
+          "oklch(15% 0.0132 248.25)",
+          "oklch(27% 0.0220 248.25)",
+          "oklch(39% 0.0220 248.25)",
+          "oklch(51% 0.0220 248.25)",
+          "oklch(63% 0.0220 248.25)",
+          "oklch(75% 0.0220 248.25)",
+          "oklch(87% 0.0130 248.25)",
+          "oklch(95% 0.0050 248.25)"
         ]
       },
       "accent": {
         "role": "primary",
         "displayName": "Accent",
-        "canonical": "#285ed1",
+        "canonical": "#3f6ad8",
         "tonalRamp": [
-          "oklch(15% 0.0780 262.74)",
-          "oklch(27% 0.1300 262.74)",
-          "oklch(39% 0.1300 262.74)",
-          "oklch(51% 0.1300 262.74)",
-          "oklch(63% 0.1300 262.74)",
-          "oklch(75% 0.1300 262.74)",
-          "oklch(87% 0.0676 262.74)",
-          "oklch(95% 0.0260 262.74)"
+          "oklch(15% 0.0360 265.07)",
+          "oklch(27% 0.0600 265.07)",
+          "oklch(39% 0.0600 265.07)",
+          "oklch(51% 0.0600 265.07)",
+          "oklch(63% 0.0600 265.07)",
+          "oklch(75% 0.0600 265.07)",
+          "oklch(87% 0.0355 265.07)",
+          "oklch(95% 0.0136 265.07)"
         ]
       },
       "accent-dark": {
         "role": "primary",
         "displayName": "Accent Dark",
-        "canonical": "#1947a6",
+        "canonical": "#3057bc",
         "tonalRamp": [
-          "oklch(15% 0.0780 262.41)",
-          "oklch(27% 0.1300 262.41)",
-          "oklch(39% 0.1300 262.41)",
-          "oklch(51% 0.1300 262.41)",
-          "oklch(63% 0.1300 262.41)",
-          "oklch(75% 0.1300 262.41)",
-          "oklch(87% 0.0676 262.41)",
-          "oklch(95% 0.0260 262.41)"
+          "oklch(15% 0.0360 264.91)",
+          "oklch(27% 0.0600 264.91)",
+          "oklch(39% 0.0600 264.91)",
+          "oklch(51% 0.0600 264.91)",
+          "oklch(63% 0.0600 264.91)",
+          "oklch(75% 0.0600 264.91)",
+          "oklch(87% 0.0355 264.91)",
+          "oklch(95% 0.0136 264.91)"
         ]
       },
       "nav": {
@@ -75,8 +75,8 @@
           "oklch(51% 0.0569 256.41)",
           "oklch(63% 0.0569 256.41)",
           "oklch(75% 0.0569 256.41)",
-          "oklch(87% 0.0296 256.41)",
-          "oklch(95% 0.0114 256.41)"
+          "oklch(87% 0.0336 256.41)",
+          "oklch(95% 0.0129 256.41)"
         ]
       },
       "nav-text": {
@@ -90,23 +90,23 @@
           "oklch(51% 0.0277 258.37)",
           "oklch(63% 0.0277 258.37)",
           "oklch(75% 0.0277 258.37)",
-          "oklch(87% 0.0144 258.37)",
-          "oklch(95% 0.0055 258.37)"
+          "oklch(87% 0.0164 258.37)",
+          "oklch(95% 0.0063 258.37)"
         ]
       },
       "canvas": {
         "role": "neutral",
         "displayName": "Canvas",
-        "canonical": "#f1f5fb",
+        "canonical": "#f1f4f6",
         "tonalRamp": [
-          "oklch(15% 0.0055 258.34)",
-          "oklch(27% 0.0091 258.34)",
-          "oklch(39% 0.0091 258.34)",
-          "oklch(51% 0.0091 258.34)",
-          "oklch(63% 0.0091 258.34)",
-          "oklch(75% 0.0091 258.34)",
-          "oklch(87% 0.0047 258.34)",
-          "oklch(95% 0.0018 258.34)"
+          "oklch(15% 0.0025 236.50)",
+          "oklch(27% 0.0042 236.50)",
+          "oklch(39% 0.0042 236.50)",
+          "oklch(51% 0.0042 236.50)",
+          "oklch(63% 0.0042 236.50)",
+          "oklch(75% 0.0042 236.50)",
+          "oklch(87% 0.0025 236.50)",
+          "oklch(95% 0.0010 236.50)"
         ]
       },
       "surface": {
@@ -127,16 +127,16 @@
       "line": {
         "role": "neutral",
         "displayName": "Line",
-        "canonical": "#dce4f0",
+        "canonical": "#e5e9ef",
         "tonalRamp": [
-          "oklch(15% 0.0111 258.35)",
-          "oklch(27% 0.0185 258.35)",
-          "oklch(39% 0.0185 258.35)",
-          "oklch(51% 0.0185 258.35)",
-          "oklch(63% 0.0185 258.35)",
-          "oklch(75% 0.0185 258.35)",
-          "oklch(87% 0.0096 258.35)",
-          "oklch(95% 0.0037 258.35)"
+          "oklch(15% 0.0055 258.34)",
+          "oklch(27% 0.0092 258.34)",
+          "oklch(39% 0.0092 258.34)",
+          "oklch(51% 0.0092 258.34)",
+          "oklch(63% 0.0092 258.34)",
+          "oklch(75% 0.0092 258.34)",
+          "oklch(87% 0.0054 258.34)",
+          "oklch(95% 0.0021 258.34)"
         ]
       },
       "warning": {
@@ -144,29 +144,74 @@
         "displayName": "Warning",
         "canonical": "#80550d",
         "tonalRamp": [
-          "oklch(15% 0.0588 73.30)",
-          "oklch(27% 0.0981 73.30)",
-          "oklch(39% 0.0981 73.30)",
-          "oklch(51% 0.0981 73.30)",
-          "oklch(63% 0.0981 73.30)",
-          "oklch(75% 0.0981 73.30)",
-          "oklch(87% 0.0510 73.30)",
-          "oklch(95% 0.0196 73.30)"
+          "oklch(15% 0.0360 73.30)",
+          "oklch(27% 0.0600 73.30)",
+          "oklch(39% 0.0600 73.30)",
+          "oklch(51% 0.0600 73.30)",
+          "oklch(63% 0.0600 73.30)",
+          "oklch(75% 0.0600 73.30)",
+          "oklch(87% 0.0355 73.30)",
+          "oklch(95% 0.0136 73.30)"
         ]
       },
       "danger": {
         "role": "secondary",
         "displayName": "Danger",
-        "canonical": "#a32846",
+        "canonical": "#c11f46",
         "tonalRamp": [
-          "oklch(15% 0.0780 11.62)",
-          "oklch(27% 0.1300 11.62)",
-          "oklch(39% 0.1300 11.62)",
-          "oklch(51% 0.1300 11.62)",
-          "oklch(63% 0.1300 11.62)",
-          "oklch(75% 0.1300 11.62)",
-          "oklch(87% 0.0676 11.62)",
-          "oklch(95% 0.0260 11.62)"
+          "oklch(15% 0.0360 14.82)",
+          "oklch(27% 0.0600 14.82)",
+          "oklch(39% 0.0600 14.82)",
+          "oklch(51% 0.0600 14.82)",
+          "oklch(63% 0.0600 14.82)",
+          "oklch(75% 0.0600 14.82)",
+          "oklch(87% 0.0355 14.82)",
+          "oklch(95% 0.0136 14.82)"
+        ]
+      },
+      "crimson": {
+        "role": "secondary",
+        "displayName": "Crimson",
+        "canonical": "#d92550",
+        "tonalRamp": [
+          "oklch(15% 0.0360 14.81)",
+          "oklch(27% 0.0600 14.81)",
+          "oklch(39% 0.0600 14.81)",
+          "oklch(51% 0.0600 14.81)",
+          "oklch(63% 0.0600 14.81)",
+          "oklch(75% 0.0600 14.81)",
+          "oklch(87% 0.0355 14.81)",
+          "oklch(95% 0.0136 14.81)"
+        ]
+      },
+      "cyan": {
+        "role": "secondary",
+        "displayName": "Cyan",
+        "canonical": "#087e9f",
+        "tonalRamp": [
+          "oklch(15% 0.0360 224.85)",
+          "oklch(27% 0.0600 224.85)",
+          "oklch(39% 0.0600 224.85)",
+          "oklch(51% 0.0600 224.85)",
+          "oklch(63% 0.0600 224.85)",
+          "oklch(75% 0.0600 224.85)",
+          "oklch(87% 0.0355 224.85)",
+          "oklch(95% 0.0136 224.85)"
+        ]
+      },
+      "tile-navy": {
+        "role": "neutral",
+        "displayName": "Tile Navy",
+        "canonical": "#3c4a7d",
+        "tonalRamp": [
+          "oklch(15% 0.0360 270.72)",
+          "oklch(27% 0.0600 270.72)",
+          "oklch(39% 0.0600 270.72)",
+          "oklch(51% 0.0600 270.72)",
+          "oklch(63% 0.0600 270.72)",
+          "oklch(75% 0.0600 270.72)",
+          "oklch(87% 0.0355 270.72)",
+          "oklch(95% 0.0136 270.72)"
         ]
       }
     },
@@ -183,23 +228,13 @@
     "shadows": [
       {
         "name": "panel",
-        "value": "0 3px 12px rgb(22 42 76 / 4%)",
-        "purpose": "Panels and metric groups."
-      },
-      {
-        "name": "selected-filter",
-        "value": "0 2px 5px rgb(28 57 111 / 6%)",
-        "purpose": "Selected filter."
+        "value": "0 5px 24px #04091408,0 2px 5px #04091409",
+        "purpose": "Panel, card and KPI tile lift."
       },
       {
         "name": "active-navigation",
-        "value": "0 3px 8px rgb(4 18 43 / 15%)",
+        "value": "0 4px 12px rgb(63 106 216 / 38%)",
         "purpose": "Selected rail link."
-      },
-      {
-        "name": "mobile-help",
-        "value": "0 8px 20px rgb(9 25 48 / 22%)",
-        "purpose": "Mobile help menu."
       }
     ],
     "motion": [
@@ -211,20 +246,36 @@
     ],
     "breakpoints": [
       {
-        "name": "filters",
+        "name": "viewport-1250",
         "value": "1250px"
       },
       {
-        "name": "single-editor",
+        "name": "viewport-1050",
         "value": "1050px"
       },
       {
-        "name": "mobile",
+        "name": "viewport-760",
         "value": "760px"
       },
       {
-        "name": "narrow-mobile",
+        "name": "viewport-380",
         "value": "380px"
+      },
+      {
+        "name": "container-620",
+        "value": "620px"
+      },
+      {
+        "name": "container-560",
+        "value": "560px"
+      },
+      {
+        "name": "container-520",
+        "value": "520px"
+      },
+      {
+        "name": "container-340",
+        "value": "340px"
       }
     ]
   },
@@ -235,7 +286,7 @@
       "refersTo": "button-primary",
       "description": "Primary button extracted from the active workspace stylesheet.",
       "html": "<button class=\"ds-primary\">Save decision</button>",
-      "css": ".ds-primary{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:40px; padding:9px 14px; border:1px solid #c5d1e4; border-radius:7px; color:#263e60; background:#fff; text-decoration:none; font-size:13px; font-weight:600; line-height:1.4; transition:background .15s ease-out,border-color .15s ease-out;background:var(--accent,#285ed1); border-color:var(--accent,#285ed1); color:#fff;}.ds-primary:hover{color:#fff; background:var(--accent-dark,#1947a6); border-color:var(--accent-dark,#1947a6);}.ds-primary:active{background:#e1eaff;}.ds-primary:focus-visible{outline:3px solid #7aa5fb;outline-offset:3px;}.ds-primary:disabled{opacity:.6;cursor:default}@media(max-width:760px){button{min-height:44px}}"
+      "css": ":host{font-family:'Open Sans Variable','Open Sans','Segoe UI',Arial,sans-serif;line-height:1.55;color:var(--ink,#343a40)}.ds-primary{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:40px; padding:9px 14px; border:1px solid #c5d1e4; border-radius:7px; color:#263e60; background:#fff; text-decoration:none; font-size:13px; font-weight:600; line-height:1.4; transition:background .15s ease-out,border-color .15s ease-out;}.ds-primary{border-radius:5px; border-color:#d3dbe8; color:#343a40; font-weight:600;}.ds-primary{background:var(--accent); border-color:var(--accent); color:#fff;}.ds-primary:hover:not(:disabled){background:var(--accent-dark); border-color:var(--accent-dark); color:#fff;}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #316cdd;outline-offset:3px}"
     },
     {
       "name": "Secondary button",
@@ -243,7 +294,7 @@
       "refersTo": "button-secondary",
       "description": "Secondary button extracted from the active workspace stylesheet.",
       "html": "<button class=\"ds-secondary\">Discard changes</button>",
-      "css": ".ds-secondary{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:40px; padding:9px 14px; border:1px solid #c5d1e4; border-radius:7px; color:#263e60; background:#fff; text-decoration:none; font-size:13px; font-weight:600; line-height:1.4; transition:background .15s ease-out,border-color .15s ease-out;}.ds-secondary:hover{background:#eef3ff; border-color:#8ca8da;}.ds-secondary:active{background:#e1eaff;}.ds-secondary:focus-visible{outline:3px solid #7aa5fb;outline-offset:3px;}.ds-secondary:disabled{opacity:.6;cursor:default}@media(max-width:760px){button{min-height:44px}}"
+      "css": ":host{font-family:'Open Sans Variable','Open Sans','Segoe UI',Arial,sans-serif;line-height:1.55;color:var(--ink,#343a40)}.ds-secondary{display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:40px; padding:9px 14px; border:1px solid #c5d1e4; border-radius:7px; color:#263e60; background:#fff; text-decoration:none; font-size:13px; font-weight:600; line-height:1.4; transition:background .15s ease-out,border-color .15s ease-out;}.ds-secondary{border-radius:5px; border-color:#d3dbe8; color:#343a40; font-weight:600;}.ds-secondary:hover:not(:disabled){background:#edf2fc; border-color:#aabce5;}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #316cdd;outline-offset:3px}"
     },
     {
       "name": "Labelled field",
@@ -251,7 +302,7 @@
       "refersTo": "input",
       "description": "Labelled field extracted from the active workspace stylesheet.",
       "html": "<label class=\"ds-label\" for=\"ds-name\">Reviewed by</label><input class=\"ds-field\" id=\"ds-name\" placeholder=\"Reviewer name\">",
-      "css": ".ds-label{font-family:'Segoe UI',Arial,sans-serif;line-height:1.55;display:block; margin:14px 0 6px; font-size:13px; font-weight:600; color:#334c6d;}.ds-field{font-family:'Segoe UI',Arial,sans-serif;line-height:1.55;font:inherit;}.ds-field:focus-visible{outline:3px solid #7aa5fb;outline-offset:3px;}.ds-field::placeholder{color:#65758c; opacity:1;}.ds-field:disabled{opacity:.6}@media(max-width:760px){.ds-field{font-size:16px}}"
+      "css": ":host{font-family:'Open Sans Variable','Open Sans','Segoe UI',Arial,sans-serif;line-height:1.55;color:var(--ink,#343a40)}.ds-field{color:var(--ink); background:#fff; border:1px solid #bac8dc; border-radius:6px; padding:9px 11px; min-width:0;}.ds-field{border-color:#d3dbe8; border-radius:5px;}.ds-label{display:block; margin:14px 0 6px; font-size:13px; font-weight:600; color:#334c6d;}.ds-label{color:#495057;}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #316cdd;outline-offset:3px}"
     },
     {
       "name": "Status badge",
@@ -259,7 +310,7 @@
       "refersTo": "badge",
       "description": "Status badge extracted from the active workspace stylesheet.",
       "html": "<span class=\"ds-badge\">Open</span><span class=\"ds-badge ds-planned\">Planned</span><span class=\"ds-badge ds-closed\">Closed</span><span class=\"ds-badge ds-attempted\">Attempted</span><span class=\"ds-badge ds-cancelled\">Cancelled</span>",
-      "css": ".ds-badge{font-family:'Segoe UI',Arial,sans-serif;line-height:1.55;display:inline-flex; align-items:center; border-radius:5px; padding:4px 8px; font-size:12px; font-weight:600; color:#465b78; background:#edf1f8; line-height:1.5;color:#285cb0; background:#eaf1ff;}.ds-planned{color:#80550d; background:#fbf1dd;}.ds-closed{color:#246646; background:#e7f5ed;}.ds-attempted{color:#6852a0; background:#f0ebfb;}.ds-cancelled{color:#596478; background:#edf0f5;}"
+      "css": ":host{font-family:'Open Sans Variable','Open Sans','Segoe UI',Arial,sans-serif;line-height:1.55;color:var(--ink,#343a40)}.ds-badge{display:inline-flex; align-items:center; border-radius:5px; padding:4px 8px; font-size:12px; font-weight:600; color:#465b78; background:#edf1f8; line-height:1.5;}.ds-badge{font-size:11px; font-weight:700; border-radius:4px;}.ds-badge{color:#285cb0; background:#eaf1ff;}.ds-planned{color:#80550d; background:#fbf1dd;}.ds-closed{color:#246646; background:#e7f5ed;}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #316cdd;outline-offset:3px}"
     },
     {
       "name": "Evidence panel",
@@ -267,7 +318,7 @@
       "refersTo": "panel",
       "description": "Evidence panel extracted from the active workspace stylesheet.",
       "html": "<section class=\"ds-panel\"><h2>Signals to investigate</h2><p>Start with the inputs that raised this estimate.</p></section>",
-      "css": ".ds-panel{font-family:'Segoe UI',Arial,sans-serif;line-height:1.55;color:var(--ink,#182b47);background:var(--surface,#fff); border:1px solid var(--line,#dce4f0); border-radius:var(--radius,10px); box-shadow:var(--shadow,0 3px 12px rgb(22 42 76 / 4%)); padding:22px; margin-bottom:22px; min-width:0;}.ds-panel h2{font-size:17px; font-weight:650; margin:0 0 12px; letter-spacing:-.15px;line-height:1.3}.ds-panel p{color:var(--muted,#53647c);font-size:13px}"
+      "css": ":host{font-family:'Open Sans Variable','Open Sans','Segoe UI',Arial,sans-serif;line-height:1.55;color:var(--ink,#343a40)}.ds-panel{padding:18px; margin-bottom:18px;}.ds-panel{border-color:#eef0f3; border-radius:6px; box-shadow:var(--shadow);}.ds-panel h2{font-size:13px;}.ds-panel h2{font-size:14px; font-weight:700; letter-spacing:.03em; text-transform:uppercase;}.ds-panel p{font-size:12px;}.ds-panel p{margin:4px 0 0;}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #316cdd;outline-offset:3px}"
     },
     {
       "name": "Workspace navigation",
@@ -275,7 +326,7 @@
       "refersTo": "navigation",
       "description": "Workspace navigation extracted from the active workspace stylesheet.",
       "html": "<nav class=\"ds-nav\" aria-label=\"Workspace\"><a href=\"#overview\" aria-current=\"page\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1.5\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1.5\"/><path d=\"M14 15h7m-7 5h7\"/></svg>Overview</a></nav>",
-      "css": ".ds-nav{font-family:'Segoe UI',Arial,sans-serif;line-height:1.55;background:var(--nav,#132742);padding:16px}.ds-nav a{display:flex; gap:11px; align-items:center; padding:13px 11px; border-radius:7px; text-decoration:none; color:var(--nav-text,#d9e5f7); font-size:13px; line-height:1.4; min-height:46px;}.ds-nav a:hover{background:#203c60; color:#fff;}.ds-nav a[aria-current=page]{background:#2e63c9; color:#fff; box-shadow:0 3px 8px rgb(4 18 43 / 15%);}.ds-nav a:focus-visible{outline:3px solid #7aa5fb;outline-offset:3px;}"
+      "css": ":host{font-family:'Open Sans Variable','Open Sans','Segoe UI',Arial,sans-serif;line-height:1.55;color:var(--ink,#343a40)}.ds-nav{ padding:16px 16px 12px;}.ds-nav{background:linear-gradient(180deg,#16305a 0%,#102340 55%,#0d1c34 100%);}.ds-nav a{flex-direction:column; font-size:11px;}.ds-nav a{font-weight:600; border-radius:6px; color:#d4e0f4;}.ds-nav a:hover{background:#ffffff14;}.ds-nav a[aria-current=page]{color:#fff; background:var(--accent); box-shadow:0 4px 12px rgb(63 106 216 / 38%);}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #316cdd;outline-offset:3px}"
     },
     {
       "name": "Signal row",
@@ -283,12 +334,36 @@
       "refersTo": "panel",
       "description": "Signal row extracted from the active workspace stylesheet.",
       "html": "<div class=\"ds-signal\"><div class=\"ds-signal-label\"><strong>Payment activity</strong><span>Pushed the estimate higher</span></div><div class=\"ds-signal-value\">Saved evidence value</div></div>",
-      "css": ".ds-signal{font-family:'Segoe UI',Arial,sans-serif;line-height:1.55;display:grid; grid-template-columns:minmax(0,1fr) minmax(130px,45%); gap:9px 20px; padding:15px 0; border-bottom:1px solid #e3eaf5; font-size:14px;}.ds-signal-label{min-width:0; display:flex; flex-direction:column; gap:4px;}.ds-signal-label span{color:#66748b; font-size:12px; line-height:1.5;}.ds-signal-value{min-width:0; text-align:right; font-size:13px; line-height:1.6; overflow-wrap:anywhere;}@media(max-width:760px){.ds-signal{grid-template-columns:1fr}.ds-signal-value{text-align:left}}"
+      "css": ":host{font-family:'Open Sans Variable','Open Sans','Segoe UI',Arial,sans-serif;line-height:1.55;color:var(--ink,#343a40)}.ds-signal{grid-template-columns:1fr; gap:9px; padding:16px 0;}.ds-signal-label{min-width:0; display:flex; flex-direction:column; gap:4px;}.ds-signal-label span{font-size:13px;}.ds-signal-value{text-align:left; font-size:14px; max-width:none; padding-top:2px;}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #316cdd;outline-offset:3px}@media(max-width:760px){.ds-signal{grid-template-columns:1fr}.ds-signal-value{text-align:left}}"
+    },
+    {
+      "name": "KPI tile",
+      "kind": "card",
+      "refersTo": "kpi-tile",
+      "description": "KPI tile extracted from final screen CSS.",
+      "html": "<div class=\"ds-stat\"><span>Flagged and awaiting review</span><strong class=\"ds-number\">208</strong></div>",
+      "css": ".ds-stat{border:0;}.ds-stat{background:linear-gradient(100deg,#087e9f,#167bb9);}.ds-stat .ds-number{font-size:27px;}:host{font-family:'Open Sans Variable','Open Sans','Segoe UI',Arial,sans-serif;color:var(--ink,#343a40)}"
+    },
+    {
+      "name": "Finance card",
+      "kind": "card",
+      "refersTo": "finance-card",
+      "description": "Finance card extracted from final screen CSS.",
+      "html": "<article class=\"ds-finance-card\"><span class=\"ds-finance-kind\">Exposure</span><h3>Operating account balances</h3><strong class=\"ds-finance-value\">RM 2,016,997.13</strong></article>",
+      "css": ".ds-finance-card{padding:16px 18px;}.ds-finance-kind{font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#5f6a75;}.ds-finance-card h3{margin:8px 0 0; font-size:13px; font-weight:600; color:var(--muted);}.ds-finance-value{color:var(--muted); font-weight:500; font-size:20px; padding:4px 0; letter-spacing:0;}:host{font-family:'Open Sans Variable','Open Sans','Segoe UI',Arial,sans-serif;color:var(--ink,#343a40)}"
+    },
+    {
+      "name": "Balance split",
+      "kind": "custom",
+      "refersTo": "split-bar",
+      "description": "Balance split extracted from final screen CSS.",
+      "html": "<div class=\"ds-split\" role=\"img\" aria-label=\"Operating 72.3 percent, fixed deposit 27.7 percent\"><i style=\"width:72.3%;background:#3f6ad8\"></i><i style=\"width:27.7%;background:#9db5ee\"></i></div><p>Operating 72.3% \u00b7 Fixed deposit 27.7%</p>",
+      "css": ".ds-split{display:flex; height:16px; border-radius:8px; overflow:hidden; margin:0 0 10px;}.ds-split>i{display:block; height:100%;}:host{font-family:'Open Sans Variable','Open Sans','Segoe UI',Arial,sans-serif;color:var(--ink,#343a40)}"
     }
   ],
   "narrative": {
-    "northStar": "Corporate financial schedules",
-    "overview": "Precise navy navigation, cobalt actions and cool white work surfaces give the workspace the character of a readable financial schedule. Operate mode favours familiar controls, aligned evidence and a deliberate Segoe UI workhorse face. The system supports committee review and later RM work without suggesting a production banking service.\n\nInformation density comes from structured rows, compact labels and tabular numbers. White panels group work; restrained colour identifies selection and explicit state. Small authored SVG icons support navigation. No raster assets are shipped.",
+    "northStar": "Architect-influenced corporate financial schedule",
+    "overview": "Precise navy navigation, cobalt actions and cool white work surfaces give the workspace the character of a readable financial schedule. The navy rail and white header stay; cobalt interaction, gradient KPI tiles and self-hosted Open Sans establish the Architect theme. Operate mode favours familiar controls and aligned evidence. The system supports committee review and later RM work without suggesting a production banking service.\n\nInformation density comes from structured rows, compact labels and tabular numbers. White panels group work; restrained colour identifies selection and explicit state. Small authored SVG icons support navigation. No raster assets are shipped.",
     "keyCharacteristics": [
       "Navy wayfinding and cobalt interaction.",
       "Tabular values and aligned comparison rows.",
@@ -306,12 +381,18 @@
       "**Do** pair colour with explicit state text.",
       "**Do** align numeric evidence with tabular numerals and keep identifiers readable through wrapping.",
       "**Do** preserve visible keyboard focus and labelled controls.",
-      "**Do** use the active stylesheet as the visual source of truth."
+      "**Do** use the active stylesheet as the visual source of truth.",
+      "**Do** draw reference lines only for combined flow with a positive twelve-month average.",
+      "**Do** show the attrition reference as a reference level, not an outcome."
     ],
     "donts": [
       "**Don't** substitute glyph characters for the authored navigation SVGs.",
       "**Don't** present preview or unavailable integrations as connected saved-data work.",
-      "**Don't** merge original and latest evidence into an undated visual summary."
+      "**Don't** merge original and latest evidence into an undated visual summary.",
+      "**Don't** colour service rates red/green without a benchmark.",
+      "**Don't** use green for pending counts.",
+      "**Don't** render a balance split when either balance is missing.",
+      "**Don't** add remote fonts."
     ]
   }
 }

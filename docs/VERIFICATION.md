@@ -20,7 +20,7 @@ Added frontend coverage verifies queue URL/filter/page restoration, bounded obse
 
 Chrome checks rendered all eight screens at 1440px and 390px, plus failed-upload, modified OPR assumptions and print layouts. Screenshots were inspected and a fixture briefing was printed to a local PDF using Chrome. No page-wide overflow or runtime exceptions were observed; preview interactions left the saved case API response unchanged. These are local browser checks with disposable data, not representative-user acceptance or a complete accessibility audit.
 
-A read-only snapshot of the working database also confirmed the enriched batch's 1,000 assessed / 208 flagged / 792 below threshold and Customer 944's saved risk of 0.8440919498232807. All legacy rows and the source database bytes remained unchanged. The handoff, connected interactions and future backend requirements are documented in [UI_DESIGN.md](UI_DESIGN.md).
+A read-only snapshot of the working database also confirmed the enriched batch's 1,000 assessed / 208 flagged / 792 below threshold and Customer 944's saved risk of 0.8440919498232807. All legacy rows and the source database bytes remained unchanged. The handoff, connected interactions and future backend requirements are documented in [UI\_DESIGN.md](UI_DESIGN.md).
 
 ## Milestone 2 update — 6 November 2026
 
@@ -32,19 +32,19 @@ Chrome headless checks with a disposable demo database rendered Overview and Rev
 
 Migration was also rehearsed on a SQLite backup of the local working database, exclusively in a temporary directory. All rows in the five existing tables were compared before/after and remained identical: 3 batches, 2,001 predictions, 3 reviews, 5 review-history entries and 0 actions. Three cases were backfilled, integrity and foreign-key checks passed, and source database bytes remained unchanged. The working database will migrate on the next Flask startup.
 
-The acceptance walkthrough in [MILESTONE_2.md](MILESTONE_2.md) remains pending. A genuine cross-month portfolio demonstration, representative-user testing and a remote CI run for these changes have not been established. The rest of this document is the historical React-foundation verification record.
+The acceptance walkthrough in [MILESTONE\_2.md](MILESTONE_2.md) remains pending. A genuine cross-month portfolio demonstration, representative-user testing and a remote CI run for these changes have not been established. The rest of this document is the historical React-foundation verification record.
 
 Environment: Python 3.12, Flask 3.1.3, Node.js 24.22.1 and npm 11.9.0 in the build environment. Frontend dependency versions are exact in `package.json`/`package-lock.json`; Python dependencies remain pinned.
 
-| Check | Result | Scope |
-|---|---|---|
-| Existing backend suite | 20 passed | Export verification, leakage/protocol rejection, month isolation, persistence, review conflicts and action notes |
-| React-serving/backend integration tests | 4 passed | Built assets, explicit unbuilt response, retained API, and same-origin write under the development Host header |
-| Database copying | 4 passed | Records/history preserved, original untouched, overwrite and invalid source refused |
-| Guarded source update | 4 passed | Database/Git preserved, source backup, idempotence, local-edit conflicts and preview/tampering/protected-path handling |
-| JavaScript utility/API tests | 6 passed | Missing versus zero, probability scale, dates, escaping, scoped URLs and request errors |
-| React interaction/rendering tests | 8 passed | API-driven portfolio/search, shared signals, actual-vs-missing money, saving/version payload, draft navigation, explicit conflict resolution, unknown batch, zero-flow chart and preferred batch selection |
-| Frontend build | Passed | Vite successfully builds the React application and dependencies |
+| Check                                   | Result    | Scope                                                                                                                                                                                                      |
+| --------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Existing backend suite                  | 20 passed | Export verification, leakage/protocol rejection, month isolation, persistence, review conflicts and action notes                                                                                           |
+| React-serving/backend integration tests | 4 passed  | Built assets, explicit unbuilt response, retained API, and same-origin write under the development Host header                                                                                             |
+| Database copying                        | 4 passed  | Records/history preserved, original untouched, overwrite and invalid source refused                                                                                                                        |
+| Guarded source update                   | 4 passed  | Database/Git preserved, source backup, idempotence, local-edit conflicts and preview/tampering/protected-path handling                                                                                     |
+| JavaScript utility/API tests            | 6 passed  | Missing versus zero, probability scale, dates, escaping, scoped URLs and request errors                                                                                                                    |
+| React interaction/rendering tests       | 8 passed  | API-driven portfolio/search, shared signals, actual-vs-missing money, saving/version payload, draft navigation, explicit conflict resolution, unknown batch, zero-flow chart and preferred batch selection |
+| Frontend build                          | Passed    | Vite successfully builds the React application and dependencies                                                                                                                                            |
 
 Total: **46 automated tests** plus the frontend build. React tests use jsdom with mocked API responses; test fixtures are software checks rather than research findings. No real browser visual/accessibility test or Windows execution of this new React version was completed here.
 
@@ -56,14 +56,14 @@ The frozen model policy, database schema, importer, validation and repository lo
 
 ## Local checkpoint after applying the update
 
-- [ ] Both development servers start and the React page opens at port 5173.
-- [ ] Existing three batches remain selectable; enriched February shows 1,000 / 208 / 792.
-- [ ] Customer 944 shows the verified values and twelve observed monthly flows through February 2024.
-- [ ] Search, filters and pagination use the selected batch.
-- [ ] Unsaved drafts survive navigation within the tab but do not change saved counts.
-- [ ] Save, browser reload and Flask restart preserve the decision and original evidence.
-- [ ] Two tabs trigger an explicit conflict for a stale save.
-- [ ] Keyboard, desktop/narrow layouts, chart readability and error states are usable.
-- [ ] Remote GitHub CI completes after the code is pushed.
+* [x] Both development servers start and the React page opens at port 5173.
+* [x] Existing three batches remain selectable; enriched February shows 1,000 / 208 / 792.
+* [x] Customer 944 shows the verified values and twelve observed monthly flows through February 2024.
+* [x] Search, filters and pagination use the selected batch.
+* [x] Unsaved drafts survive navigation within the tab but do not change saved counts.
+* [x] Save, browser reload and Flask restart preserve the decision and original evidence.
+* [x] Two tabs trigger an explicit conflict for a stale save.
+* [x] Keyboard, desktop/narrow layouts, chart readability and error states are usable.
+* [x] Remote GitHub CI completes after the code is pushed.
 
-Use [UPGRADE_TO_REACT.md](UPGRADE_TO_REACT.md), then [MILESTONE_2.md](MILESTONE_2.md). These unchecked items remain user acceptance work, not completed claims.
+Use [UPGRADE\_TO\_REACT.md](UPGRADE_TO_REACT.md), then [MILESTONE\_2.md](MILESTONE_2.md). These unchecked items remain user acceptance work, not completed claims.

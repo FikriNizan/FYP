@@ -1,0 +1,323 @@
+diff --git a/frontend/src/components/FlowHistory.jsx b/frontend/src/components/FlowHistory.jsx
+index 47276a6..b68f6a9 100644
+--- a/frontend/src/components/FlowHistory.jsx
++++ b/frontend/src/components/FlowHistory.jsx
+@@ -2,30 +2,60 @@ import React, { useState } from 'react';
+ import { isNumber, money, monthLabel } from '../format.js';
+ import { observedMonths } from '../flows.js';
+ 
++const WIDTH = 780, HEIGHT = 280, PLOT_LEFT = 75, PLOT_RIGHT = 640;
++const compact = value => value >= 1e6 ? 'RM ' + (value / 1e6).toFixed(2) + 'm' : value >= 1e3 ? 'RM ' + Math.round(value / 1e3) + 'k' : 'RM ' + Math.round(value);
++
+ export default function FlowHistory({ history = [], baseline, cutoff }) {
+   const [measure,setMeasure] = useState('combined_flow_myr');
++  const [active,setActive] = useState(null);
+   const rows = observedMonths(history,cutoff);
+   const labels = {combined_flow_myr:'Combined flow',inbound_myr:'Incoming flow',outbound_success_myr:'Successful outgoing flow'};
+   if (!rows.length) return <section className="panel"><h2>Recorded transaction activity</h2><p className="muted">No transaction history was provided for this assessment.</p></section>;
+-  const reference = measure==='combined_flow_myr' && isNumber(baseline) ? baseline : null;
+-  const top = Math.max(1, ...rows.map(r => isNumber(r[measure]) ? r[measure] : 0), reference || 0) * 1.1;
+-  const x = i => 80 + i * (650 / rows.length);
++  // The volume-attrition rule uses a positive trailing twelve-month average of combined flow.
++  const average = measure==='combined_flow_myr' && isNumber(baseline) && baseline > 0 ? baseline : null;
++  const attrition = average === null ? null : average / 2;
++  const top = Math.max(1, ...rows.map(r => isNumber(r[measure]) ? r[measure] : 0), average || 0) * 1.1;
++  const step = (PLOT_RIGHT - PLOT_LEFT) / rows.length, barWidth = step * .65;
++  const x = i => PLOT_LEFT + 8 + i * step;
+   const y = value => 215 - (value / top) * 170;
+   const tick = value => top >= 1e6 ? (value/1e6).toFixed(1)+'m' : top >= 1000 ? (value/1000).toFixed(1)+'k' : Math.round(value).toLocaleString('en-MY');
+   const latest = rows.at(-1), previous = rows.at(-2);
+   const takeaway = isNumber(latest[measure]) ? `${monthLabel(latest.snapshot_month)}: ${money(latest[measure])}.`
+     : `${monthLabel(latest.snapshot_month)}: this measure was not provided.`;
++  const averageY = average === null ? 0 : y(average);
++  const attritionY = attrition === null ? 0 : y(attrition);
++  const attritionLabelY = Math.min(Math.max(attritionY, averageY + 34), 232);
++  const hovered = active === null ? null : rows[active];
++  const hoveredValue = hovered && isNumber(hovered[measure]) ? hovered[measure] : null;
++  const tipLeft = hovered ? Math.min(Math.max((x(active) + barWidth / 2) / WIDTH * 100, 15), 80) : 0;
++  const tipTop = hovered ? (hoveredValue === null ? 150 : y(hoveredValue)) / HEIGHT * 100 : 0;
+   return <section className="panel"><div className="section-heading"><div><h2>Recorded transaction activity</h2><p className="muted">How has activity changed? · {monthLabel(rows[0].snapshot_month)}–{monthLabel(latest.snapshot_month)}</p></div><label className="chart-control">Measure<select value={measure} onChange={e=>setMeasure(e.target.value)}>{Object.entries(labels).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label></div>
+     <p className="chart-takeaway">{takeaway}{isNumber(latest[measure]) && isNumber(previous?.[measure]) && previous[measure]>0 && <> {Math.abs((latest[measure]/previous[measure]-1)*100).toFixed(1)}% {latest[measure]>=previous[measure] ? 'higher' : 'lower'} than the previous recorded month.</>}</p>
+-    <svg className="chart" viewBox="0 0 780 280" role="img" aria-label={`${labels[measure]} by observed month in MYR. Missing months are gaps. Exact amounts are in the table below.`}>
++    <div className="chart-wrap" style={{position:'relative'}}>
++    <svg className="chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${labels[measure]} by observed month in MYR. Missing months are gaps.${average !== null ? ' Two reference lines show the trailing twelve-month average and the attrition reference, which is half of that average.' : ''} Exact amounts are in the table below.`}>
+       <text x="4" y="22">MYR</text>
+-      {[0,.5,1].map(f => <g key={f}><line className="grid" x1="75" x2="750" y1={y(f*top)} y2={y(f*top)} /><text x="4" y={y(f*top)+4}>{tick(f*top)}</text></g>)}
+-      {rows.map((row,i) => <g key={row.snapshot_month}>{isNumber(row[measure]) ? <rect x={x(i)} y={y(row[measure])} width={650/rows.length*.65} height={Math.max(0,215-y(row[measure]))} fill={i >= rows.length-3 ? '#356bd9' : '#c6d5ed'}><title>{monthLabel(row.snapshot_month)}: {money(row[measure])}</title></rect> : <text x={x(i)} y="206"><title>{monthLabel(row.snapshot_month)}: Not provided</title>—</text>}<text x={x(i)} y="238">{new Date(row.snapshot_month+'T00:00:00Z').toLocaleDateString('en-MY',{month:'short',timeZone:'UTC'})}</text></g>)}
+-      {reference !== null && <line className="baseline" x1="75" x2="750" y1={y(reference)} y2={y(reference)} />}
++      {[0,.5,1].map(f => <g key={f}><line className="grid" x1={PLOT_LEFT} x2={PLOT_RIGHT} y1={y(f*top)} y2={y(f*top)} /><text x="4" y={y(f*top)+4}>{tick(f*top)}</text></g>)}
++      {rows.map((row,i) => <g key={row.snapshot_month} className={'col'+(active === i ? ' is-active' : '')} onPointerEnter={()=>setActive(i)} onPointerLeave={()=>setActive(null)} onPointerDown={()=>setActive(i)}>
++        <path className="hit" d={`M${x(i)+barWidth/2-step/2} 40 h${step} V215 h${-step} Z`} fill="transparent" />
++        {isNumber(row[measure]) ? <rect x={x(i)} y={y(row[measure])} width={barWidth} height={Math.max(0,215-y(row[measure]))} fill={i >= rows.length-3 ? '#356bd9' : '#c6d5ed'} /> : <text x={x(i)} y="206">—</text>}
++        <text x={x(i)} y="238">{new Date(row.snapshot_month+'T00:00:00Z').toLocaleDateString('en-MY',{month:'short',timeZone:'UTC'})}</text></g>)}
++      {average !== null && <g>
++        <line className="baseline" x1={PLOT_LEFT} x2={PLOT_RIGHT} y1={averageY} y2={averageY} stroke="#3c4a7d" strokeWidth="1.75" strokeDasharray="1 5" strokeLinecap="round" />
++        <text className="line-label average" x={PLOT_RIGHT + 10} y={averageY + 3}>12-month average</text><text className="line-value average" x={PLOT_RIGHT + 10} y={averageY + 16}>{compact(average)}</text>
++        <line className="reference-line" x1={PLOT_LEFT} x2={PLOT_RIGHT} y1={attritionY} y2={attritionY} stroke="#d92550" strokeWidth="1.5" strokeDasharray="7 4" />
++        <text className="line-label attrition" x={PLOT_RIGHT + 10} y={attritionLabelY + 3}>Attrition reference</text><text className="line-value attrition" x={PLOT_RIGHT + 10} y={attritionLabelY + 16}>{compact(attrition)}</text>
++      </g>}
+       <text x="345" y="270">Observed month</text>
+     </svg>
+-    <div className="legend"><span>Earlier months</span><span>Latest three calendar months</span></div>
+-    <p className="muted">{labels[measure]}, MYR. Gaps mean not provided; zero remains zero. {reference !== null ? 'Dashed line: trailing twelve-month monthly average of combined flow.' : ''}</p>
++    {hovered && <div className="chart-tooltip" aria-hidden="true" style={{position:'absolute',left:tipLeft+'%',top:tipTop+'%',transform:'translate(-50%,calc(-100% - 10px))',pointerEvents:'none'}}>
++      <strong>{monthLabel(hovered.snapshot_month)}</strong>
++      <span>{hoveredValue === null ? labels[measure]+': not provided' : `${labels[measure]}: ${money(hoveredValue)}`}</span>
++      {hoveredValue !== null && average !== null && <span>{Math.abs((hoveredValue/average-1)*100).toFixed(1)}% {hoveredValue >= average ? 'above' : 'below'} the 12-month average</span>}
++    </div>}
++    </div>
++    <div className="legend"><span className="key-earlier">Earlier months</span><span className="key-recent">Latest three calendar months</span>{average !== null && <><span className="key-average">12-month average</span><span className="key-attrition">Attrition reference</span></>}</div>
++    {average !== null && <p className="chart-reference-note"><strong>How to read the lines.</strong> The dotted line is the trailing twelve-month average of combined flow. The red dashed line is the attrition reference: half of that average. The defined drop is a next-three-month average at or below this reference. Those months are not yet observed, so the line shows the reference level, not an outcome.</p>}
++    <p className="muted">{labels[measure]}, MYR. Gaps mean not provided; zero remains zero.{measure==='combined_flow_myr' && average === null ? ' No positive trailing twelve-month average was provided, so reference lines are not drawn.' : ''}</p>
+     <details><summary>Read exact monthly amounts</summary><div className="table-wrap"><table><thead><tr><th scope="col">Month</th><th scope="col">Incoming (MYR)</th><th scope="col">Successful outgoing (MYR)</th><th scope="col">Combined (MYR)</th></tr></thead><tbody>{rows.map(row => <tr key={row.snapshot_month}><td>{monthLabel(row.snapshot_month)}</td><td>{money(row.inbound_myr)}</td><td>{money(row.outbound_success_myr)}</td><td>{money(row.combined_flow_myr)}</td></tr>)}</tbody></table></div></details>
+   </section>;
+ }
+diff --git a/frontend/src/components/Icon.jsx b/frontend/src/components/Icon.jsx
+index 288217d..4b6eaa6 100644
+--- a/frontend/src/components/Icon.jsx
++++ b/frontend/src/components/Icon.jsx
+@@ -6,6 +6,10 @@ const paths = {
+   calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h1m6 0h1m-8 3h1"/></>,
+   guide: <><path d="M12 5C8 2 3 4 3 4v16s5-2 9 1c4-3 9-1 9-1V4s-5-2-9 1Zm0 0v16"/></>,
+   research: <><path d="M4 4v16h17M8 15l4-5 4 2 5-7"/></>,
++  wallet: <><path d="M4 7a2 2 0 0 1 2-2h12v4"/><path d="M4 7v10a2 2 0 0 0 2 2h14V9H6a2 2 0 0 1-2-2Z"/><circle cx="16.5" cy="14" r="1"/></>,
++  deposit: <><path d="M3 10 12 4l9 6"/><path d="M5 10v8m4-8v8m6-8v8m4-8v8M3 20h18"/></>,
++  receipt: <><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6m-6 4h6"/></>,
++  waiver: <><path d="m19 5-14 14"/><circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/></>,
+   brand: <><path d="M5 20V9m7 11V4m7 16v-7"/><path d="M3 20h18"/></>,
+ };
+ export default function Icon({name,className=''}) {
+diff --git a/frontend/src/main.jsx b/frontend/src/main.jsx
+index 97e0bbf..ac97a61 100644
+--- a/frontend/src/main.jsx
++++ b/frontend/src/main.jsx
+@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
+ import { HashRouter } from 'react-router-dom';
+ import App from './App.jsx';
+ import './workspace.css';
++import './workspace-architect.css';
+ 
+ // Preserve links made by the earlier HTML starter.
+ if (location.hash && !location.hash.startsWith('#/')) location.replace('#/' + location.hash.slice(1));
+diff --git a/frontend/src/pages/Overview.jsx b/frontend/src/pages/Overview.jsx
+index 4665636..689dfb4 100644
+--- a/frontend/src/pages/Overview.jsx
++++ b/frontend/src/pages/Overview.jsx
+@@ -5,8 +5,15 @@ import { count, decisionLabel, forecastLabel, money, monthLabel, percent } from
+ import { assessmentLink } from '../navigation.js';
+ import { ErrorNotice, RiskBadge } from '../components/Common.jsx';
+ import { ConnectionState } from '../components/Workspace.jsx';
++import Icon from '../components/Icon.jsx';
+ 
+ const limit = 50;
++const financeCards = [
++  { key:'non_fd_balance_myr', label:'Operating account balances', icon:'wallet', kind:'exposure' },
++  { key:'fd_balance_myr', label:'Fixed deposit balances', icon:'deposit', kind:'exposure' },
++  { key:'estimated_monthly_fee_myr', label:'Estimated monthly fees', icon:'receipt', kind:'estimate' },
++  { key:'estimated_monthly_waiver_myr', label:'Estimated monthly waivers', icon:'waiver', kind:'estimate' },
++];
+ export default function Overview({ batch, revision }) {
+   const [params,setParams] = useSearchParams();
+   const location = useLocation();
+@@ -48,6 +55,22 @@ export default function Overview({ batch, revision }) {
+       <div className="stat"><span>Flagged and awaiting review</span><strong className="number">{count(awaiting)}</strong><small className="muted">{count(summary.flagged_review_counts.prioritise)} prioritised for RM</small></div>
+     </div>
+     <div className="review-progress"><div><strong>Flagged review progress</strong><span>{count(reviewed)} reviewed · {count(awaiting)} awaiting</span></div><progress max={summary.flagged || 1} value={reviewed} aria-label="Reviewed flagged customers" /><small>{summary.flagged ? 'Based on all flagged customers in the selected batch.' : 'No flagged customers in this assessment.'}</small></div>
++    <section className="finance-context" aria-labelledby="finance-context-title">
++      <div className="section-heading"><div><h2 id="finance-context-title">Financial context for flagged customers</h2><p className="muted">Totals across the {count(summary.flagged)} flagged customers in this assessment.</p></div></div>
++      <div className="finance-cards">
++        {financeCards.map(({key,label,icon,kind}) => {
++          const value = summary.finance['flagged_' + key];
++          const coverage = value.records ? Math.round(value.records_with_value / value.records * 100) : 0;
++          return <article className={'finance-card '+kind} key={key}>
++            <div className="finance-card-top"><span className="finance-icon"><Icon name={icon}/></span><span className="finance-kind">{kind==='exposure' ? 'Exposure' : 'Historical estimate'}</span></div>
++            <h3>{label}</h3>
++            <strong className="finance-value">{money(value.total)}</strong>
++            <div className="finance-coverage"><span className="coverage-track" aria-hidden="true"><i style={{width:coverage+'%'}} /></span><small className="muted">{count(value.records_with_value)} of {count(value.records)} records available</small></div>
++          </article>;
++        })}
++      </div>
++      <p className="muted finance-note">Balances are exposures. Fees and waivers are separate historical estimates; they do not establish profit or potential savings.</p>
++    </section>
+     <section className="panel"><h2>Customer review queue</h2><p className="muted">Highest predicted risk first. Consider the evidence from both Operations and Finance before deciding.</p>
+       <div className="toolbar"><div className="filters" role="group" aria-label="Customer filter">
+         {[['flagged','Flagged'],['awaiting','Flagged · awaiting review'],['all','All customers']].map(([key,label]) => <button key={key} aria-pressed={filter === key} onClick={() => chooseFilter(key)}>{label}</button>)}
+@@ -59,12 +82,5 @@ export default function Overview({ batch, revision }) {
+       </tbody></table></div>
+       <div className="pagination"><span className="muted">{list.items.length ? `${offset + 1}–${Math.min(offset + limit, list.total)}` : '0'} of {count(list.total)} {list.total===1 ? 'customer' : 'customers'}</span><div className="pagination-controls"><button disabled={!offset} onClick={() => update({offset:Math.max(0,offset-limit)})}>Previous</button><button disabled={offset+limit >= list.total} onClick={() => update({offset:offset+limit})}>Next</button></div></div>
+     </section>
+-    <section className="panel"><details><summary>Financial context for flagged customers</summary>
+-      {[['non_fd_balance_myr','Operating account balances'],['fd_balance_myr','Fixed deposit balances'],['estimated_monthly_fee_myr','Estimated monthly fees'],['estimated_monthly_waiver_myr','Estimated monthly waivers']].map(([key,label]) => {
+-        const value = summary.finance['flagged_' + key];
+-        return <div className="signal" key={key}><span>{label}</span><span className="signal-value">{money(value.total)}<br /><small className="muted">{count(value.records_with_value)} of {count(value.records)} records available</small></span></div>;
+-      })}
+-      <p className="muted">Balances are exposures. Fees and waivers are separate historical estimates; they do not establish profit or potential savings.</p>
+-    </details></section>
+   </>;
+ }
+diff --git a/frontend/src/workspace-architect.css b/frontend/src/workspace-architect.css
+new file mode 100644
+index 0000000..a83ca48
+--- /dev/null
++++ b/frontend/src/workspace-architect.css
+@@ -0,0 +1,160 @@
++/* Architect theme layer. Loaded after workspace.css; delete the import in main.jsx to revert.
++   Markup is untouched. Screen only, so the A4 briefing print rules in workspace.css still apply. */
++@media screen {
++  :root {
++    --ink:#343a40; --muted:#5f6a75; --accent:#3f6ad8; --accent-dark:#3057bc;
++    --canvas:#f1f4f6; --line:#e5e9ef; --soft:#e8eefb; --danger:#c11f46;
++    --nav:#132742; --radius:6px;
++    --shadow:0 5px 24px #04091408,0 2px 5px #04091409;
++    --crimson:#d92550;
++    font-family:'Open Sans','Segoe UI',Arial,sans-serif;
++  }
++  body { background:var(--canvas); }
++  a,summary,.link-button { color:var(--accent-dark); }
++  ::selection { color:#14275a; background:#cfdcfb; }
++
++  /* ---- controls ---- */
++  button,.button { border-radius:5px; border-color:#d3dbe8; color:#343a40; font-weight:600; }
++  button:hover:not(:disabled),.button:hover { background:#edf2fc; border-color:#aabce5; }
++  .primary { background:var(--accent); border-color:var(--accent); color:#fff; }
++  .primary:hover:not(:disabled) { background:var(--accent-dark); border-color:var(--accent-dark); color:#fff; }
++  input,textarea,select { border-color:#d3dbe8; border-radius:5px; }
++  button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[role=tabpanel]:focus-visible { outline-color:#316cdd; }
++
++  /* ---- navy rail, Architect wayfinding ---- */
++  .workspace-rail { background:linear-gradient(180deg,#16305a 0%,#102340 55%,#0d1c34 100%); }
++  .brand-mark { background:var(--accent); border-color:transparent; border-radius:6px; }
++  .rail-context { font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:#8fb4ff; }
++  .app-nav a { font-weight:600; border-radius:6px; color:#d4e0f4; }
++  .app-nav a:hover { background:#ffffff14; }
++  .app-nav a.active { background:var(--accent); box-shadow:0 4px 12px rgb(63 106 216 / 38%); }
++  .rail-help { border-top-color:#ffffff1f; }
++  .header-utilities a:hover { background:#ffffff14; }
++  .app-header { box-shadow:0 1px 3px #04091409; border-bottom:0; }
++  .workspace-location>span { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6c7a8a; }
++  .month-control select { background:#f6f8fb; border-color:#d3dbe8; }
++
++  /* ---- type ---- */
++  h1 { font-weight:600; letter-spacing:-.6px; }
++  h2 { font-size:14px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; }
++  .briefing-sheet h2,.context-card h2,.prediction-stats h2 { text-transform:none; letter-spacing:-.15px; }
++  .muted { color:var(--muted); }
++
++  /* ---- panels ---- */
++  .panel,.context-card { border-color:#eef0f3; border-radius:6px; box-shadow:var(--shadow); }
++  .case-content details>.panel { box-shadow:none; border:0; }
++  .scope-note { border-color:#cfdcf7; background:#e8eefb; color:#2f4d8f; border-radius:5px; }
++
++  /* ---- gradient KPI tiles ---- */
++  .stats { gap:20px; border:0; background:transparent; box-shadow:none; border-radius:0; margin-bottom:22px; }
++  .stat { position:relative; overflow:hidden; color:#fff; border-radius:6px; padding:21px 24px; box-shadow:var(--shadow); }
++  .stat+.stat { border-left:0; }
++  .stat::after { content:''; position:absolute; right:-32px; top:-46px; width:125px; height:125px; border:1px solid #ffffff22; border-radius:50%; pointer-events:none; }
++  .stat:nth-child(1) { background:linear-gradient(135deg,#3c4a7d,#262b4f); }
++  .stat:nth-child(2) { background:linear-gradient(100deg,#b41c40,#d92550); }
++  .stat:nth-child(3) { background:linear-gradient(100deg,#087e9f,#167bb9); }
++  .stat>span { max-width:none; font-size:13px; }
++  .stat .number,.stat:last-child .number { color:#fff; }
++  .stat small,.stat small.muted { color:#fff; opacity:.92; }
++
++  /* ---- progress, filters, tabs ---- */
++  progress { height:8px; border-radius:4px; background:#dde5f3; }
++  progress::-webkit-progress-bar { background:#dde5f3; }
++  progress::-webkit-progress-value { background:var(--accent); }
++  .filters { background:#f4f6fa; border-color:#e5e9ef; border-radius:6px; }
++  .filters button[aria-pressed=true] { color:var(--accent-dark); border-color:#d6e0f5; }
++  .perspective-tabs { border-bottom:1px solid var(--line); padding-bottom:0; gap:22px; }
++  .perspective-tabs button { border:0; border-bottom:3px solid transparent; border-radius:0; background:transparent; padding:10px 2px; margin-bottom:-1px; min-height:44px; }
++  .perspective-tabs button:hover:not(:disabled) { background:transparent; color:var(--accent-dark); }
++  .perspective-tabs button[aria-selected=true] { color:var(--accent-dark); background:transparent; border-bottom-color:var(--accent); }
++  .case-action-tabs { background:#dfe8fa; border-radius:6px; }
++  .case-action-tabs button[aria-selected=true] { color:var(--accent-dark); }
++
++  /* ---- tables ---- */
++  th { background:#f8f9fb; color:#5f6a75; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; border-top:1px solid var(--line); }
++  td { border-bottom-color:#edf0f5; }
++  tbody tr:hover { background:#fafbfe; }
++  .customer-name { color:#2b3a55; }
++
++  /* ---- badges and status ---- */
++  .badge { font-size:11px; font-weight:700; border-radius:4px; color:#3057bc; background:#e8eefb; }
++  .flagged { color:#ad173d; background:#fce8ed; }
++  .risk { color:var(--danger); }
++  .status-open { color:#3057bc; background:#e8eefb; }
++  .status-deferred,.status-planned,.overdue { color:#855500; background:#fff4d6; }
++  .status-closed,.status-delivered { color:#17653d; background:#e3f6ec; }
++  .connection-state { background:#e3f6ec; color:#17653d; }
++  .connection-state.preview { background:#fff4d6; color:#855500; }
++
++  /* ---- forms ---- */
++  .review-form label,.case-filters label { color:#495057; }
++  .review-form h2 { color:var(--accent-dark); }
++  .success { color:#19643b; background:#e3f6ec; border-color:#b2e3c9; }
++  .error { color:#9b1235; background:#fce8ed; border-color:#f5b8c6; }
++  .technical { background:#f6f8fb; }
++  details { border-top-color:#e9edf3; }
++
++  /* ---- charts (inline SVG fills are overridden here) ---- */
++  .chart text { font-family:'Open Sans','Segoe UI',Arial,sans-serif; font-size:11px; fill:#5f6a75; }
++  .chart .grid { stroke:#e9edf3; }
++  .chart rect { rx:3px; }
++  .chart rect[fill="#356bd9"] { fill:#3f6ad8; }
++  .chart rect[fill="#c6d5ed"] { fill:#a9bdee; }
++  .legend { gap:8px 20px; }
++  .legend span::before { background:#a9bdee; }
++  .legend span.key-recent::before { background:#3f6ad8; }
++  .legend span.key-average::before,.legend span.key-attrition::before { width:20px; height:0; border-top:2px dotted #3c4a7d; border-radius:0; background:none; vertical-align:middle; }
++  .legend span.key-attrition::before { border-top:2px dashed #d92550; }
++  .chart .baseline { stroke:#3c4a7d; stroke-width:1.75; stroke-dasharray:1 5; stroke-linecap:round; }
++  .chart .reference-line { stroke:#d92550; stroke-width:1.5; stroke-dasharray:7 4; }
++  .chart text.line-label { font-size:11px; font-weight:700; }
++  .chart text.line-value { font-size:11px; font-weight:600; }
++  .chart text.average { fill:#3c4a7d; }
++  .chart text.attrition { fill:#c11f46; }
++  .chart .col .hit { cursor:default; }
++  .chart .col.is-active rect { filter:brightness(.9); }
++  .chart-tooltip { z-index:3; display:flex; flex-direction:column; gap:2px; padding:9px 12px; border-radius:6px; color:#fff; background:#262b4f; box-shadow:0 8px 22px rgb(9 25 48 / 28%); font-size:12px; line-height:1.45; white-space:nowrap; }
++  .chart-tooltip strong { font-size:12px; }
++  .chart-tooltip span { opacity:.92; }
++  .chart-reference-note { margin:12px 0; padding:11px 14px; border-left:3px solid #d92550; border-radius:0 5px 5px 0; background:#f8f9fb; font-size:12.5px; line-height:1.65; color:var(--ink); }
++
++  /* ---- case follow-up ---- */
++  .case-summary { background:#e8eefb; border-color:#d3def6; border-radius:6px; }
++  .context-card.original-context { color:#fff; border:0; background:linear-gradient(135deg,#3c4a7d,#262b4f); }
++  .original-context :is(h2,h3,strong,dt,dd,p,.number,.comparison-date,.muted,.eyebrow,small) { color:#fff; }
++  .original-context .muted,.original-context small { opacity:.9; }
++  .original-context .button { color:#fff; background:#ffffff16; border-color:#ffffff4d; }
++  .original-context .button:hover { background:#ffffff26; }
++  .timeline { border-left:2px solid #e0e7f5; }
++  .timeline li::before { background:var(--accent); border:2px solid #fff; box-sizing:content-box; left:-24px; }
++  .workflow-steps li[aria-current=step] { color:var(--accent-dark); border-color:var(--accent); }
++}
++@media screen and (max-width:760px) {
++  .stat .number,.stat:last-child .number { font-size:27px; }
++  .stat { padding:16px 18px; }
++  .perspective-tabs { gap:14px; }
++}
++
++/* ---- Financial context cards (Overview) ---- */
++@media screen {
++  .finance-context { margin:0 0 22px; }
++  .finance-context .section-heading { margin-bottom:12px; }
++  .finance-context .section-heading .muted { margin:2px 0 0; }
++  .finance-cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
++  .finance-card { display:flex; flex-direction:column; gap:6px; min-width:0; padding:18px 20px 16px; background:#fff; border:1px solid #eef0f3; border-top:3px solid var(--accent); border-radius:6px; box-shadow:var(--shadow); }
++  .finance-card.estimate { border-top-color:#087e9f; }
++  .finance-card-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
++  .finance-icon { display:grid; place-items:center; width:36px; height:36px; border-radius:50%; color:var(--accent-dark); background:var(--soft); }
++  .finance-card.estimate .finance-icon { color:#087e9f; background:#e3f3f8; }
++  .finance-icon .icon { width:19px; height:19px; }
++  .finance-kind { font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#5f6a75; }
++  .finance-card h3 { margin:8px 0 0; font-size:13px; font-weight:600; color:var(--muted); }
++  .finance-value { font-size:24px; font-weight:650; letter-spacing:-.5px; line-height:1.3; overflow-wrap:anywhere; }
++  .finance-coverage { margin-top:auto; padding-top:10px; display:flex; flex-direction:column; gap:6px; }
++  .coverage-track { display:block; height:5px; border-radius:3px; background:#e5e9ef; overflow:hidden; }
++  .coverage-track i { display:block; height:100%; background:var(--accent); border-radius:3px; }
++  .finance-card.estimate .coverage-track i { background:#087e9f; }
++  .finance-note { margin:12px 0 0; font-size:12px; }
++}
++@media screen and (max-width:1250px) { .finance-cards { grid-template-columns:repeat(2,minmax(0,1fr)); } }
++@media screen and (max-width:760px) { .finance-cards { grid-template-columns:1fr; gap:12px; } .finance-card { padding:16px 18px; } }
