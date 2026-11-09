@@ -1,5 +1,10 @@
 # Verification record — React correction, 3 November 2026
 
+## Milestone 3 update ? 9 November 2026
+
+The deterministic RM briefing and direct PDF download pass 115 automated tests (41 backend, 8 copy/update, 8 JavaScript client/API, 58 React) and the Vite production build. Chrome downloaded and opened a two-page A4 single-case PDF using a read-only February/March portfolio backup and an eight-page two-case stress PDF from separate constructed fixtures. Independent PDF parsing checked A4 dimensions, non-blank pages and complete identifiers. Browser checks covered 1440px/380px layouts, actual download, print and stale-evidence review/retry. Read-only tests compare complete database dumps; the working database SHA-256 remained unchanged. See [MILESTONE_3.md](MILESTONE_3.md) for precise scope, dependency pins and the owner's pending acceptance walkthrough. No full-portfolio scoring/import replay or representative-user evaluation is claimed.
+
+
 ## Impeccable redesign and five-issue refinement — 7 November 2026
 
 The work-centred redesign passes **73 automated tests** (32 backend/migration, 8 copy/update, 6 JavaScript utility/API and 27 React interaction tests), plus the production build. Seven added React checks cover independent per-task drafts, deliberate task outcomes, scoped discard, worklist filters/page/selection restoration, version advancement after the same session's accepted write, keyboard action switching and normal committee-draft discard.

@@ -30,6 +30,26 @@ export async function request(path, { params, method = 'GET', body, signal } = {
 }
 
 export const api = {
+  briefing: ids => request('/api/briefings?' + new URLSearchParams(ids.map(id=>['case_id',id]))),
+  downloadBriefing: async (ids, snapshots, signal) => {
+    const response=await fetch('/api/briefings/pdf', {
+      method:'POST', credentials:'same-origin', signal,
+      headers:{Accept:'application/pdf','Content-Type':'application/json'},
+      body:JSON.stringify({case_ids:ids,snapshots}),
+    });
+    if (!response.ok) {
+      let result;
+      try { result=await response.json(); } catch { throw new ApiError('The PDF service returned an unreadable response. Try again.',response.status,'invalid_response'); }
+      const error=new ApiError(result.error?.message || 'PDF download failed. Try again.',response.status,result.error?.code);
+      error.briefing=result.briefing;
+      throw error;
+    }
+    if (!response.headers.get('Content-Type')?.startsWith('application/pdf')) throw new ApiError('The server did not return a PDF. Try again.',response.status,'invalid_pdf');
+    const blob=await response.blob();
+    if (!(await blob.slice(0,5).text()).startsWith('%PDF-')) throw new ApiError('The downloaded file is not a valid PDF. Try again.',response.status,'invalid_pdf');
+    const filename=response.headers.get('Content-Disposition')?.match(/filename="?([A-Za-z0-9_-]+\.pdf)"?/)?.[1] || 'txb-rm-briefing.pdf';
+    return {blob,filename};
+  },
   cases: params => request('/api/cases', { params }),
   case: id => request('/api/cases/' + encodeURIComponent(id)),
   updateCase: (id, body) => request('/api/cases/' + encodeURIComponent(id), { method: 'PUT', body }),

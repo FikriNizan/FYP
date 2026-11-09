@@ -1,0 +1,15 @@
+﻿/* Briefing-only content wrapping and export states; shared Architect tokens stay unchanged. */
+@media screen {
+  .briefing-sheet .briefing-note { white-space:pre-wrap; overflow-wrap:anywhere; }
+  .briefing-refresh { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px; }
+  .briefing-sheet .briefing-context dl { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+  .briefing-sheet .briefing-followups { grid-template-columns:minmax(0,1fr); gap:5px; }
+  .briefing-sheet .briefing-followups dd { text-align:left; margin-bottom:12px; }
+}
+@media print {
+  .briefing-sheet .briefing-section,.briefing-sheet .briefing-context>section { break-inside:auto; }
+  .briefing-sheet .briefing-note { white-space:pre-wrap; overflow-wrap:anywhere; }
+  .briefing-sheet h3 { break-after:avoid; }
+  .briefing-sheet .briefing-followups { grid-template-columns:minmax(0,1fr); gap:5px; }
+  .briefing-sheet .briefing-followups dd { text-align:left; margin-bottom:8px; }
+}

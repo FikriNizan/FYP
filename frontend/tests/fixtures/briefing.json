@@ -1,0 +1,201 @@
+{
+  "items": [
+    {
+      "activity": {
+        "items": [],
+        "paragraphs": [
+          "50.0% lower versus the trailing twelve-month average.",
+          "Saved three-month and trailing twelve-month averages ending at this assessment cutoff; no future observations are inferred.",
+          "No cutoff-safe monthly flow history was supplied; this briefing uses the saved aggregate measures."
+        ],
+        "rows": [
+          [
+            "Latest 3-month average",
+            "RM\u00a050.00"
+          ],
+          [
+            "Trailing 12-month average",
+            "RM\u00a0100.00"
+          ]
+        ],
+        "title": "Observed activity through February 2024"
+      },
+      "ai_context": {
+        "calibrated_risk": 0.12,
+        "cutoff_month": "2024-02-29"
+      },
+      "case_id": "b2fb7fcd9ca1478078fc69e7760dec799d1b79bcc6b50fbbfc95e85ae27d6efb",
+      "customer_id": "944",
+      "decision": {
+        "items": [],
+        "paragraphs": [
+          "Original committee rationale",
+          "Reviewer: Committee \u00b7 Review saved: 9 Nov 2026",
+          "Owner: RM A \u00b7 Next follow-up: Not scheduled \u00b7 Case: Open",
+          "No follow-up has been recorded; this briefing can be prepared before outreach."
+        ],
+        "rows": [],
+        "title": "Current committee rationale & next step"
+      },
+      "finance": {
+        "items": [],
+        "paragraphs": [
+          "No committee Finance notes recorded.",
+          "Balances are exposures. Fees and waivers are separate historical three-month monthly estimates, not verified profit, actual invoices or retention savings."
+        ],
+        "rows": [
+          [
+            "Operating balances",
+            "RM\u00a02,016,997.13"
+          ],
+          [
+            "Fixed-deposit balances",
+            "RM\u00a00.00"
+          ],
+          [
+            "Estimated monthly fees",
+            "Not provided"
+          ],
+          [
+            "Estimated monthly waivers",
+            "RM\u00a00.00"
+          ]
+        ],
+        "title": "Finance context"
+      },
+      "latest": {
+        "items": [],
+        "paragraphs": [
+          "February 2024 \u00b7 Predicted risk 12.0%",
+          "Forecast Mar\u2013May 2024",
+          "No newer assessment month is available.",
+          "A distinct saved batch exists for the same assessment cutoff; this is not a newer month. See the exact identifiers below.",
+          "A later risk estimate does not revise the original judgement or close the case."
+        ],
+        "rows": [],
+        "title": "Latest available assessment"
+      },
+      "name": "Constructed long company 0",
+      "operations": {
+        "items": [],
+        "paragraphs": [
+          "No committee Operations notes recorded.",
+          "Saved aggregate rates for the latest three months through February 2024. No monthly service trend is inferred."
+        ],
+        "rows": [
+          [
+            "Payment failure rate",
+            "Not provided"
+          ],
+          [
+            "Bank-attributed payment failure rate",
+            "Not provided"
+          ],
+          [
+            "Login difficulty rate",
+            "Not provided"
+          ],
+          [
+            "Sessions without transactions",
+            "Not provided"
+          ]
+        ],
+        "title": "Operations context"
+      },
+      "original": {
+        "items": [],
+        "paragraphs": [
+          "February 2024 \u00b7 Predicted risk 84.4%",
+          "Forecast Mar\u2013May 2024",
+          "Original committee rationale",
+          "Original reviewer: Committee",
+          "Case opened: 9 Nov 2026"
+        ],
+        "rows": [],
+        "title": "At the time of review"
+      },
+      "questions": [
+        {
+          "month": "February 2024",
+          "source": "Observed three- and twelve-month flow averages",
+          "text": "Recent recorded transaction activity is lower than the trailing average. Has the way you use these accounts changed?"
+        },
+        {
+          "month": "February 2024",
+          "source": "Payment failures",
+          "text": "The recorded payment failure rate contributed to this estimate. Have you experienced difficulties completing payments?"
+        },
+        {
+          "month": "February 2024",
+          "source": "Login difficulties",
+          "text": "The recorded login difficulty rate contributed to this estimate. Have you experienced difficulties signing in?"
+        }
+      ],
+      "sample_note": "Single-case sample evidence is included. This briefing does not represent a complete portfolio.",
+      "signals": {
+        "items": [
+          "Transaction activity: 0.87% of the twelve-month average \u00b7 Pushed the estimate higher",
+          "Incoming payments: 15.02% of the twelve-month average \u00b7 Pushed the estimate higher",
+          "Payment failures: 40.0% \u00b7 Pushed the estimate higher"
+        ],
+        "paragraphs": [
+          "Model signals describe influence on the saved estimate, not confirmed complaints, causes or probability-point effects."
+        ],
+        "rows": [],
+        "title": "Signals to investigate"
+      },
+      "snapshot": {
+        "case_id": "b2fb7fcd9ca1478078fc69e7760dec799d1b79bcc6b50fbbfc95e85ae27d6efb",
+        "case_version": 1,
+        "evidence_hash": "f3dd9eeae94fda29c593a3e3746ac49e8ff092b80f61c77247eff5c65cf1500c",
+        "latest_prediction_id": "63b9354c1e05911e1fa664a2aaf9ca489b1b5df58ba928a3b9543f4f5e8530a4",
+        "original_prediction_id": "b2fb7fcd9ca1478078fc69e7760dec799d1b79bcc6b50fbbfc95e85ae27d6efb",
+        "review_version": 1
+      },
+      "traceability": [
+        [
+          "Case ID",
+          "b2fb7fcd9ca1478078fc69e7760dec799d1b79bcc6b50fbbfc95e85ae27d6efb"
+        ],
+        [
+          "Case version",
+          "1"
+        ],
+        [
+          "Original batch",
+          "025447fea9880197f3510507322581d94ca2016950439fb08429f267426069fe"
+        ],
+        [
+          "Original prediction",
+          "b2fb7fcd9ca1478078fc69e7760dec799d1b79bcc6b50fbbfc95e85ae27d6efb"
+        ],
+        [
+          "Original review version",
+          "1"
+        ],
+        [
+          "Current review version",
+          "1"
+        ],
+        [
+          "Latest batch",
+          "f84551f9376b4b2cf8dfba4989781189e0843af6041b2665f5b398873293d880"
+        ],
+        [
+          "Latest prediction",
+          "63b9354c1e05911e1fa664a2aaf9ca489b1b5df58ba928a3b9543f4f5e8530a4"
+        ]
+      ]
+    }
+  ],
+  "snapshots": [
+    {
+      "case_id": "b2fb7fcd9ca1478078fc69e7760dec799d1b79bcc6b50fbbfc95e85ae27d6efb",
+      "case_version": 1,
+      "evidence_hash": "f3dd9eeae94fda29c593a3e3746ac49e8ff092b80f61c77247eff5c65cf1500c",
+      "latest_prediction_id": "63b9354c1e05911e1fa664a2aaf9ca489b1b5df58ba928a3b9543f4f5e8530a4",
+      "original_prediction_id": "b2fb7fcd9ca1478078fc69e7760dec799d1b79bcc6b50fbbfc95e85ae27d6efb",
+      "review_version": 1
+    }
+  ]
+}

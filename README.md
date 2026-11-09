@@ -8,7 +8,7 @@ This corrects the earlier v0.2.0 plain-JavaScript starter to match Part 1, Secti
 
 ## Where you are now
 
-The roadmap's **Milestone 2 is Reviewed Customers and follow-up**. First verify the React foundation using the update guide. Then use [MILESTONE\_2.md](docs/MILESTONE_2.md) for the next feature's scope and build order.
+Milestone 2 (Reviewed Customers and follow-up) is implemented. Milestone 3 now completes the existing RM briefing with a direct, read-only PDF download and freshness checks. See [MILESTONE_3.md](docs/MILESTONE_3.md) for dependency setup, verified behaviour and the owner's pending Windows acceptance walkthrough; [MILESTONE_2.md](docs/MILESTONE_2.md) retains the earlier workflow context.
 
 Your supplied database-copy log showed three preserved batches and 2,001 prediction records. Those correspond to the one-case demo and two 1,000-customer imports. The selected enriched February batch remains a portfolio of 1,000 customers, with 208 flagged and 792 below threshold. At copying, there were zero reviews/actions; later development decisions will change those workflow counts.
 
@@ -36,7 +36,7 @@ Frontend = what users see and click. Backend = trusted server operations. Databa
 | `frontend/src/components/Signals.jsx`     | Shared SHAP signals, plain-language/technical layers            |
 | `frontend/src/components/FlowHistory.jsx` | Recorded monthly flows and accessible exact-value table         |
 | `frontend/src/api.js`, `format.js`        | API requests and consistent display rules                       |
-| `frontend/src/workspace.css`              | Active design system and responsive layout                       |
+| `frontend/src/workspace.css`, `workspace-architect.css` | Ordered base/Architect styles; screen theme and A4 print rules |
 | `frontend/package-lock.json`              | Exact resolved frontend dependency versions                     |
 | `backend/churn_backend/`                  | Existing Flask API, importer, validation and persistence        |
 | `backend/instance/churn.sqlite`           | Default local database, excluded from source control            |
@@ -130,7 +130,7 @@ Retained: completed-export CLI import, review history and dated action-note APIs
 
 Milestone 2 implementation: Reviewed Customers, original/latest assessment comparison, persistent cases, linked follow-up tasks and events, explicit closure/defer/reopen decisions, audit history and version conflicts. Existing databases receive a timestamped SQLite backup before automatic migration on Flask startup; existing reviews are backfilled as cases. See [Milestone 2](docs/MILESTONE_2.md) for the acceptance walkthrough and [UI design](docs/UI_DESIGN.md) for the current frontend direction, connected features and preview boundaries. Browser acceptance with your portfolio remains to be completed.
 
-Later milestones cover briefing/PDF, automated new-month inference, intervention-aware outcomes, grounded GenAI and an OPR scenario. See [Roadmap](docs/ROADMAP.md).
+Briefing/PDF is implemented in Milestone 3. Later milestones cover automated new-month inference, intervention-aware outcomes, grounded GenAI and an OPR scenario. See [Roadmap](docs/ROADMAP.md).
 
 ## 7. Learn through one working change
 

@@ -7,9 +7,10 @@ import FlowHistory from '../src/components/FlowHistory.jsx';
 import { api } from '../src/api.js';
 import { observedMonths } from '../src/flows.js';
 import { discussionQuestions } from '../src/briefing.js';
+import briefingPayload from './fixtures/briefing.json';
 import demo from '../../backend/demo/notebook_case.json';
 
-vi.mock('../src/api.js',async original=>({...await original(),api:{months:vi.fn(),summary:vi.fn(),customers:vi.fn(),customer:vi.fn(),saveReview:vi.fn(),case:vi.fn(),cases:vi.fn()}}));
+vi.mock('../src/api.js',async original=>({...await original(),api:{months:vi.fn(),summary:vi.fn(),customers:vi.fn(),customer:vi.fn(),saveReview:vi.fn(),case:vi.fn(),cases:vi.fn(),briefing:vi.fn(),downloadBriefing:vi.fn()}}));
 const batch={batch_id:'enriched',cutoff_month:'2024-02-29',record_count:1000,source_kind:'saved_shap_export',imported_at:'2026-11-01T18:00:00Z',source:{customer_names_loaded:true,flow_history_loaded:true}};
 let customer,reviewed;
 function start(path) { render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>); }
@@ -24,6 +25,12 @@ beforeEach(()=>{
   api.customer.mockResolvedValue({customer});
   api.case.mockImplementation(async()=>({case:structuredClone(reviewed)}));
   api.cases.mockImplementation(async()=>({items:[structuredClone(reviewed)],total:1}));
+  api.briefing.mockImplementation(async()=>{
+    if(reviewed.original.review.decision!=='prioritise') throw new Error('Selected case is no longer prioritised.');
+    const payload=structuredClone(briefingPayload);
+    payload.items[0].name=customer.customer_name;
+    return payload;
+  });
 });
 
 describe('Work-focused frontend',()=>{
@@ -84,10 +91,10 @@ describe('Work-focused frontend',()=>{
     const print=vi.spyOn(window,'print').mockImplementation(()=>{});
     start('/briefing?case_id=case-a');
     await screen.findByRole('heading',{name:'Saved evidence company'});
-    expect(api.case).toHaveBeenCalledWith('case-a');
+    expect(api.briefing).toHaveBeenCalledWith(['case-a']);
     expect(screen.getByText('AI draft not available yet.')).toBeTruthy();
     expect(screen.getByRole('button',{name:'Generate AI draft · unavailable'}).disabled).toBe(true);
-    expect(screen.getByRole('button',{name:'Export PDF · unavailable'}).disabled).toBe(true);
+    expect(screen.getByRole('button',{name:'Download PDF'}).disabled).toBe(false);
     expect(screen.getByText(/Recent recorded transaction activity is lower/)).toBeTruthy();
     expect(screen.getByText('No newer assessment month is available.')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('AI state preview'),{target:{value:'ready'}});
@@ -97,7 +104,7 @@ describe('Work-focused frontend',()=>{
     expect(screen.getByRole('heading',{name:'Draft request failed · demo preview'})).toBeTruthy();
     expect(screen.getAllByText('Not provided').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button',{name:'Print briefing'}));
-    expect(print).toHaveBeenCalledOnce(); print.mockRestore();
+    await waitFor(()=>expect(print).toHaveBeenCalledOnce()); print.mockRestore();
   });
 
   it('selects only prioritised cases and blocks briefings for a changed committee decision',async()=>{

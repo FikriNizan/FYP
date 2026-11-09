@@ -1,7 +1,9 @@
-from flask import Blueprint, abort, jsonify, request
+from flask import Blueprint, abort, jsonify, request, send_file
+from io import BytesIO
 
 from . import repository as repo
 from . import cases
+from . import briefings
 from .db import get_db
 from .constants import ACTION_STATUSES, ACTION_TYPES, DECISIONS, VERSION
 from .validation import (month_end, require, strict_json, validate_action, validate_review)
@@ -149,6 +151,32 @@ def reviewed_cases():
 @api.get('/cases/<case_id>')
 def reviewed_case(case_id):
     return jsonify(case=cases.record(cases.case_row(case_id),True))
+
+
+@api.get('/briefings')
+def briefing_preview():
+    return jsonify(briefings.load(request.args.getlist('case_id')))
+
+
+@api.post('/briefings/pdf')
+def briefing_download():
+    from .briefing_pdf import render, UnsupportedPdfText
+    data = body()
+    require(isinstance(data, dict) and set(data) == {'case_ids', 'snapshots'}, 'Send case_ids and preview snapshots only.')
+    payload = briefings.load(data['case_ids'])
+    require(isinstance(data['snapshots'], list), 'Preview snapshots are required before downloading.')
+    if data['snapshots'] != payload['snapshots']:
+        return jsonify(error=dict(code='briefing_changed', message='Saved evidence changed. Review the refreshed briefing before downloading.'), briefing=payload), 409
+    # Only server-resolved, freshly validated facts are passed to the renderer.
+    try:
+        pdf = render(payload)
+    except UnsupportedPdfText as error:
+        return jsonify(error=dict(code='pdf_font_unsupported', message=str(error))), 422
+    name = ('txb-rm-briefing-'+payload['items'][0]['customer_id'] if len(payload['items']) == 1
+            else 'txb-rm-briefing-'+str(len(payload['items']))+'-cases')
+    import re
+    name = re.sub(r'[^A-Za-z0-9_-]', '_', name)[:100]+'.pdf'
+    return send_file(BytesIO(pdf), mimetype='application/pdf', as_attachment=True, download_name=name)
 
 
 @api.put('/cases/<case_id>')

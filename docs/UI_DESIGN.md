@@ -44,8 +44,9 @@ Committee decision, case status, task state and observed outcome are distinct. A
 | Assessments, portfolio counts, queue, customer evidence | Connected to saved data | Existing months/summary/customers APIs |
 | Explicit committee save, drafts and conflicts | Connected | Existing versioned review API; no automatic outreach write |
 | Reviewed cases, case status and task timeline | Connected | Existing Milestone 2 case/follow-up APIs |
-| RM briefing | Read-only structured preview from saved cases | Existing case details; deterministic evidence and bounded questions; no AI service |
-| Print briefing | Working browser action | `window.print()` with dedicated print CSS and exact source IDs; server PDF export stays unavailable |
+| RM briefing | Read-only deterministic preview and PDF from saved cases | Shared server-built sections resolved through the existing case service; up to ten explicit current-prioritise case IDs; no AI service |
+| Print briefing | Working browser action | `window.print()` after freshness validation, with dedicated print CSS and exact source IDs; AI/demo controls are excluded |
+| Download PDF | Connected local download | Server revalidates eligibility and preview snapshots; changed evidence requires review before retry; no database writes or external renderer |
 | AI drafting | Unavailable, with optional labelled state examples | Grounded generation service, evidence validation and human-review flow required; Generate stays disabled |
 | Monthly package upload | Unavailable; isolated state preview | Agreed package contract, file validation, job/scoring status and atomic publication services required |
 | Monitoring | Unavailable | Data-quality/drift results, mature outcomes, periods/counts and intervention-window integration required |
@@ -64,3 +65,7 @@ Chrome verification uses a read-only SQLite backup in a disposable server. Overv
 
 
 The browser copy includes the actual enriched February batch, long company names, recorded flows and saved reviews. Its reference totals remain 1,000 assessed / 208 flagged / 792 below threshold, and Customer 944 remains about 84.4%; these values are never hardcoded in the UI. This Architect verification does not write reviews or follow-up records. The browser copy can contain different saved finance values from the deliberately constructed customer 944 test fixture; neither is substituted for the other. Representative-user usability and comprehensive accessibility remain separate acceptance work.
+
+## Milestone 3 briefing completion ? 9 November 2026
+
+The existing briefing page now consumes one deterministic server payload for preview and PDF. It distinguishes original/current review and latest assessment context, preserves MYR zero/missing states, labels saved dates accurately and retains trace identifiers. The Architect shell and other screens are unchanged; new wrapping/export CSS is scoped to briefing or print. See [MILESTONE_3.md](MILESTONE_3.md) for implementation, full-check results and PDF/browser inspection, separate from the owner's pending acceptance walkthrough.

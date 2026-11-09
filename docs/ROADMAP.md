@@ -59,14 +59,16 @@ The existing `/actions` endpoints support dated notes but do not implement the c
 
 ## Milestone 3 — RM briefing and PDF
 
-* [ ] Generate a deterministic briefing from selected prioritised customers.
-* [ ] Include customer/assessment identity, forecast and risk, recorded flow trend, top signals, Ops/Finance findings, committee rationale, owner and next step.
-* [ ] Include questions for a relationship discussion, phrased as hypotheses to verify.
-* [ ] Keep figures traceable to the saved assessment and label unavailable data.
-* [ ] Add a readable print/PDF export; a briefing can be generated before any outreach.
-* [ ] Include original review and latest assessment dates where they differ.
+* [x] Generate a deterministic briefing from selected prioritised customers.
+* [x] Include customer/assessment identity, forecast and risk, recorded flow trend, top signals, Ops/Finance findings, committee rationale, owner and next step.
+* [x] Include questions for a relationship discussion, phrased as hypotheses to verify.
+* [x] Keep figures traceable to the saved assessment and label unavailable data.
+* [x] Add a readable print/PDF export; a briefing can be generated before any outreach.
+* [x] Include original review and latest assessment dates where they differ.
 
 Acceptance: an RM receives a reproducible briefing that does not confuse model evidence with confirmed customer complaints.
+
+Implementation and software/PDF verification completed on 9 November 2026; see [MILESTONE_3.md](MILESTONE_3.md) for the direct-download contract, dependencies, evidence and Windows acceptance steps. The owner's own acceptance walkthrough remains pending. Live GenAI remains in the later AI milestone.
 
 ## Milestone 4 — Monthly package and automated processing
 
