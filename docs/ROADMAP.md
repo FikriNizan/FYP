@@ -42,16 +42,16 @@ Implementation checkpoint (6 November 2026): the listed behaviours are implement
 
 Do this after the React checkpoint and before GenAI or OPR. Follow [MILESTONE\_2.md](MILESTONE_2.md) for the first implementation slice.
 
-* [ ] Introduce tested, versioned database migrations before schema changes.
-* [ ] Define a stable reviewed-case/follow-up identity so a case survives a new monthly batch.
-* [ ] List reviewed customers with original decision month/risk, reviewer, reason, owner and follow-up state.
-* [ ] Show latest available assessment month/risk and latest historical flow/SHAP alongside the original decision context.
-* [ ] Never auto-cancel a decision solely because a new monthly risk falls.
-* [ ] Add a linked follow-up lifecycle, rather than unrelated planned/completed notes with no task identity.
-* [ ] Allow a completed RM contact, service action or unsuccessful attempt to be recorded after the event; no immediate action log required on committee save.
-* [ ] Record who/when/what, intervention delivery date/type and notes. Treat a planned action separately from an actual intervention.
-* [ ] Show explicit manual case closure/defer decisions and their reasons; preserve audit history.
-* [ ] Test a January prioritisation followed by a lower February score.
+* [x] Introduce tested, versioned database migrations before schema changes.
+* [x] Define a stable reviewed-case/follow-up identity so a case survives a new monthly batch.
+* [x] List reviewed customers with original decision month/risk, reviewer, reason, owner and follow-up state.
+* [x] Show latest available assessment month/risk and latest historical flow/SHAP alongside the original decision context.
+* [x] Never auto-cancel a decision solely because a new monthly risk falls.
+* [x] Add a linked follow-up lifecycle, rather than unrelated planned/completed notes with no task identity.
+* [x] Allow a completed RM contact, service action or unsuccessful attempt to be recorded after the event; no immediate action log required on committee save.
+* [x] Record who/when/what, intervention delivery date/type and notes. Treat a planned action separately from an actual intervention.
+* [x] Show explicit manual case closure/defer decisions and their reasons; preserve audit history.
+* [x] Test a January prioritisation followed by a lower February score.
 
 Acceptance: a reviewer can find a previously prioritised customer after a new import, see both contexts and record a later follow-up without altering the earlier prediction.
 
