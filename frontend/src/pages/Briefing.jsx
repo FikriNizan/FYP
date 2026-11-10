@@ -88,17 +88,19 @@ export default function Briefing() {
     {current?.needsReview && <p className="no-print briefing-refresh"><strong>Review the updated evidence below.</strong> <button onClick={()=>setState(old=>({...old,needsReview:false,error:null}))}>I have reviewed the updated briefing</button></p>}
     {busy && <p className="no-print" role="status">{operation.kind==='pdf' ? 'Preparing the PDF from freshly checked saved evidence…' : 'Checking saved evidence before printing…'}</p>}
     {!validSelection ? <section className="panel empty"><h2>Select up to ten prioritised cases</h2><p>Choose cases in Reviewed Customers, then open a briefing.</p></section> : !current ? <p role="status">Loading selected case evidence…</p> : payload?.items.map(item=><article className="panel briefing-sheet" key={item.case_id}>
-      <div className="section-heading"><div><h2>{item.name}</h2><p className="muted">Relationship discussion brief · Customer {item.customer_id} · Case {item.case_id.slice(0,12)}</p><small className="muted">Internal use · Review before sharing.</small></div><ConnectionState /></div>
-      <div className="briefing-context"><EvidenceSection value={item.original} /><EvidenceSection value={item.latest} /></div>
+      <header className="briefing-head"><div><p className="briefing-eyebrow">RM discussion brief</p><h2>{item.name}</h2><p className="briefing-meta">Customer {item.customer_id} · Case {item.case_id.slice(0,12)}{item.prepared_on ? ' · Prepared '+item.prepared_on : ''}</p></div><div className="briefing-badge"><span>Internal use</span><span>Review before sharing</span><span className="no-print"><ConnectionState /></span></div></header>
       {item.sample_note && <p className="scope-note">{item.sample_note}</p>}
+      {!!item.glance?.length && <><div className="briefing-glance" role="list" aria-label="At a glance">{item.glance.map(g=><div role="listitem" key={g.label}><span className="glance-label">{g.label}</span><strong className="glance-value">{g.value}</strong><span className="glance-note">{g.note}</span></div>)}</div>{item.risk_definition && <p className="briefing-definition">{item.risk_definition}</p>}</>}
+      <div className="briefing-context"><EvidenceSection value={item.original} /><EvidenceSection value={item.latest} /></div>
       <EvidenceSection value={item.activity} className="briefing-section" />
-      <EvidenceSection value={item.signals} className="briefing-section" itemsFirst />
+      <EvidenceSection value={item.signals} className="briefing-section" longRows />
       <div className="briefing-context"><EvidenceSection value={item.operations} /><EvidenceSection value={item.finance} /></div>
       <EvidenceSection value={item.decision} className="briefing-section" longRows />
-      <section className="briefing-section"><h3>Questions for the customer</h3>{item.questions.length ? <ol>{item.questions.map((q,i)=><li key={i}><p>{q.text}</p><small className="muted">Evidence: {q.source} · {q.month}</small></li>)}</ol> : <p>No evidence-linked question is available from the supplied measures. Review the case before preparing questions.</p>}</section>
+      {item.followups && <EvidenceSection value={item.followups} className="briefing-followup-block" longRows />}
+      <section className="briefing-section"><h3>Questions for the customer</h3>{item.questions.length ? <ol className="briefing-questions">{item.questions.map((q,i)=><li key={i}><p>{q.text}</p><small className="muted">Evidence: {q.source} · {q.month}</small></li>)}</ol> : <p>No evidence-linked question is available from the supplied measures. Review the case before preparing questions.</p>}</section>
       <div className="no-print"><AIBriefingDraft customer={item.ai_context} /></div>
       <details className="briefing-sources"><summary>Evidence sources and identifiers</summary><p className="source-id">{item.traceability.map(([label,text])=><React.Fragment key={label}>{label}: {text}<br /></React.Fragment>)}</p></details>
-      <p className="print-only source-id">{item.traceability.map(([label,text])=><React.Fragment key={label}>{label}: {text}<br /></React.Fragment>)}</p>
+      <section className="print-only briefing-section"><h3>Evidence sources and identifiers</h3><dl className="briefing-followups source-id">{item.traceability.map(([label,text])=><React.Fragment key={label}><dt>{label}</dt><dd>{text}</dd></React.Fragment>)}</dl></section>
     </article>)}
   </>;
 }

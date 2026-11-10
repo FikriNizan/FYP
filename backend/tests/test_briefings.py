@@ -88,21 +88,37 @@ class BriefingTests(unittest.TestCase):
         march = self.batch()
         before = self.dump()
         item = self.preview().json['items'][0]
-        self.assertIn('February 2024', item['original']['paragraphs'][0])
-        self.assertIn('84.4%', item['original']['paragraphs'][0])
-        self.assertIn('Original committee rationale', item['original']['paragraphs'])
-        self.assertIn('Current rationale', item['decision']['paragraphs'])
-        self.assertIn('March 2024', item['latest']['paragraphs'][0])
-        self.assertIn('12.0%', item['latest']['paragraphs'][0])
-        self.assertIn('Forecast Apr–Jun 2024', item['latest']['paragraphs'])
+        self.assertIn(['Assessment month', 'February 2024'], item['original']['rows'])
+        self.assertIn(['Predicted risk', '84.4%'], item['original']['rows'])
+        self.assertIn('Rationale: Original committee rationale', item['original']['paragraphs'])
+        self.assertIn('Rationale: Current rationale', item['decision']['paragraphs'])
+        self.assertIn(['Assessment month', 'March 2024'], item['latest']['rows'])
+        self.assertIn(['Predicted risk', '12.0%'], item['latest']['rows'])
+        self.assertIn(['Forecast window', 'Apr–Jun 2024'], item['latest']['rows'])
+        self.assertEqual(item['glance'][1]['value'], '12.0%')
+        self.assertIn('was 84.4% at review (February 2024)', item['glance'][1]['note'])
+        self.assertEqual(item['glance'][0]['value'], 'Prioritise for RM')
         self.assertIn(['Latest batch', march], item['traceability'])
         self.assertEqual(item['finance']['rows'][0][1], 'RM\u00a02,016,997.13')
         self.assertEqual([r[1] for r in item['finance']['rows'][1:]], ['RM\u00a00.00','Not provided','RM\u00a00.00'])
-        self.assertIn('Planned', item['decision']['rows'][0][0])
-        self.assertIn('Case opened:', ' '.join(item['original']['paragraphs']))
-        self.assertIn('Review saved:', ' '.join(item['decision']['paragraphs']))
+        self.assertIn('Planned', item['followups']['rows'][0][0])
+        self.assertEqual(item['original']['rows'][-1][0], 'Case opened')
+        self.assertIn('Review saved', [r[0] for r in item['decision']['rows']])
         self.assertEqual(self.pdf(self.preview().json).status_code, 200)
         self.assertEqual(self.dump(), before)
+
+    def test_unchanged_rationale_is_not_repeated_and_planned_contact_is_beside_due_date(self):
+        self.client.post('/api/cases/'+self.id+'/follow-ups', json=dict(expected_version=1,
+            action_type='customer_contact', action_status='planned', action_date='2026-11-18',
+            recorded_by='RM A', notes='Proposed discussion; no contact yet'))
+        item = self.preview().json['items'][0]
+        self.assertIn('Rationale unchanged since the original review.', item['decision']['paragraphs'])
+        self.assertNotIn('Rationale: Original committee rationale', item['decision']['paragraphs'])
+        self.assertEqual(item['glance'][3]['value'], 'Not set')
+        self.assertIn('Planned contact 18 Nov 2026', item['glance'][3]['note'])
+        self.assertIn(['Case due date', 'Not set'], item['decision']['rows'])
+        self.assertEqual(len(item['glance']), 4)
+        self.assertTrue(item['prepared_on'])
 
     def test_same_cutoff_distinct_batch_is_not_a_newer_month(self):
         self.batch(month='2024-02-29')
@@ -167,6 +183,19 @@ class BriefingTests(unittest.TestCase):
         self.assertEqual(money(-1234.567), '-RM\u00a01,234.57')
         self.assertEqual(money(0), 'RM\u00a00.00')
         self.assertEqual(money(None), 'Not provided')
+        # PDF embeds both bundled static Open Sans faces; no fontTools runtime dependency.
+        pdf = self.pdf(self.preview().json)
+        self.assertEqual(pdf.status_code, 200)
+        self.assertIn(b'OpenSansRoman-Regular', pdf.data)
+        self.assertIn(b'OpenSansRoman-Bold', pdf.data)
+        self.assertGreaterEqual(pdf.data.count(b'/FontFile2'), 2)
+        from churn_backend.briefing_pdf import render, UnsupportedPdfText
+        supported = self.preview().json
+        supported['items'][0]['name'] = '\u2212 \u2013 \u00b7 \u2022 \u2265 \u2018pelanggan\u2019 \u201cMelayu English\u201d'
+        self.assertTrue(render(supported).startswith(b'%PDF-'))
+        supported['items'][0]['name'] = 'Unsupported \U0001f98a'
+        with self.assertRaises(UnsupportedPdfText):
+            render(supported)
         self.review(self.id, version=1, reason='Unsupported glyph \U0001f98a')
         before = self.dump()
         response = self.pdf(self.preview().json)

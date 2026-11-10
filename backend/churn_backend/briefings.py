@@ -41,6 +41,10 @@ def dated(value, missing='Not provided'):
     return f'{stamp.day} {stamp:%b %Y}'
 
 
+def signed_percent(value):
+    return ('\u2212' if value < 0 else '+' if value > 0 else '') + f'{abs(value):.1f}%'
+
+
 def forecast(cutoff):
     cutoff = date.fromisoformat(cutoff)
     def ahead(n):
@@ -130,7 +134,9 @@ def document(case, sources):
         change = (recent / usual - 1) * 100
         activity = 'Similar to usual' if abs(change) < .05 else f'{abs(change):.1f}% {"lower" if change < 0 else "higher"}'
         activity += ' versus the trailing twelve-month average.'
+        activity_glance = ('Similar to usual' if abs(change) < .05 else signed_percent(change))
     else:
+        activity_glance = 'Not comparable'
         activity = 'A comparable activity change is unavailable: a recorded recent average and a positive trailing twelve-month average are required.'
     history_available = any(isinstance(row.get('snapshot_month'), str) and row['snapshot_month'] <= latest['cutoff_month'] and any(number(row.get(key)) for key in ['combined_flow_myr','inbound_myr','outbound_success_myr']) for row in latest.get('flow_history', []))
     history_note = [] if history_available else ['No cutoff-safe monthly flow history was supplied; this briefing uses the saved aggregate measures.']
@@ -144,7 +150,7 @@ def document(case, sources):
     for key, direction in [('higher_risk_drivers', 'Pushed the estimate higher'), ('lower_risk_drivers', 'Pushed the estimate lower')]:
         for driver in explanation.get(key, []):
             if len(signals) < 3:
-                signals.append(f'{driver_label(driver)}: {driver_value(driver)} · {direction}')
+                signals.append([driver_label(driver), f'{driver_value(driver)} · {direction}'])
     tasks = case.get('follow_ups') or []
     follow_rows = []
     for task in tasks:
@@ -152,6 +158,12 @@ def document(case, sources):
         status = {'planned':'Planned', 'attempted':'Attempted', 'delivered':'Completed', 'cancelled':'Cancelled'}[event['action_status']]
         follow_rows.append([f'{status} · {task["action_type"].replace("_", " ")}',
                             f'{dated(event["action_date"])} · {event.get("recorded_by") or "Not provided"} · {event.get("notes") or "No notes"}'])
+    ops_all = [['Payment failure rate', ops.get('outbound_failure_rate_3m')],
+               ['Bank-attributed payment failure rate', ops.get('outbound_bank_failure_rate_3m')],
+               ['Login difficulty rate', ops.get('login_failure_rate_3m')],
+               ['Sessions without transactions', ops.get('passive_session_rate_3m')]]
+    ops_rows = [[label, percent(value)] for label, value in ops_all] if any(number(v) for _, v in ops_all) else []
+    planned = sorted(dated(t['current']['action_date']) for t in tasks if t['current']['action_status'] == 'planned' and t['current'].get('action_date'))
     questions = discussion_questions(latest)
     for question in questions:
         question['month'] = month(latest['cutoff_month'])
@@ -171,34 +183,45 @@ def document(case, sources):
                 # Only these two fields are used by the unchanged, explicitly unavailable AI preview.
                 ai_context={k:latest[k] for k in ['cutoff_month', 'calibrated_risk']},
                 sample_note='Single-case sample evidence is included. This briefing does not represent a complete portfolio.' if sample else None,
-                original=section('At the time of review', [
-                    f'{month(original["cutoff_month"])} · Predicted risk {percent(original["calibrated_risk"])}',
-                    'Forecast '+forecast(original['cutoff_month']), opened.get('reason') or 'No original rationale supplied.',
-                    'Original reviewer: '+(opened.get('reviewer') or 'Not provided'),
-                    'Case opened: '+dated(case.get('created_at'))]),
-                latest=section('Latest available assessment', [
-                    f'{month(latest["cutoff_month"])} · Predicted risk {percent(latest["calibrated_risk"])}',
-                    'Forecast '+forecast(latest['cutoff_month']), *latest_notes]),
+                original=section('At the time of review', ['Rationale: '+(opened.get('reason') or 'No original rationale supplied.')], [
+                    ['Assessment month', month(original['cutoff_month'])],
+                    ['Predicted risk', percent(original['calibrated_risk'])],
+                    ['Forecast window', forecast(original['cutoff_month'])],
+                    ['Original reviewer', opened.get('reviewer') or 'Not provided'],
+                    ['Case opened', dated(case.get('created_at'))]]),
+                latest=section('Latest available assessment', latest_notes, [
+                    ['Assessment month', month(latest['cutoff_month'])],
+                    ['Predicted risk', percent(latest['calibrated_risk'])],
+                    ['Forecast window', forecast(latest['cutoff_month'])]]),
                 activity=section('Observed activity through '+month(latest['cutoff_month']), [activity,
-                    'Saved three-month and trailing twelve-month averages ending at this assessment cutoff; no future observations are inferred.', *history_note],
+                    *history_note],
                     [['Latest 3-month average', money(recent)], ['Trailing 12-month average', money(usual)]]),
-                signals=section('Signals to investigate', ['Model signals describe influence on the saved estimate, not confirmed complaints, causes or probability-point effects.'], items=signals),
+                signals=section('Signals to investigate', ['Model signals describe influence on the saved estimate, not confirmed complaints, causes or probability-point effects.'], signals),
                 operations=section('Operations context', [review.get('operations_notes') or 'No committee Operations notes recorded.',
-                    'Saved aggregate rates for the latest three months through '+month(latest['cutoff_month'])+'. No monthly service trend is inferred.'], [
-                        ['Payment failure rate', percent(ops.get('outbound_failure_rate_3m'))],
-                        ['Bank-attributed payment failure rate', percent(ops.get('outbound_bank_failure_rate_3m'))],
-                        ['Login difficulty rate', percent(ops.get('login_failure_rate_3m'))],
-                        ['Sessions without transactions', percent(ops.get('passive_session_rate_3m'))]]),
+                    *([] if ops_rows else ['No Operations rates were recorded for this assessment.']),
+                    *(['Saved rates for the three months through '+month(latest['cutoff_month'])+'.'] if ops_rows else [])], ops_rows),
                 finance=section('Finance context', [review.get('finance_notes') or 'No committee Finance notes recorded.',
                     'Balances are exposures. Fees and waivers are separate historical three-month monthly estimates, not verified profit, actual invoices or retention savings.'], [
                         ['Operating balances', money(finance.get('non_fd_balance_myr'))],
                         ['Fixed-deposit balances', money(finance.get('fd_balance_myr'))],
                         ['Estimated monthly fees', money(finance.get('estimated_monthly_fee_myr'))],
                         ['Estimated monthly waivers', money(finance.get('estimated_monthly_waiver_myr'))]]),
-                decision=section('Current committee rationale & next step', [review.get('reason') or 'No rationale supplied.',
-                    'Reviewer: '+(review.get('reviewer') or 'Not provided')+' · Review saved: '+dated(review.get('updated_at')),
-                    'Owner: '+(case.get('owner') or 'Unassigned')+' · Next follow-up: '+dated(case.get('next_action_date'), 'Not scheduled')+' · Case: '+case['status'].capitalize(),
-                    'Plans and recorded contact are separate; consult the case timeline for the full event history.' if tasks else 'No follow-up has been recorded; this briefing can be prepared before outreach.'], follow_rows),
+                decision=section('Current committee rationale & next step', [
+                    'Rationale unchanged since the original review.' if (review.get('reason') or '') == (opened.get('reason') or '') else 'Rationale: '+(review.get('reason') or 'No rationale supplied.'),
+                    *([] if tasks else ['No follow-up has been recorded; this briefing can be prepared before outreach.'])], [
+                        ['Reviewer', review.get('reviewer') or 'Not provided'], ['Review saved', dated(review.get('updated_at'))],
+                        ['Case owner', case.get('owner') or 'Unassigned'], ['Case due date', dated(case.get('next_action_date'), 'Not set')],
+                        ['Case status', case['status'].capitalize()]]),
+                followups=section('Follow-up recorded', rows=follow_rows) if follow_rows else None,
+                glance=[
+                    dict(label='Committee decision', value='Prioritise for RM', note='Case '+case['status']),
+                    dict(label='Predicted risk, latest', value=percent(latest['calibrated_risk']),
+                         note=month(latest['cutoff_month'])+' \u00b7 was '+percent(original['calibrated_risk'])+' at review ('+month(original['cutoff_month'])+')'),
+                    dict(label='Activity vs usual', value=activity_glance, note='3-month vs trailing 12-month average'),
+                    dict(label='Case due date', value=dated(case.get('next_action_date'), 'Not set'),
+                         note='Owner: '+(case.get('owner') or 'Unassigned')+(' \u00b7 Planned contact '+planned[0] if planned else ''))],
+                risk_definition='Predicted risk is the calibrated estimate that average combined transaction flow over the forecast window falls to half or less of the trailing twelve-month average. It is not account-closure risk.',
+                prepared_on=dated(datetime.now(timezone.utc).isoformat()),
                 questions=questions, traceability=trace)
 
 

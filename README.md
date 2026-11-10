@@ -120,7 +120,7 @@ Backend-only checks:
 .\.venv\Scripts\python.exe scripts\check.py --backend-only
 ```
 
-The complete checks run 32 backend/migration tests, 8 database-copy/source-update tests, 6 JavaScript utility/API tests, 27 React interaction/rendering tests, and a Vite build. Tests use temporary databases and constructed fixtures. See [Verification](docs/VERIFICATION.md) for scope and remaining user acceptance checks.
+The complete checks run 42 backend/API/PDF/migration tests, 8 database-copy/source-update tests, 8 JavaScript client/API tests, 58 React interaction/rendering tests, and a Vite build. Tests use temporary databases and constructed fixtures. See [Verification](docs/VERIFICATION.md) for scope and remaining user acceptance checks.
 
 ## 6. Current feature boundary
 

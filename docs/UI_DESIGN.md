@@ -69,3 +69,7 @@ The browser copy includes the actual enriched February batch, long company names
 ## Milestone 3 briefing completion ? 9 November 2026
 
 The existing briefing page now consumes one deterministic server payload for preview and PDF. It distinguishes original/current review and latest assessment context, preserves MYR zero/missing states, labels saved dates accurately and retains trace identifiers. The Architect shell and other screens are unchanged; new wrapping/export CSS is scoped to briefing or print. See [MILESTONE_3.md](MILESTONE_3.md) for implementation, full-check results and PDF/browser inspection, separate from the owner's pending acceptance walkthrough.
+
+## RM briefing refinement ? 11 November 2026
+
+The reviewed briefing adds an At-a-glance strip and labelled financial-schedule rows, separates case due dates from planned contact, deduplicates unchanged rationale and groups saved follow-ups separately. Screen, browser print and PDF share this structure and the existing ink/muted/nav/line/canvas/warning palette. Browser print and PDF use local Open Sans; the PDF embeds static 400/700 TTFs under SIL OFL 1.1. Only briefing-local styles changed. See [MILESTONE_3.md](MILESTONE_3.md#briefing-refinement--11-november-2026) for verified checks and the still-pending owner acceptance.

@@ -1,4 +1,4 @@
-﻿# Milestone 3 — RM briefing and PDF
+# Milestone 3 — RM briefing and PDF
 
 Implemented and verified on 9 November 2026 against the local `architect-theme` worktree, starting at `1b1c036893f5ea58e0af1723c9f12909510875ce`. Owner acceptance is a separate, pending step below. No commit, merge or deployment is implied.
 
@@ -20,7 +20,7 @@ Both original/latest batch and prediction IDs, case ID/version and available ori
 
 ## Local PDF implementation and setup
 
-ReportLab **5.1.0** produces a real A4 PDF in Flask memory. Its tested runtime dependencies are pinned in `backend/requirements.txt`: Pillow **13.0.0** and charset-normalizer **3.5.2**. Root `requirements.txt` includes that file. ReportLab's packaged, redistributable Bitstream Vera fonts are embedded; no OS font installation, browser rendering executable, remote font, API key or external customer-data service is required. The approved dashboard continues using its existing Open Sans/Architect styles. The PDF uses fixed readable type sizes, natural paragraph splitting, a new page for each case and page-numbered footers; it contains no dashboard chrome, controls or AI demo text.
+ReportLab **5.1.0** produces a real A4 PDF in Flask memory. Its tested runtime dependencies are pinned in `backend/requirements.txt`: Pillow **13.0.0** and charset-normalizer **3.5.2**. Root `requirements.txt` includes that file. Bundled static Open Sans Regular (400) and Bold (700), licensed under SIL OFL 1.1, are embedded as of the 11 November refinement below (the initial 9 November export used ReportLab's packaged Bitstream Vera fonts); no OS font installation, browser rendering executable, remote font, API key or external customer-data service is required. The approved dashboard continues using its existing Open Sans/Architect styles. The PDF uses fixed readable type sizes, natural paragraph splitting, a new page for each case and page-numbered footers; it contains no dashboard chrome, controls or AI demo text.
 
 From the project root in PowerShell:
 
@@ -71,3 +71,16 @@ No preview/export endpoint writes reviews, cases, tasks, actions, assessments, p
 6. If another window updates the selected review/case, retry Download PDF: review the refreshed evidence and explicitly confirm before downloading.
 
 Your acceptance walkthrough, representative-RM evaluation, physical touch devices and other browser engines have not been claimed as completed. Live GenAI remains a later milestone.
+
+## Briefing refinement ? 11 November 2026
+
+The reviewed refinement preserves the read-only endpoints, `{case_ids, snapshots}` request, snapshot fields, SHA-256 evidence hash and 409 `briefing_changed` review-before-retry flow. Discussion-question wording is unchanged; AI remains unavailable, receives only `ai_context` and stays outside print/export. Owner acceptance remains pending.
+
+* A four-cell **At a glance** strip shows committee decision/case state, latest risk with original-risk context, activity versus usual, and **Case due date** with owner and a separate planned-contact note when present. The case due date is not relabelled as the date a contact occurred.
+* Original/latest context, activity, model signals, Operations/Finance and current decision use labelled rows. Generic filler is removed; unchanged rationale is identified without repeating the saved reason; all-missing Operations rates collapse to one explicit missing-data statement. Genuine zeros and missing MYR values remain distinct.
+* Existing item keys remain. Added fields are `glance`, `risk_definition`, `prepared_on` and nullable `followups`. Signal data now uses `signals.rows` instead of `signals.items`; saved follow-up rows move out of `decision.rows` into `followups.rows`. Current reviewer/date/owner/due/status remain in `decision.rows`. See [API_CONTRACT.md](../backend/API_CONTRACT.md).
+* Screen, browser print and direct PDF share the same section order and financial-schedule presentation: header, glance/definition, original/latest context, activity, signals, Operations/Finance, current rationale/next step, recorded follow-ups when supplied, questions and complete identifiers. Browser print uses the browser's header/footer; direct PDF retains the TxB footer and page numbers. Print sizes mirror the PDF. Only briefing-local CSS changed; the approved workspace styles remain untouched.
+* PDF fonts are now bundled **static Open Sans 3.003**, 400/700 at width 100, instantiated with preparation-only fontTools 4.68.0 from the official Google Fonts repository. Both static TTFs and the upstream SIL OFL 1.1 licence ship under `backend/churn_backend/fonts/`; no OS fonts, runtime network call or runtime fontTools dependency is introduced. The module-relative paths work independently of the current working directory. [Font provenance and preparation](../backend/churn_backend/fonts/README.md) records the pinned revision and SHA-256 values.
+* Both faces cover U+2212 minus, en dash, middle dot, bullet, greater-than-or-equal, curly quotes and normal Malay/English text. Tests verify both embedded faces and retain the existing explicit unsupported-glyph error/message, including emoji rejection.
+* Baseline before changes: **115 tests** (41 backend/API/PDF, 8 copy/update, 8 JavaScript client, 58 React), plus Vite build. After the reviewed refinement and font change: **116 tests** (42 backend/API/PDF, 8 copy/update, 8 JavaScript client, 58 React), plus Vite build. The one new backend test comes from the reviewed refinement; font embedding/coverage assertions extend an existing test. No existing React freshness tests were weakened.
+* Generated fixture PDFs retain a **two-page single-case** document. The long-name/multiline-note two-case stress document renders across **seven non-blank pages**. Browser comparison and database-integrity verification are recorded separately once completed; these fixture checks do not establish owner or representative-RM acceptance.

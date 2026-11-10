@@ -141,7 +141,7 @@ Green completion and purple attempted-state treatments are local semantic varian
 
 ## Typography
 
-**Body and heading font:** Open Sans Variable, Open Sans, Segoe UI, Arial and sans-serif fallbacks, self-hosted through `@fontsource-variable/open-sans`. Chart SVG text uses the same stack. No remote fonts are loaded. Print retains the existing Segoe UI/Arial stack.
+**Body and heading font:** Open Sans Variable, Open Sans, Segoe UI, Arial and sans-serif fallbacks, self-hosted through `@fontsource-variable/open-sans`. Chart SVG text uses the same stack. No remote fonts are loaded. RM briefing print uses the same Open Sans stack; other print surfaces retain the existing Segoe UI/Arial stack.
 
 **Technical font:** UI monospace for technical explanations and source identifiers.
 
@@ -160,7 +160,7 @@ At 1250px, filters simplify and scenarios stack. At 1050px, the rail narrows to 
 
 Perspective views use the evidence column as an inline-size container. Service metrics have four columns at 620px and above, two below, and one at 340px or less. Activity rows put labels above the tracks below 560px. Finance cards have two columns at 520px and above, one below. Overview finance cards have four columns, two at viewport widths up to 1250px, one up to 760px.
 
-Guide definition pairs use a bounded term column and a flexible description, then stack on mobile. Printed briefings use A4 with 16mm margins, full-width containment and 11px body text; navigation and controls disappear. Browser print is the established export path.
+Guide definition pairs use a bounded term column and a flexible description, then stack on mobile. Printed briefings use A4 with 16mm margins, full-width containment and the briefing-specific print type sizes below; navigation and controls disappear. Browser print is the established export path.
 
 ## Elevation & Depth
 
@@ -210,6 +210,11 @@ Activity uses two rows, each with a label, track and adjacent MYR value. Widths 
 
 ### Interpretation callouts
 Blue-tinted callouts pair an authored information icon with text. Operations preserves causal uncertainty; Finance separates exposure from historical estimates, profit, invoices and retention savings.
+
+### RM briefing sheet
+The sheet uses a header, four-cell At-a-glance strip and risk definition, original/latest context, activity, labelled model signals, Operations/Finance, current rationale/next step, recorded follow-ups when present, questions and an identifiers appendix. It shares the ink, muted, nav, line, canvas and warning tokens with the dashboard. Screen, browser print and PDF retain one structure, complete source IDs and explicit missing/zero states; interactive AI previews and controls stay out of documents. Local responsive rules stack the glance strip and context blocks on narrow screens.
+
+Browser print sizes mirror the PDF: body 8.5pt, title 18pt and section headings 10.5pt, with smaller labelled metadata. The PDF embeds bundled static Open Sans 400/700; browser print uses the local Open Sans font stack. Browser print keeps the browser's own header/footer, while the direct PDF has a TxB internal-use footer with page numbers. Both are acceptable export presentations.
 
 ## Do's and Don'ts
 

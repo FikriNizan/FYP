@@ -110,3 +110,18 @@ Case IDs equal their original prediction IDs. A case is created atomically on th
 Action types retain `customer_contact`, `rm_visit`, `service_fix`, `other`. States retain `planned`, `attempted`, `delivered`, `cancelled`; the UI calls `delivered` Completed. A task may start as planned, attempted or delivered. Planned/attempted tasks accept attempted/delivered/cancelled events; terminal tasks require a new task for further work. Type cannot change on an existing task. `planned_date` is the initial plan, while each event's `action_date` is its own date. Non-planned dates cannot be in the future using the Malaysian business date; events after an attempt cannot predate that attempt. A closed case must be reopened before further task events.
 
 Every successful case/task mutation increments the shared case version and appends a case event. Version mismatches return 409 and do not change data. Invalid fields, dates, states or missing attribution/reason return 422; missing cases/tasks return 404. Same-origin write protection and the 64 KiB request limit remain enabled. No task/event write changes predictions or loads realised outcomes.
+
+## RM briefing payload refinement ? 11 November 2026
+
+The existing briefing response's `items` gain the fields below. The GET/POST endpoints, `{case_ids, snapshots}` download body, snapshot fields, evidence hash and 409 review-before-retry contract are unchanged. No client HTML or amounts are accepted.
+
+| Item field | Type and meaning |
+|---|---|
+| `glance` | Four ordered objects with `label`, `value` and `note` strings: committee decision/case state, latest risk/original-risk context, activity versus usual, and case due date/owner/planned-contact note. A case due date is distinct from planned or recorded contact. |
+| `risk_definition` | Deterministic explanatory string for the volume-attrition risk; not account-closure risk. |
+| `prepared_on` | Formatted Malaysian calendar date when this representation was prepared; not an assessment cutoff or saved-review date. |
+| `followups` | Nullable standard section object (`title`, `paragraphs`, `rows`, `items`); recorded follow-up label/value rows now live in `followups.rows`. Null when no follow-up rows exist. |
+| `signals.rows` | Ordered `[label, text]` pairs carrying recorded values and model-influence direction; replaces populated `signals.items`. The generic section shape is retained. |
+| `decision.rows` | Current reviewer, review-saved date, case owner, case due date and case status. Follow-up rows have moved to `followups.rows`. |
+
+Other item keys remain `original`, `latest`, `activity`, `operations`, `finance`, `questions`, `traceability`, `ai_context`, `sample_note`, `snapshot`, `case_id`, `customer_id` and `name`. Existing section keys remain intact. `ai_context` still contains only `cutoff_month` and `calibrated_risk`; discussion-question wording and the read-only eligibility/freshness rules are unchanged.
