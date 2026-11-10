@@ -8,9 +8,9 @@ Use **Reviewed Customers → select case(s) → Prepare RM briefing → Download
 
 The existing briefing page and the PDF consume one deterministic, server-built representation. It separates:
 
-- The original assessed snapshot and immutable opening judgement (`original`, `original_review`), with original reason/reviewer and the accurately labelled case-opened date.
-- The currently saved review (`original.review`), with current rationale/reviewer/review-saved date, case owner, due date/status and saved follow-up summaries. A plan is not contact delivery.
-- The latest backend-resolved assessment (`latest`), with its own cutoff, forecast and risk. A different batch at the same cutoff is identified without calling it a newer month.
+* The original assessed snapshot and immutable opening judgement (`original`, `original_review`), with original reason/reviewer and the accurately labelled case-opened date.
+* The currently saved review (`original.review`), with current rationale/reviewer/review-saved date, case owner, due date/status and saved follow-up summaries. A plan is not contact delivery.
+* The latest backend-resolved assessment (`latest`), with its own cutoff, forecast and risk. A different batch at the same cutoff is identified without calling it a newer month.
 
 Activity uses the latest saved three- and twelve-month flow averages. Missing or non-positive references have an explicit fallback; missing cutoff-safe monthly history is stated without fabricated observations. Selected model signals include readable labels, recorded values and influence direction, separate from measured activity and causal conclusions. The briefing contains Operations rates/notes and separate balance exposures and historical three-month monthly fee/waiver estimates. It does not calculate profit, invoices, savings, outcomes or intervention effectiveness.
 
@@ -24,7 +24,7 @@ ReportLab **5.1.0** produces a real A4 PDF in Flask memory. Its tested runtime d
 
 From the project root in PowerShell:
 
-```powershell
+```PowerShell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 npm ci --prefix frontend
 npm run build --prefix frontend
@@ -39,12 +39,12 @@ If saved text contains a glyph outside the embedded font's coverage (for example
 
 Existing case endpoints and schemas are unchanged. Two focused endpoints reuse the existing case service:
 
-| Endpoint | Contract |
-|---|---|
-| `GET /api/briefings?case_id=A&case_id=B` | Validate/deduplicate one to ten IDs; read all records and batch provenance in one SQLite read snapshot; return `items` plus ordered `snapshots`. |
-| `POST /api/briefings/pdf` | Accept only `{case_ids, snapshots}`; load and validate all selected cases again; compare snapshots before rendering; return an attachment with `Content-Type: application/pdf`. Client HTML and amounts are never accepted. |
+| Endpoint                                 | Contract                                                                                                                                                                                                                    |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/briefings?case_id=A&case_id=B` | Validate/deduplicate one to ten IDs; read all records and batch provenance in one SQLite read snapshot; return `items` plus ordered `snapshots`.                                                                            |
+| `POST /api/briefings/pdf`                | Accept only `{case_ids, snapshots}`; load and validate all selected cases again; compare snapshots before rendering; return an attachment with `Content-Type: application/pdf`. Client HTML and amounts are never accepted. |
 
-Each preview snapshot includes case ID/version, current review version, original/latest prediction IDs and an SHA-256 fingerprint over the server-resolved case evidence and source provenance. A changed snapshot returns **409 `briefing_changed`** and refreshed preview content, without any PDF. The page shows the updated briefing, disables print/download and requires **I have reviewed the updated briefing** before retrying. Print also fetches fresh evidence and compares snapshots before opening its dialog. Every retry validates again.
+Each preview snapshot includes case ID/version, current review version, original/latest prediction IDs and an SHA-256 fingerprint over the server-resolved case evidence and source provenance. A changed snapshot returns **409** **`briefing_changed`** and refreshed preview content, without any PDF. The page shows the updated briefing, disables print/download and requires **I have reviewed the updated briefing** before retrying. Print also fetches fresh evidence and compares snapshots before opening its dialog. Every retry validates again.
 
 Missing/ineligible cases block the entire selection, never a partial file. Empty/oversized selections, loading, download progress, service failures and unsupported-font errors are explicit. Failures retain selected IDs and the return-worklist query. A new selection immediately hides the old preview and disables export; in-flight downloads are aborted, and late responses cannot download or replace another selection. Responses are `no-store`.
 
@@ -52,14 +52,14 @@ No preview/export endpoint writes reviews, cases, tasks, actions, assessments, p
 
 ## Verification completed
 
-- Baseline: **92 existing tests** and production build passed before implementation.
-- Final automated checks: **115 tests** (41 backend/API/migration/PDF, 8 copy/update, 8 JavaScript client/API, 58 React) and Vite build. Tests use temporary databases and constructed fixtures.
-- New coverage: ordered/deduplicated selection and ten-case limit; February origin/March lower-risk context; same-month distinct batches; zero/missing estimates; no follow-up; insufficient/duplicate questions; sample provenance; stale case/review/latest assessment; whole-selection failures; long notes/names; real PDF bytes/A4 pages; read-only database dumps; client selection races, error recovery and review-before-retry.
-- The existing React briefing test was updated for the intended change from disabled Export PDF to enabled Download PDF, the new shared-payload endpoint and asynchronous print freshness validation. Other Milestone 2 assertions remain intact.
-- Real Chrome downloads: a **two-page A4 single-case PDF** from a read-only backup of the local February/March portfolio, and an **eight-page A4 two-case stress document** from separate constructed fixtures with long names and multiline notes. The files were opened in Chrome's PDF viewer and inspected. Independent parsing with verification-only `pypdf==6.12.0` checked every page's A4 media box, non-blank content, exact source IDs and exclusion of controls/AI text. pypdf is not a runtime dependency.
-- Browser flow: Reviewed Customers selection, retained worklist query, direct Download PDF, desktop **1440px** and narrow **380px** preview, browser Print path, and actual server-conflict refresh/review/retry. The copied real case retains February **84.4%** versus March **74.3%** and its manually closed lifecycle; export does not reinterpret that status. A deliberate stale-review mutation was made only in the separate constructed fixture server.
-- The copied real case's complete JSON (including original/latest evidence, review history, follow-ups and actions) was identical before/after preparation/download. The working SQLite file's SHA-256 was unchanged. No working February/March records were modified. This was selected-case acceptance using a copied portfolio, not a full-portfolio import/scoring replay.
-- Ignored local evidence: `.impeccable/review/milestone3/` contains browser screenshots/checks, actual downloaded PDFs, extracted text and PDF inspection records. None is committed. Temporary acceptance servers are stopped after verification.
+* Baseline: **92 existing tests** and production build passed before implementation.
+* Final automated checks: **115 tests** (41 backend/API/migration/PDF, 8 copy/update, 8 JavaScript client/API, 58 React) and Vite build. Tests use temporary databases and constructed fixtures.
+* New coverage: ordered/deduplicated selection and ten-case limit; February origin/March lower-risk context; same-month distinct batches; zero/missing estimates; no follow-up; insufficient/duplicate questions; sample provenance; stale case/review/latest assessment; whole-selection failures; long notes/names; real PDF bytes/A4 pages; read-only database dumps; client selection races, error recovery and review-before-retry.
+* The existing React briefing test was updated for the intended change from disabled Export PDF to enabled Download PDF, the new shared-payload endpoint and asynchronous print freshness validation. Other Milestone 2 assertions remain intact.
+* Real Chrome downloads: a **two-page A4 single-case PDF** from a read-only backup of the local February/March portfolio, and an **eight-page A4 two-case stress document** from separate constructed fixtures with long names and multiline notes. The files were opened in Chrome's PDF viewer and inspected. Independent parsing with verification-only `pypdf==6.12.0` checked every page's A4 media box, non-blank content, exact source IDs and exclusion of controls/AI text. pypdf is not a runtime dependency.
+* Browser flow: Reviewed Customers selection, retained worklist query, direct Download PDF, desktop **1440px** and narrow **380px** preview, browser Print path, and actual server-conflict refresh/review/retry. The copied real case retains February **84.4%** versus March **74.3%** and its manually closed lifecycle; export does not reinterpret that status. A deliberate stale-review mutation was made only in the separate constructed fixture server.
+* The copied real case's complete JSON (including original/latest evidence, review history, follow-ups and actions) was identical before/after preparation/download. The working SQLite file's SHA-256 was unchanged. No working February/March records were modified. This was selected-case acceptance using a copied portfolio, not a full-portfolio import/scoring replay.
+* Ignored local evidence: `.impeccable/review/milestone3/` contains browser screenshots/checks, actual downloaded PDFs, extracted text and PDF inspection records. None is committed. Temporary acceptance servers are stopped after verification.
 
 ## Owner acceptance — pending
 

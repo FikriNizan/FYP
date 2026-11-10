@@ -8,7 +8,7 @@ This corrects the earlier v0.2.0 plain-JavaScript starter to match Part 1, Secti
 
 ## Where you are now
 
-Milestone 2 (Reviewed Customers and follow-up) is implemented. Milestone 3 now completes the existing RM briefing with a direct, read-only PDF download and freshness checks. See [MILESTONE_3.md](docs/MILESTONE_3.md) for dependency setup, verified behaviour and the owner's pending Windows acceptance walkthrough; [MILESTONE_2.md](docs/MILESTONE_2.md) retains the earlier workflow context.
+Milestone 2 (Reviewed Customers and follow-up) is implemented. Milestone 3 now completes the existing RM briefing with a direct, read-only PDF download and freshness checks. See [MILESTONE\_3.md](docs/MILESTONE_3.md) for dependency setup, verified behaviour and the owner's pending Windows acceptance walkthrough; [MILESTONE\_2.md](docs/MILESTONE_2.md) retains the earlier workflow context.
 
 Your supplied database-copy log showed three preserved batches and 2,001 prediction records. Those correspond to the one-case demo and two 1,000-customer imports. The selected enriched February batch remains a portfolio of 1,000 customers, with 208 flagged and 792 below threshold. At copying, there were zero reviews/actions; later development decisions will change those workflow counts.
 
@@ -26,22 +26,22 @@ Frontend = what users see and click. Backend = trusted server operations. Databa
 
 ## 2. Find the right file
 
-| Location                                  | Purpose                                                         |
-| ----------------------------------------- | --------------------------------------------------------------- |
-| `frontend/src/main.jsx`                   | Starts React and the hash-based router                          |
-| `frontend/src/App.jsx`                    | Assessment selection, navigation and shared review/draft state  |
-| `frontend/src/pages/Overview.jsx`         | Portfolio counts, searching, filters and pagination             |
-| `frontend/src/pages/CustomerReview.jsx`   | Customer evidence and Ops/Finance layout                        |
-| `frontend/src/components/ReviewForm.jsx`  | Editable review and explicit save/conflict handling             |
-| `frontend/src/components/Signals.jsx`     | Shared SHAP signals, plain-language/technical layers            |
-| `frontend/src/components/FlowHistory.jsx` | Recorded monthly flows and accessible exact-value table         |
-| `frontend/src/api.js`, `format.js`        | API requests and consistent display rules                       |
-| `frontend/src/workspace.css`, `workspace-architect.css` | Ordered base/Architect styles; screen theme and A4 print rules |
-| `frontend/package-lock.json`              | Exact resolved frontend dependency versions                     |
-| `backend/churn_backend/`                  | Existing Flask API, importer, validation and persistence        |
-| `backend/instance/churn.sqlite`           | Default local database, excluded from source control            |
-| `scripts/`                                | Checks, safe database copying and guarded React source updating |
-| `.github/workflows/ci.yml`                | Backend tests, frontend tests and React build on GitHub         |
+| Location                                                | Purpose                                                         |
+| ------------------------------------------------------- | --------------------------------------------------------------- |
+| `frontend/src/main.jsx`                                 | Starts React and the hash-based router                          |
+| `frontend/src/App.jsx`                                  | Assessment selection, navigation and shared review/draft state  |
+| `frontend/src/pages/Overview.jsx`                       | Portfolio counts, searching, filters and pagination             |
+| `frontend/src/pages/CustomerReview.jsx`                 | Customer evidence and Ops/Finance layout                        |
+| `frontend/src/components/ReviewForm.jsx`                | Editable review and explicit save/conflict handling             |
+| `frontend/src/components/Signals.jsx`                   | Shared SHAP signals, plain-language/technical layers            |
+| `frontend/src/components/FlowHistory.jsx`               | Recorded monthly flows and accessible exact-value table         |
+| `frontend/src/api.js`, `format.js`                      | API requests and consistent display rules                       |
+| `frontend/src/workspace.css`, `workspace-architect.css` | Ordered base/Architect styles; screen theme and A4 print rules  |
+| `frontend/package-lock.json`                            | Exact resolved frontend dependency versions                     |
+| `backend/churn_backend/`                                | Existing Flask API, importer, validation and persistence        |
+| `backend/instance/churn.sqlite`                         | Default local database, excluded from source control            |
+| `scripts/`                                              | Checks, safe database copying and guarded React source updating |
+| `.github/workflows/ci.yml`                              | Backend tests, frontend tests and React build on GitHub         |
 
 ## 3. Run your existing project on Windows
 
