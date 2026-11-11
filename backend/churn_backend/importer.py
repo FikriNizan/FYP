@@ -1,6 +1,7 @@
 """Read completed local SHAP exports. No model fitting or pickle loading."""
 import csv
 import hashlib
+import re
 from pathlib import Path
 
 from .constants import (CALIBRATION_INTERCEPT, CALIBRATION_SLOPE, CATEGORIES,
@@ -65,23 +66,25 @@ def read_features(path):
     return result
 
 
-def read_customer_master(path, selected_ids):
+def read_customer_master(path, selected_ids, allow_missing=False):
     if path is None:
         return {}
     columns, rows = csv_rows(path)
     require({"cus_id", "cus_name"}.issubset(columns), "Customer master needs cus_id and cus_name")
     result, seen = {}, set()
     for row in rows:
-        require(row["cus_id"].strip() and row["cus_id"] not in seen, "Invalid/duplicate master customer")
+        require(bool(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,199}',row["cus_id"]))
+                and row["cus_id"] not in seen, "Invalid/duplicate master customer")
         seen.add(row["cus_id"])
         if row["cus_id"] in selected_ids:
             require(len(row["cus_name"]) <= 500, "Customer name exceeds 500 characters")
             result[row["cus_id"]] = dict(customer_name=row["cus_name"] or None)
-    require(selected_ids <= seen, "Customer master does not cover the selected month")
+    if not allow_missing:
+        require(selected_ids <= seen, "Customer master does not cover the selected month")
     return result
 
 
-def read_flows(path, month, selected_ids, features):
+def read_flows(path, month, selected_ids, features, allow_missing=False):
     if path is None:
         return {}
     columns, rows = csv_rows(path)
@@ -112,6 +115,9 @@ def read_flows(path, month, selected_ids, features):
         result[row["cus_id"]].append(flow)
     for customer, history in result.items():
         history.sort(key=lambda item: item["snapshot_month"])
+        if allow_missing and (not history or history[-1]["snapshot_month"] != month):
+            result[customer] = []
+            continue
         require(history and history[-1]["snapshot_month"] == month, "Missing selected-month flow")
         current = features[(customer, month)]["combined_flow_mean_1m_myr"]
         require(current is not None and abs(history[-1]["combined_flow_myr"] - current) <= .011,

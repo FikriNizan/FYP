@@ -33,7 +33,7 @@ The primary journey is: choose an assessment → find a customer → understand 
 
 Overview is scoped to an exact saved assessment batch. Customer Review presents Summary, Operations and Finance perspectives on that same assessment. Reviewed Customers spans assessments so earlier decisions remain findable after later imports. A case links the original decision to dated follow-up tasks and events, with explicit manual defer, closure and reopening.
 
-Monthly Assessments describes saved evidence coverage. RM Briefing prepares a read-only structured discussion preview for explicitly selected prioritised cases, with working browser Print and local PDF download actions. Guide explains the workflow. Monitoring, monthly upload/scoring, AI drafting and OPR calculations remain unavailable or clearly labelled isolated design previews until their services exist.
+Monthly Assessments describes saved evidence coverage and provides the implemented upload, validation, scoring and publication flow for a complete prepared month; scoring requires the trusted local research environment to be configured. RM Briefing prepares a read-only structured discussion preview for explicitly selected prioritised cases, with working browser Print and local PDF download actions. Guide explains the workflow. Monitoring, AI drafting and OPR calculations remain unavailable or clearly labelled isolated design previews until their services exist.
 
 The application is a local research/FYP prototype for a meeting-room laptop and narrower browser windows. It is not established as a production banking service.
 
@@ -53,7 +53,7 @@ The application is a local research/FYP prototype for a meeting-room laptop and 
 * Observed activity ends at the assessment cutoff; predicted risk covers the following three months. Missing observations stay missing, and genuine zero values remain zero.
 * Balances are exposures. Fees and waivers are separate historical estimates, not verified profit, invoices or guaranteed retention savings.
 * Product explanations must preserve explicit uncertainty and limitations. Model explanations are not causal effects, financial values may be unavailable, and action logging does not establish retention effectiveness.
-* Connected saved data, isolated demo previews and unavailable integrations must remain distinguishable. Preview interactions must not create real records, transmit files or announce successful scoring/publication.
+* Connected saved data, the real prepared-month upload flow, isolated demo previews and unavailable integrations must remain distinguishable. Preview interactions must not create real records, transmit files or announce successful scoring/publication.
 * AI generation, new-month inference, realised-outcome monitoring and OPR scenario calculations are not established live capabilities. Browser printing and deterministic briefing preparation do not imply those services exist.
 
 ## Brand Commitments
@@ -92,4 +92,4 @@ Support keyboard navigation, visible focus, labelled forms, readable contrast an
 
 ## Open Decisions
 
-Production hosting, authentication/access control and a final deployment scope remain later decisions. Real monthly upload/scoring, grounded AI generation, mature-outcome monitoring and a justified OPR calculation contract require further integration work. Milestone acceptance and representative-user evaluation remain governed by the project roadmap; implemented screens alone do not establish sign-off.
+Production hosting, authentication/access control and a final deployment scope remain later decisions. Production hardening of monthly upload/scoring, grounded AI generation, mature-outcome monitoring and a justified OPR calculation contract require further integration work. Milestone acceptance and representative-user evaluation remain governed by the project roadmap; implemented screens alone do not establish sign-off.

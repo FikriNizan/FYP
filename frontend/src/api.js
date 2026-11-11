@@ -30,6 +30,17 @@ export async function request(path, { params, method = 'GET', body, signal } = {
 }
 
 export const api = {
+  uploadAssessment: async (features, manifest) => {
+    const body = new FormData(); body.append('features',features); body.append('manifest',manifest);
+    let response;
+    try { response = await fetch('/api/assessments', {method:'POST', credentials:'same-origin', headers:{Accept:'application/json'}, body}); }
+    catch { throw new ApiError('Connection lost during processing. Check saved assessments, then safely resubmit the unchanged package.',0,'network_error'); }
+    let result;
+    try { result = await response.json(); }
+    catch { throw new ApiError('The server returned an unreadable response. Check saved assessments before retrying.',response.status,'invalid_response'); }
+    if (!response.ok) throw new ApiError(result.error?.message || 'Monthly processing failed. Correct the package and try again.',response.status,result.error?.code);
+    return result;
+  },
   briefing: ids => request('/api/briefings?' + new URLSearchParams(ids.map(id=>['case_id',id]))),
   downloadBriefing: async (ids, snapshots, signal) => {
     const response=await fetch('/api/briefings/pdf', {

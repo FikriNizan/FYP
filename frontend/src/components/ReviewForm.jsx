@@ -13,6 +13,7 @@ export default function ReviewForm({ customer, workflow }) {
   const [expectedVersion,setExpectedVersion] = useState(() => draft?.expectedVersion ?? customer.review.version);
   const [error, setError] = useState(null);
   const [dirty, setDirty] = useState(Boolean(draft));
+  const [caseChoice,setCaseChoice] = useState(customer.workflow?.case_id || '');
   const mounted = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const change = event => {
@@ -26,7 +27,9 @@ export default function ReviewForm({ customer, workflow }) {
     workflow.setSaving(true); setError(null);
     workflow.rememberDraft(id, { fields, expectedVersion });
     try {
-      await api.saveReview(id, { ...fields, next_action_date: fields.next_action_date || null, expected_version: expectedVersion });
+      const chosen = customer.workflow?.active_cases?.find(item=>item.case_id===caseChoice);
+      await api.saveReview(id, { ...fields, next_action_date: fields.next_action_date || null, expected_version: expectedVersion,
+        ...(caseChoice ? {case_id:caseChoice,expected_case_version:chosen?.version ?? customer.workflow?.case_version} : {}) });
       workflow.saved(customer);
     } catch (error) { if (mounted.current) setError(error); }
     finally { workflow.setSaving(false); }
@@ -37,6 +40,7 @@ export default function ReviewForm({ customer, workflow }) {
   };
   return <aside id="decision-section" className="panel review-sidebar"><h2>Record committee decision</h2><p className="muted">Save your judgement. Outreach can be recorded later.</p>
     <form className="review-form" onSubmit={submit}><fieldset disabled={workflow.saving}>
+      {customer.workflow?.active_cases?.length>1 && <><label htmlFor="case-choice">Existing case to reassess</label><select id="case-choice" value={caseChoice} required onChange={e=>setCaseChoice(e.target.value)}><option value="">Select case</option>{customer.workflow.active_cases.map(item=><option key={item.case_id} value={item.case_id}>{item.origin_month} ? {item.status} ? {item.case_id.slice(0,8)}</option>)}</select></>}
       <label htmlFor="decision">Decision</label><select id="decision" name="decision" value={fields.decision} onChange={change} required><option value="">Choose a decision</option>{['prioritise','monitor','no_immediate_action'].map(value => <option key={value} value={value}>{decisionLabel(value)}</option>)}</select>
       <label htmlFor="reason">Decision reason</label><textarea id="reason" name="reason" value={fields.reason} onChange={change} required maxLength={4000} />
       <label htmlFor="reviewer">Reviewed by</label><input id="reviewer" name="reviewer" value={fields.reviewer} onChange={change} required maxLength={200} />

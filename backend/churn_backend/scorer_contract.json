@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "champion_sha256": "3d31eb0cfc36c2a8bb7fb072f9a63664ae2c3a940552c53c0f58ba94394346ec",
+  "files": {
+    "boosted_baselines_v1.py": "8797ddd9d527c6a17a4396ef9ccc48c06e260009347b4fc010a4b6f2bc75da75",
+    "catboost_baseline_v1.py": "7783e82214152c7465657d4697f997a72556278477baaf45990f90352fd420ce",
+    "data/models/final_refit_v1/catboost_baseline_final.joblib": "3d31eb0cfc36c2a8bb7fb072f9a63664ae2c3a940552c53c0f58ba94394346ec",
+    "data/models/final_refit_v1/catboost_tuned_final.joblib": "9708993c88ecbc0ae738ecf9bca21bbb2817ea277b1300581e9ec209af90fd76",
+    "data/models/final_refit_v1/final_policy_parameters.csv": "121e7223847fa7d79672ccbd298e03481c37f156eec2cadec10fc28c6f0ee56a",
+    "data/models/final_refit_v1/fit_summary.csv": "8f9c20f403db420546f7c86e421871428c9c082812ede1d7d8dae0f2d3c3b7f7",
+    "data/models/final_refit_v1/fold_overview.csv": "cd04bae52076a89d10743e55fddc98c638a6950336dccea122047e6080f4d513",
+    "data/models/final_refit_v1/lightgbm_tuned_final.joblib": "482198e8da3124581326e206b51be65ba837d83f06cced96430197ff343f3813",
+    "data/models/final_refit_v1/logistic_regression_tuned_final.joblib": "48421b14017914cf67ede1429140a4d7199ee7b5c092c34c2e378dbc826e31e2",
+    "data/models/final_refit_v1/oof_predictions.csv": "ece7123dd751fec7951d193116952fd53736a9ca2dc2bd88237fa03654c42f28",
+    "data/models/final_refit_v1/refit_manifest.json": "751bf424c4f8b6c3f74e0c0ea19f7bf61ede22def973d4ee146c363843484d73",
+    "data/models/final_refit_v1/xgboost_tuned_final.joblib": "3c95c27bcf43b30f39591242b08d0d812bba64523283bd748393ed1916643d53",
+    "data/models/frozen_experiment_v1/freeze_manifest.json": "ad709d4990199090ae15d114e9218b5b0e0311d9fbd541e1dbc07440e0914efc",
+    "data/models/frozen_experiment_v1/frozen_protocol.json": "6ae6d17ef0dcb7c3b0b7e090bed0dbae475024f5c0606f71ad100411adb5a4dc",
+    "data/models/frozen_experiment_v1/selection_evidence.csv": "70cf4a0a728724cb006f1fea27fec2a5651d88b4567e17b1ed65446d04bf67d9",
+    "data_contract.py": "ff2dd21e22ca29fa2f0ee60f1ecd0761f1933c7db98f68a563c35a309af20913",
+    "final_experiment_v1.py": "4f9be7a10f42e0af0935ed9dac8da1c01cca6f377753c08744673a0a577eb121",
+    "model_baseline_v1.py": "f24ae106ac13d6f8fbfefe18677c33f52e496ad606a48956042a8466847e20ff",
+    "shap_explainability_v1.py": "2b02155e3aabb70f229ba6cd22bfffbb2dc74fdad1e351d72fbefdc740320234",
+    "sigmoid_recalibration_v1.py": "f6d25a3efa6919b6d9f362ec79923bddc223278ea8cc65c7757dd581031fdc9c",
+    "threshold_analysis_v1.py": "7d0d4de34de41d4df5d64ee41518fb15b91a7cf867cdae422f282734abff7139",
+    "time_aware_tuning_v1.py": "474145531b9a67a1bb6b36f46d96fbea70febee5f98ba47381c2be2837abc585"
+  }
+}

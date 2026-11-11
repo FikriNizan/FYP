@@ -46,6 +46,12 @@ export const caseStatusLabel = status => ({
   closed: 'Closed',
 }[status] || status);
 
+export const workflowLabel = (state, original=false) => ({
+  reviewed:'Reviewed for this assessment', existing_case:original ? 'Existing case for its original assessment' : 'Existing case - new assessment',
+  case_conflict:'Existing cases - select one', below_threshold:'Below review threshold',
+  needs_reassessment:'Needs reassessment',needs_first_review:'Needs first review',
+}[state] || 'Review context unavailable');
+
 export function activityChange(recent, baseline) {
   if (!isNumber(recent) || !isNumber(baseline) || baseline <= 0) return 'Not provided';
   const change = (recent / baseline - 1) * 100;

@@ -28,8 +28,9 @@ class BriefingTests(unittest.TestCase):
         self.review(self.id)
 
     def review(self, case_id, decision='prioritise', version=0, reason='Original committee rationale'):
+        extra = {'expected_case_version':self.client.get('/api/cases/'+case_id).json['case']['version']} if version else {}
         response = self.client.put('/api/predictions/'+case_id+'/review', json=dict(
-            decision=decision, reason=reason, reviewer='Committee', owner='RM A', expected_version=version))
+            decision=decision, reason=reason, reviewer='Committee', owner='RM A', expected_version=version, **extra))
         self.assertEqual(response.status_code, 200)
 
     def preview(self, ids=None):
@@ -81,7 +82,7 @@ class BriefingTests(unittest.TestCase):
     def test_february_origin_march_lower_risk_keeps_original_current_and_latest_distinct(self):
         # Current judgement changes; immutable opening rationale remains separately available.
         self.review(self.id, version=1, reason='Current rationale')
-        follow = self.client.post('/api/cases/'+self.id+'/follow-ups', json=dict(expected_version=1,
+        follow = self.client.post('/api/cases/'+self.id+'/follow-ups', json=dict(expected_version=2,
             action_type='customer_contact', action_status='planned', action_date='2026-11-10',
             recorded_by='RM A', notes='Proposed discussion; no contact yet'))
         self.assertEqual(follow.status_code, 201)
@@ -129,7 +130,8 @@ class BriefingTests(unittest.TestCase):
     def test_order_deduplication_limit_and_multiple_pdf_cases(self):
         batch = self.batch(count=11)
         ids = [c['prediction_id'] for c in self.client.get('/api/customers', query_string=dict(batch_id=batch)).json['items']]
-        for id in ids:
+        ids = [self.id]+[id for id in ids if id != next(c['prediction_id'] for c in self.client.get('/api/customers', query_string=dict(batch_id=batch)).json['items'] if c['cus_id']=='944')]
+        for id in ids[1:]:
             self.review(id)
         selection = [ids[2], ids[0], ids[1], ids[2]]
         preview = self.preview(selection).json
@@ -150,7 +152,7 @@ class BriefingTests(unittest.TestCase):
         self.assertEqual(response.json['error']['code'], 'briefing_changed')
         self.assertEqual(self.pdf(response.json['briefing']).status_code, 200)
         preview = response.json['briefing']
-        response = self.client.put('/api/cases/'+self.id, json=dict(expected_version=1,status='closed',
+        response = self.client.put('/api/cases/'+self.id, json=dict(expected_version=2,status='closed',
             owner='RM B',next_action_date=None,notes='Manual closure',recorded_by='Committee'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.pdf(preview).status_code, 409)

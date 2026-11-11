@@ -10,7 +10,7 @@ import { discussionQuestions } from '../src/briefing.js';
 import briefingPayload from './fixtures/briefing.json';
 import demo from '../../backend/demo/notebook_case.json';
 
-vi.mock('../src/api.js',async original=>({...await original(),api:{months:vi.fn(),summary:vi.fn(),customers:vi.fn(),customer:vi.fn(),saveReview:vi.fn(),case:vi.fn(),cases:vi.fn(),briefing:vi.fn(),downloadBriefing:vi.fn()}}));
+vi.mock('../src/api.js',async original=>({...await original(),api:{uploadAssessment:vi.fn(),months:vi.fn(),summary:vi.fn(),customers:vi.fn(),customer:vi.fn(),saveReview:vi.fn(),case:vi.fn(),cases:vi.fn(),briefing:vi.fn(),downloadBriefing:vi.fn()}}));
 const batch={batch_id:'enriched',cutoff_month:'2024-02-29',record_count:1000,source_kind:'saved_shap_export',imported_at:'2026-11-01T18:00:00Z',source:{customer_names_loaded:true,flow_history_loaded:true}};
 let customer,reviewed;
 function start(path) { render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>); }
@@ -42,7 +42,7 @@ describe('Work-focused frontend',()=>{
     fireEvent.click(screen.getByRole('link',{name:'← Back to review queue'}));
     await screen.findByRole('heading',{name:'Overview'});
     expect(screen.getByLabelText('Find customer').value).toBe('944');
-    expect(screen.getByLabelText('Committee decision').value).toBe('monitor');
+    expect(screen.getByLabelText('This assessment decision').value).toBe('monitor');
     expect(screen.getByRole('button',{name:'All customers'}).getAttribute('aria-pressed')).toBe('true');
     expect(api.customers).toHaveBeenLastCalledWith('enriched',{q:'944',decision:'monitor',offset:50,limit:50});
   });
@@ -60,20 +60,61 @@ describe('Work-focused frontend',()=>{
     expect(screen.getByRole('img').getAttribute('aria-label')).toContain('Incoming flow');
   });
 
-  it('shows saved coverage while failed-upload previews never send a file or mutate records',async()=>{
-    const fetchSpy=vi.spyOn(globalThis,'fetch');
+  it('recovers a failed upload, refreshes saved coverage and opens the exact published batch',async()=>{
     start('/assessments');
     await screen.findByRole('link',{name:'Open overview'});
     expect(screen.getByText('1,000 customers')).toBeTruthy();
-    expect(screen.getByRole('button',{name:'Upload monthly package'}).disabled).toBe(true);
-    fireEvent.click(screen.getByRole('button',{name:'Explore workflow preview'}));
-    fireEvent.change(screen.getByLabelText('Preview state'),{target:{value:'failed'}});
-    expect(screen.getByRole('heading',{name:'Validation failed · constructed example'})).toBeTruthy();
-    expect(screen.getByText('Package cutoff is missing.')).toBeTruthy();
-    expect(screen.getByRole('link',{name:'Open overview'}).getAttribute('href')).toBe('/overview?batch_id=enriched');
-    fireEvent.click(screen.getByRole('button',{name:'Preview correction and resubmission'}));
-    expect(screen.getByLabelText('Monthly package upload unavailable').disabled).toBe(true);
-    expect(fetchSpy).not.toHaveBeenCalled(); fetchSpy.mockRestore();
+    const submit=screen.getByRole('button',{name:'Validate, score and publish'});
+    expect(submit.disabled).toBe(true);
+    const csv=new File(['features'],'features.csv',{type:'text/csv'});
+    const manifest=new File(['{}'],'manifest.json',{type:'application/json'});
+    fireEvent.change(screen.getByLabelText('Prepared features CSV'),{target:{files:[csv]}});
+    fireEvent.change(screen.getByLabelText('Companion manifest JSON'),{target:{files:[manifest]}});
+    api.uploadAssessment.mockRejectedValueOnce(new Error('Checksum differs. Select matching files.'));
+    fireEvent.submit(submit.closest('form'));
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent','Checksum differs. Select matching files.');
+    expect(submit.disabled).toBe(false);
+    const published={batch_id:'exact-april',cutoff_month:'2024-04-30',records:1000,already_imported:false};
+    let finish; api.uploadAssessment.mockReturnValueOnce(new Promise(resolve=>{finish=resolve;}));
+    api.months.mockResolvedValue({items:[{...batch,batch_id:'exact-april',cutoff_month:'2024-04-30',source_kind:'prepared_month_scored'},batch]});
+    fireEvent.submit(submit.closest('form'));
+    expect(screen.getByRole('progressbar')).toBeTruthy();
+    expect(screen.getByLabelText('Prepared features CSV').disabled).toBe(true);
+    finish(published);
+    const link=await screen.findByRole('link',{name:'Open published assessment'});
+    expect(link.getAttribute('href')).toBe('/overview?batch_id=exact-april');
+    await waitFor(()=>expect(screen.getByText('Newly scored prepared package')).toBeTruthy());
+    expect(api.uploadAssessment).toHaveBeenLastCalledWith(csv,manifest);
+    api.uploadAssessment.mockResolvedValue({...published,already_imported:true});
+    fireEvent.submit(screen.getByRole('button',{name:'Validate, score and publish'}).closest('form'));
+    await screen.findByRole('heading',{name:'Assessment already published'});
+    expect(screen.getByText(/No new records were created/)).toBeTruthy();
+  });
+
+  it('shows an ongoing case beside an unreviewed later assessment',async()=>{
+    customer={...customer,cutoff_month:'2024-04-30',review:{...customer.review,version:0,decision:'awaiting_review'},
+      workflow:{state:'existing_case',case_id:'case-a',case_version:1,case_status:'open',origin_month:'2024-02-29',
+        origin_risk:.844,origin_decision:'prioritise',active_cases:[{case_id:'case-a',version:1,status:'open',origin_month:'2024-02-29'}]}};
+    api.customer.mockResolvedValue({customer});
+    start('/customer/944?batch_id=enriched');
+    await screen.findByRole('heading',{name:'Saved evidence company'});
+    expect(screen.getByText('Existing case - new assessment')).toBeTruthy();
+    expect(screen.getByText(/No committee review has been saved for this assessment/)).toBeTruthy();
+    expect(screen.getByRole('link',{name:'Continue existing case'}).getAttribute('href')).toBe('/cases/case-a');
+    fireEvent.change(screen.getByLabelText('Decision'),{target:{value:'monitor'}});
+    fireEvent.change(screen.getByLabelText('Decision reason'),{target:{value:'Deliberate reassessment'}});
+    fireEvent.change(screen.getByLabelText('Reviewed by'),{target:{value:'Committee'}});
+    fireEvent.click(screen.getByRole('button',{name:'Save decision'}));
+    await waitFor(()=>expect(api.saveReview).toHaveBeenCalledWith('prediction',expect.objectContaining({decision:'monitor',case_id:'case-a',expected_case_version:1,expected_version:0})));
+  });
+
+  it('uses the current linked committee decision for briefing selection',async()=>{
+    reviewed.current_review={...customer.review,decision:'monitor',assessment_month:'2024-04-30',version:1};
+    start('/reviewed');
+    const checkbox=await screen.findByRole('checkbox');
+    expect(checkbox.disabled).toBe(true);
+    expect(screen.getByText('Monitor',{selector:'span.badge'})).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Prepare RM briefing'}).disabled).toBe(true);
   });
 
   it('changes only hypothetical OPR inputs and never invents a calculated output',async()=>{

@@ -1,4 +1,4 @@
-from flask import Blueprint, abort, jsonify, request, send_file
+from flask import Blueprint, abort, current_app, jsonify, request, send_file
 from io import BytesIO
 
 from . import repository as repo
@@ -43,6 +43,8 @@ def metadata():
     return jsonify(version=VERSION, decisions=list(DECISIONS), action_types=list(ACTION_TYPES),
                    action_statuses=list(ACTION_STATUSES), display_timezone="Asia/Kuala_Lumpur",
                    timestamps="UTC ISO 8601", outcome_monitoring=False, live_model_scoring=False,
+                   prepared_month_scoring=True,
+                   scoring_configured=bool(current_app.config.get('TXB_RESEARCH_ROOT') and current_app.config.get('TXB_MODEL_PYTHON')),
                    review_identity="User-entered attribution for this local prototype; not authenticated identity",
                    data_access="Local saved evidence snapshots")
 
@@ -50,6 +52,18 @@ def metadata():
 @api.get("/months")
 def months():
     return jsonify(items=repo.batches())
+
+
+@api.post('/assessments')
+def upload_assessment():
+    from . import monthly
+    request.max_content_length = monthly.REQUEST_LIMIT
+    require(request.mimetype == 'multipart/form-data', 'Select a features CSV and companion manifest JSON.')
+    require(not request.form and set(request.files) == {'features', 'manifest'}, 'Upload exactly features and manifest files.')
+    require(all(len(request.files.getlist(key)) == 1 for key in request.files), 'Upload one file per input.')
+    result = monthly.process(request.files['features'].stream.read(monthly.CSV_LIMIT+1),
+                             request.files['manifest'].stream.read(monthly.MANIFEST_LIMIT+1))
+    return jsonify(result), 200 if result['already_imported'] else 201
 
 
 @api.get("/summary")
@@ -73,6 +87,10 @@ def customers():
     require(decision is None or decision in DECISIONS, "Invalid decision filter")
     if decision:
         items = [item for item in items if item["review"]["decision"] == decision]
+    workflow = request.args.get('workflow')
+    require(workflow in (None,'needs_review'), 'Invalid workflow filter')
+    if workflow:
+        items = [item for item in items if item['workflow']['state'] in ('needs_first_review','needs_reassessment')]
     try:
         limit, offset = int(request.args.get("limit", "100")), int(request.args.get("offset", "0"))
     except ValueError:

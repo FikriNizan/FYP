@@ -170,11 +170,15 @@ def validate_record(record):
 
 def validate_review(body):
     fields = {"decision", "reason", "operations_notes", "finance_notes", "owner",
-              "next_action_date", "reviewer", "expected_version"}
+              "next_action_date", "reviewer", "expected_version", "case_id", "expected_case_version"}
     require(isinstance(body, dict) and not set(body) - fields, "Unknown review fields")
     require(body.get("decision") in DECISIONS[1:], "Choose prioritise, monitor or no_immediate_action")
     version = body.get("expected_version")
     require(type(version) is int and version >= 0, "expected_version must be a non-negative integer")
+    case_id = body.get('case_id')
+    require(case_id is None or isinstance(case_id,str) and re.fullmatch(r'[A-Za-z0-9_-]{1,128}',case_id), 'Invalid case_id')
+    case_version = body.get('expected_case_version')
+    require(case_version is None or type(case_version) is int and case_version >= 1, 'Invalid expected_case_version')
     next_date = body.get("next_action_date")
     if next_date is not None:
         iso_date(next_date, "next_action_date")
@@ -183,7 +187,7 @@ def validate_review(body):
                 finance_notes=text_field(body, "finance_notes"),
                 owner=text_field(body, "owner", maximum=200), next_action_date=next_date,
                 reviewer=text_field(body, "reviewer", maximum=200, required=True),
-                expected_version=version)
+                expected_version=version,case_id=case_id,expected_case_version=case_version)
 
 
 def validate_action(body):

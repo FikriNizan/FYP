@@ -26,9 +26,9 @@ def initialise():
     existing = db.execute("SELECT 1 FROM sqlite_master WHERE name='predictions'").fetchone()
     versioned = db.execute("SELECT 1 FROM sqlite_master WHERE name='schema_migrations'").fetchone()
     version = db.execute("SELECT COALESCE(MAX(version),0) FROM schema_migrations").fetchone()[0] if versioned else 0
-    if version > 2:
+    if version > 3:
         raise RuntimeError("Database schema is newer than this application")
-    if version == 2:
+    if version == 3:
         return
     # SQLite backup includes committed WAL pages. Never overwrite an earlier backup.
     if existing:
@@ -44,7 +44,7 @@ def initialise():
         db.execute("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)")
         # A second process may have upgraded while this connection waited for the lock.
         version = db.execute("SELECT COALESCE(MAX(version),0) FROM schema_migrations").fetchone()[0]
-        if version == 2:
+        if version == 3:
             db.commit()
             return
         if version < 1:
@@ -52,10 +52,15 @@ def initialise():
                 if statement.strip():
                     db.execute(statement)
             db.execute("INSERT INTO schema_migrations VALUES (1,?)", (datetime.now(timezone.utc).isoformat(),))
-        for statement in (directory / 'migrations' / '002_reviewed_cases.sql').read_text().split(';'):
+        if version < 2:
+            for statement in (directory / 'migrations' / '002_reviewed_cases.sql').read_text().split(';'):
+                if statement.strip():
+                    db.execute(statement)
+            db.execute("INSERT INTO schema_migrations VALUES (2,?)", (datetime.now(timezone.utc).isoformat(),))
+        for statement in (directory / 'migrations' / '003_supplemental_continuity.sql').read_text().split(';'):
             if statement.strip():
                 db.execute(statement)
-        db.execute("INSERT INTO schema_migrations VALUES (2,?)", (datetime.now(timezone.utc).isoformat(),))
+        db.execute("INSERT INTO schema_migrations VALUES (3,?)", (datetime.now(timezone.utc).isoformat(),))
         db.commit()
     except Exception:
         db.rollback()

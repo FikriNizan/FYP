@@ -36,6 +36,14 @@ def record(row, detail=False):
         (original['cus_id'],)).fetchone()
     result = dict(row)
     result['original_review'] = json.loads(result.pop('original_review_json'))
+    current_row = get_db().execute('SELECT p.prediction_id,b.cutoff_month,r.version,r.body_json,r.updated_at '
+        'FROM predictions p JOIN batches b USING(batch_id) JOIN reviews r USING(prediction_id) '
+        'WHERE p.prediction_id=? OR p.prediction_id IN (SELECT prediction_id FROM review_case_links WHERE case_id=?) '
+        'ORDER BY b.cutoff_month DESC,r.updated_at DESC,p.prediction_id DESC LIMIT 1',
+        (row['prediction_id'],row['case_id'])).fetchone()
+    result['current_review'] = dict(**json.loads(current_row['body_json']),version=current_row['version'],
+        updated_at=current_row['updated_at'],prediction_id=current_row['prediction_id'],
+        assessment_month=current_row['cutoff_month'])
     result.update(original=original, latest=repo.customer_record(latest_row, detail=detail))
     follow_ups = tasks(row['case_id'])
     result['follow_up_counts'] = {state: sum(t['current']['action_status'] == state for t in follow_ups)
@@ -44,7 +52,11 @@ def record(row, detail=False):
         result['follow_ups'] = follow_ups
         events = get_db().execute('SELECT * FROM case_events WHERE case_id=? ORDER BY version', (row['case_id'],)).fetchall()
         result['history'] = [dict(**json.loads(e['body_json']), version=e['version'], recorded_at=e['recorded_at']) for e in events]
-        result['review_history'] = repo.review_history(row['prediction_id'])
+        linked = get_db().execute('SELECT p.prediction_id,b.cutoff_month FROM predictions p JOIN batches b USING(batch_id) '
+            'WHERE p.prediction_id=? OR p.prediction_id IN (SELECT prediction_id FROM review_case_links WHERE case_id=?) '
+            'ORDER BY b.cutoff_month,p.prediction_id',(row['prediction_id'],row['case_id'])).fetchall()
+        result['review_history'] = [dict(item,assessment_month=p['cutoff_month'],prediction_id=p['prediction_id'])
+                                    for p in linked for item in repo.review_history(p['prediction_id'])]
     return result
 
 
@@ -53,7 +65,7 @@ def listing(query='', status=None, decision=None, owner='', offset=0, limit=50):
     items = [record(row) for row in rows]
     query, owner = query.casefold(), owner.casefold()
     items = [c for c in items if (not status or c['status'] == status)
-             and (not decision or c['original_review']['decision'] == decision)
+             and (not decision or c['current_review']['decision'] == decision)
              and (not owner or owner in c['owner'].casefold())
              and (not query or query in c['original']['cus_id'].casefold()
                   or query in (c['latest']['customer_name'] or c['original']['customer_name'] or '').casefold())]

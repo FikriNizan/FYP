@@ -8,6 +8,8 @@ This corrects the earlier v0.2.0 plain-JavaScript starter to match Part 1, Secti
 
 ## Where you are now
 
+Milestone 4 Step 3 adds prepared monthly CSV + manifest upload, fresh frozen-model scoring and atomic publication through the existing Monthly Assessments page. Trusted optional enrichment now attaches names and recorded cutoff-safe history, and later deliberate committee reviews continue one existing case. The April historical replay matched all 1,000 archived results exactly on a separate database copy. See [MILESTONE_4.md](docs/MILESTONE_4.md) for copyable Windows configuration, safe replay/comparison commands, measured timings and the separate pending Step 4 owner exercise. The active database is unchanged; no milestone-wide sign-off is claimed.
+
 Milestone 2 (Reviewed Customers and follow-up) is implemented. Milestone 3 now completes the existing RM briefing with a direct, read-only PDF download and freshness checks. See [MILESTONE\_3.md](docs/MILESTONE_3.md) for dependency setup, verified behaviour and the owner's pending Windows acceptance walkthrough; [MILESTONE\_2.md](docs/MILESTONE_2.md) retains the earlier workflow context.
 
 Your supplied database-copy log showed three preserved batches and 2,001 prediction records. Those correspond to the one-case demo and two 1,000-customer imports. The selected enriched February batch remains a portfolio of 1,000 customers, with 208 flagged and 792 below threshold. At copying, there were zero reviews/actions; later development decisions will change those workflow counts.

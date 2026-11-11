@@ -21,12 +21,25 @@ def create_app(test_config=None):
                             MAX_CONTENT_LENGTH=64 * 1024, TRUSTED_HOSTS=["localhost", "127.0.0.1", "[::1]"])
     if test_config:
         app.config.update(test_config)
+    app.config.setdefault('TXB_RESEARCH_ROOT', os.environ.get('TXB_RESEARCH_ROOT'))
+    app.config.setdefault('TXB_MODEL_PYTHON', os.environ.get('TXB_MODEL_PYTHON'))
+    app.config.setdefault('TXB_SCORING_TIMEOUT_SECONDS', float(os.environ.get('TXB_SCORING_TIMEOUT_SECONDS', '120')))
+    app.config.setdefault('TXB_MONTHLY_POPULATION', int(os.environ.get('TXB_MONTHLY_POPULATION', '1000')))
+    if not 1 <= app.config['TXB_SCORING_TIMEOUT_SECONDS'] <= 600:
+        raise ValueError('TXB_SCORING_TIMEOUT_SECONDS must be between 1 and 600 seconds')
+    if type(app.config['TXB_MONTHLY_POPULATION']) is not int or app.config['TXB_MONTHLY_POPULATION'] < 1:
+        raise ValueError('TXB_MONTHLY_POPULATION must be a positive server-controlled integer')
     app.teardown_appcontext(db.close_db)
     with app.app_context():
         db.initialise()
 
     from .api import api
     app.register_blueprint(api)
+    from .monthly import MonthlyError
+
+    @app.errorhandler(MonthlyError)
+    def monthly_error(error):
+        return jsonify(error=dict(code=error.code, message=str(error))), error.status
 
     @app.before_request
     def local_write_origin():
@@ -91,5 +104,18 @@ def create_app(test_config=None):
         except (ValidationError, OSError, UnicodeError) as error:
             raise click.ClickException(str(error)) from error
         click.echo(json.dumps(result, indent=2))
+
+    @app.cli.command('enrich-batch')
+    @click.option('--batch-id',required=True)
+    @click.option('--apply', 'do_apply', is_flag=True,help='Commit after full validation; default previews only.')
+    @click.option('--replace',is_flag=True,help='Explicitly version a correction to accepted supporting evidence.')
+    def enrich_batch_command(batch_id,do_apply,replace):
+        """Attach trusted names and recorded cutoff-safe flows to one saved batch."""
+        from . import enrichment
+        try:
+            result = enrichment.apply(batch_id,replace=replace,dry_run=not do_apply)
+        except (ValidationError, ConflictError, OSError) as error:
+            raise click.ClickException(str(error)) from error
+        click.echo(json.dumps(result,indent=2))
 
     return app

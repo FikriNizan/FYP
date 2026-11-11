@@ -68,9 +68,11 @@ The existing `/actions` endpoints support dated notes but do not implement the c
 
 Acceptance: an RM receives a reproducible briefing that does not confuse model evidence with confirmed customer complaints.
 
-Implementation and software/PDF verification completed on 9 November 2026; see [MILESTONE_3.md](MILESTONE_3.md) for the direct-download contract, dependencies, evidence and Windows acceptance steps. The owner's own acceptance walkthrough remains pending. Live GenAI remains in the later AI milestone.
+Implementation and software/PDF verification completed on 9 November 2026; see [MILESTONE\_3.md](MILESTONE_3.md) for the direct-download contract, dependencies, evidence and Windows acceptance steps. The owner's own acceptance walkthrough remains pending. Live GenAI remains in the later AI milestone.
 
 ## Milestone 4 — Monthly package and automated processing
+
+The supporting-evidence and case-continuity refinement adds trusted optional enrichment and a linked reassessment write path; see the later section of MILESTONE\_4.md. Step 3 is implemented and historically replayed: see [MILESTONE\_4.md](MILESTONE_4.md) for the exact prepared two-file contract, fresh scoring adapter, atomic publication, measured 1,000-row comparison and Windows commands. The owner Step 4 exercise and broader audits/targets below remain pending; this is not milestone-wide acceptance. The checklist below retains the wider research/application scope.
 
 Start by choosing and documenting one input contract. Recommended first integration: a **new month's complete prepared feature table**, with required metadata/provenance, plus optional names/observed history. Do not require the user to re-upload the entire past feature table every month. Historical rows are preserved by the application. Rolling features still require the upstream pipeline to use adequate history.
 

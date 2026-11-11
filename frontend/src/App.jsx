@@ -93,7 +93,7 @@ export default function App() {
     <Route path="/customer/:id" element={<CustomerReview batch={batch} revision={revision} workflow={workflow} />} />
     <Route path="/reviewed" element={<ReviewedCustomers revision={revision} />} />
     <Route path="/cases/:id" element={<CaseDetail key={location.pathname} workflow={workflow} />} />
-    <Route path="/assessments" element={<MonthlyAssessments batches={batches || []} />} />
+    <Route path="/assessments" element={<MonthlyAssessments batches={batches || []} onPublished={async () => { const result = await api.months(); setBatches(preferredBatches(result.items)); refresh(); }} />} />
     <Route path="/briefing" element={<Briefing batches={batches || []} />} />
     <Route path="/guide" element={<Guide />} />
     <Route path="/research" element={<ResearchPreview />} />

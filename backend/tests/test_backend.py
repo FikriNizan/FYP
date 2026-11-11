@@ -117,7 +117,7 @@ class BackendTests(unittest.TestCase):
         self.assertEqual(self.client.put(route, json=self.review_body()).status_code, 200)
         self.assertEqual(self.client.put(route, json=self.review_body()).status_code, 409)
         changed = self.review_body(1)
-        changed.update(decision="monitor", reason="Follow up next month.")
+        changed.update(decision="monitor", reason="Follow up next month.", expected_case_version=1)
         self.assertEqual(self.client.put(route, json=changed).status_code, 200)
         versions = self.client.get(f"/api/predictions/{self.prediction}/review-history").json["items"]
         self.assertEqual([item["version"] for item in versions], [1, 2])

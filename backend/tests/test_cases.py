@@ -30,7 +30,8 @@ class CaseTests(unittest.TestCase):
     def review(self, decision='prioritise', version=0):
         return self.client.put('/api/predictions/'+self.prediction+'/review',json=dict(
             decision=decision, reason='Constructed committee rationale', reviewer='Committee',
-            owner='RM A', next_action_date='2026-11-10',expected_version=version))
+            owner='RM A', next_action_date='2026-11-10',expected_version=version,
+            **({'expected_case_version':self.case()['version']} if version else {})))
 
     def action(self, version=1, status='planned', date='2026-11-10'):
         return dict(expected_version=version,action_type='customer_contact',action_status=status,
@@ -178,7 +179,7 @@ class MigrationTests(unittest.TestCase):
             case = db.execute('SELECT * FROM reviewed_cases').fetchone()
             self.assertEqual(json.loads(case['original_review_json'])['reason'],'Original')
             self.assertEqual(case['owner'],'RM B')
-            self.assertEqual(db.execute('SELECT COUNT(*) FROM schema_migrations').fetchone()[0],2)
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM schema_migrations').fetchone()[0],3)
         backups = list(self.path.parent.glob('legacy.sqlite-pre-migration-*'))
         self.assertEqual(len(backups),1)
         with closing(sqlite3.connect(backups[0])) as db:

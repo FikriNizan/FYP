@@ -126,7 +126,7 @@ def section(title, paragraphs=None, rows=None, items=None):
 
 def document(case, sources):
     original, latest = case['original'], case['latest']
-    review, opened = original['review'], case['original_review']
+    review, opened = case['current_review'], case['original_review']
     ops, finance = latest.get('operations') or {}, latest.get('finance') or {}
     recent, usual = ops.get('combined_flow_mean_3m_myr'), ops.get('combined_flow_mean_12m_myr')
     comparable = number(recent) and number(usual) and usual > 0
@@ -172,6 +172,8 @@ def document(case, sources):
         ['Original batch', original['batch_id']], ['Original prediction', original['prediction_id']],
         ['Original review version', str((case.get('review_history') or [{}])[0].get('version', 'Not provided'))],
         ['Current review version', str(review['version'])],
+        ['Current review prediction', review['prediction_id']],
+        ['Current committee month', month(review['assessment_month'])],
         ['Latest batch', latest['batch_id']], ['Latest prediction', latest['prediction_id']],
     ]
     sample = any(sources.get(c['batch_id']) == 'notebook_case_sample' for c in [original, latest])
@@ -207,6 +209,7 @@ def document(case, sources):
                         ['Estimated monthly fees', money(finance.get('estimated_monthly_fee_myr'))],
                         ['Estimated monthly waivers', money(finance.get('estimated_monthly_waiver_myr'))]]),
                 decision=section('Current committee rationale & next step', [
+                    *(['Deliberate reassessment for '+month(review['assessment_month'])+'.'] if review['prediction_id'] != original['prediction_id'] else []),
                     'Rationale unchanged since the original review.' if (review.get('reason') or '') == (opened.get('reason') or '') else 'Rationale: '+(review.get('reason') or 'No rationale supplied.'),
                     *([] if tasks else ['No follow-up has been recorded; this briefing can be prepared before outreach.'])], [
                         ['Reviewer', review.get('reviewer') or 'Not provided'], ['Review saved', dated(review.get('updated_at'))],
@@ -233,7 +236,7 @@ def load(values):
     try:
         sources = {r['batch_id']:r['source_kind'] for r in db.execute('SELECT batch_id,source_kind FROM batches')}
         records = [cases.record(cases.case_row(case_id), True) for case_id in ids]
-        require(all(c['original']['review']['decision'] == 'prioritise' for c in records),
+        require(all(c['current_review']['decision'] == 'prioritise' for c in records),
                 'One or more selected cases are no longer prioritised. Return to Reviewed Customers and select currently prioritised cases.')
         items = [document(c, {k:sources[k] for k in {c['original']['batch_id'],c['latest']['batch_id']}}) for c in records]
         return dict(items=items, snapshots=[item['snapshot'] for item in items])

@@ -38,7 +38,7 @@ describe('React full-stack foundation', () => {
     expect(screen.getByText('1,000')).toBeTruthy();
     expect(screen.getByText('792 below the review threshold')).toBeTruthy();
     fireEvent.click(screen.getByRole('button',{name:'Flagged · awaiting review'}));
-    await waitFor(()=>expect(api.customers).toHaveBeenLastCalledWith('enriched',expect.objectContaining({flagged:true,decision:'awaiting_review'})));
+    await waitFor(()=>expect(api.customers).toHaveBeenLastCalledWith('enriched',expect.objectContaining({flagged:true,workflow:'needs_review'})));
     await screen.findByLabelText('Find customer');
     fireEvent.change(screen.getByLabelText('Find customer'),{target:{value:'A&B'}});
     fireEvent.click(screen.getByRole('button',{name:'Search'}));
