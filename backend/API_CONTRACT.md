@@ -21,6 +21,7 @@ Evidence endpoints accept `month=YYYY-MM` or a full month-end date, and optional
 | GET | `/api/months` | `items`: imported batches |
 | POST | `/api/assessments` | Validate, freshly score, verify and atomically publish a prepared month; 201 new / 200 repeat |
 | GET | `/api/summary` | Population, flagged counts, review counts, finance totals and coverage |
+| GET | `/api/monitoring` | Outcome coverage, descriptive delivery groups, saved-risk metrics and earlier-batch input movement |
 | GET | `/api/customers` | Filtered/paginated `items`, batch, total, limit, offset |
 | GET | `/api/customers/<cus_id>` | Batch and detailed customer evidence |
 | GET | `/api/customers/<cus_id>/history` | Imported monthly snapshots through the selected month |
@@ -49,7 +50,7 @@ Fresh batches use `prepared_month_scored` with hashes/versions, champion identit
 
 ## Detail response
 
-`customer` contains `prediction_id`, `batch_id`, `cus_id`, `cutoff_month`, nullable customer/profile fields, `calibrated_risk`, `review_alert`, `probability_cutoff`, `review`, `workflow`, `finance`, `operations`, `features`, `feature_count`, `explanation`, `flow_history`, `actions`, optional `supplemental_provenance`, and the assessment-window end date.
+`customer` contains `prediction_id`, `batch_id`, `cus_id`, `cutoff_month`, nullable customer/profile fields, `calibrated_risk`, `review_alert`, `probability_cutoff`, `review`, `workflow`, `finance`, `operations`, `features`, `feature_count`, `explanation`, `flow_history`, `actions`, optional `supplemental_provenance`, `observed_outcome` and the assessment-window end date.
 
 The `explanation` is the exact saved v1 dashboard record: base, signed drivers, omitted-feature sum and clipping adjustment reconstruct calibrated risk. Values are calibrated log-odds, not probability percentage-point effects. SHAP explains the model, not the customer's confirmed cause.
 
@@ -66,7 +67,13 @@ Fee/waiver estimates are historical mean monthly amounts over three months. They
 
 `flow_history` holds up to twelve cutoff-safe monthly flow observations when loaded. Snapshot history only includes imported prediction months. Old snapshot evidence stays immutable; each snapshot has its own review. Current-month history respects the explicitly selected batch version.
 
-`actual_attrition=null` and `outcome_status=not_loaded` are deliberate in this milestone. Historical labels printed elsewhere in the notebook are not imported into dashboard evidence.
+Until an outcome is explicitly imported, `actual_attrition=null`, `observed_outcome=null` and `outcome_status=not_loaded`. For a fully observed and imported horizon, `actual_attrition` is the saved Boolean volume-drop result, `outcome_status=observed`, and `observed_outcome` contains the three-month window end, source-observed-through month, separate baseline/future averages, three future monthly flows and source SHA-256. These never revise the prediction, model flag, review or case. The pre-cutoff `flow_history` never includes future outcome months.
+
+## Mature outcome import and monitoring
+
+`flask --app app load-outcomes --batch-id ID --observed-through YYYY-MM-DD` previews a trusted recorded-flow import; add `--apply` to publish after checking coverage. This is an **administrator CLI**, not a dashboard upload. `TXB_RESEARCH_ROOT` selects the trusted research tree; the fixed file is `data/final_v4_0_1/cleaned/monthly_flows.csv` with its accepted `cleaned_manifest.json`. Import requires a complete twelve-month baseline and all next three complete customer-month flows by the declared observed-through date. It validates source hash, row shape, duplicate keys, cents reconciliation and the saved baseline, then saves each mature outcome under its prediction ID in one transaction. Missing/incomplete months remain unavailable. A repeated same-source import changes zero rows; conflicting accepted evidence is rejected. See [Milestone 5](../docs/MILESTONE_5.md).
+
+`GET /api/monitoring?batch_id=ID` returns `outcome_month`, prediction count, `outcome_coverage` (`loaded`, `unavailable`, `documented_delivery`, `without_recorded_delivery`), `observed_all`, two descriptive delivery-group metric objects, delivered type counts and `drift`. Group metrics have records, positives, observed rate, mean saved calibrated risk, Brier score, flagged count and flagged-positive share; rates/scores are JSON null when their denominator is absent. Delivery is derived from saved linked follow-up events with status `delivered`, a named type (RM visit, customer contact or service fix) and action date inside that prediction's future window. Plans/attempts/legacy notes do not count. No recorded delivery is **not** a verified untreated control. `drift` compares the nearest earlier batch under the same protocol, with saved risk/flag rates and per-feature availability/medians or category total-variation; it is null if no earlier batch exists. No live outcome feed, causal estimate or automatic retraining is implied.
 
 ## Review body
 
@@ -99,7 +106,7 @@ Required: decision, non-empty reason, non-empty reviewer and expected_version. T
 }
 ```
 
-All fields are required. An action is append-only, linked to a particular prediction/customer-month, and leaves evidence and outcome untouched. Group service fixes and systematic intervention-exposure derivation are later functionality. No retained-customer benefit is inferred from these notes.
+All fields are required. An action is append-only, linked to a particular prediction/customer-month, and leaves evidence and outcome untouched. Legacy action notes do not count as documented delivery in Monitoring; only an explicit completed linked follow-up with an eligible type/date does. No retained-customer benefit is inferred from these notes.
 
 ## Errors and frontend connection
 

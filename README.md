@@ -132,7 +132,7 @@ Retained: completed-export CLI import, review history and dated action-note APIs
 
 Milestone 2 implementation: Reviewed Customers, original/latest assessment comparison, persistent cases, linked follow-up tasks and events, explicit closure/defer/reopen decisions, audit history and version conflicts. Existing databases receive a timestamped SQLite backup before automatic migration on Flask startup; existing reviews are backfilled as cases. See [Milestone 2](docs/MILESTONE_2.md) for the acceptance walkthrough and [UI design](docs/UI_DESIGN.md) for the current frontend direction, connected features and preview boundaries. Browser acceptance with your portfolio remains to be completed.
 
-Briefing/PDF is implemented in Milestone 3. Later milestones cover automated new-month inference, intervention-aware outcomes, grounded GenAI and an OPR scenario. See [Roadmap](docs/ROADMAP.md).
+Briefing/PDF is implemented in Milestone 3. Prepared monthly scoring is implemented in Milestone 4. Milestone 5 adds explicit mature-outcome import and descriptive monitoring on saved evidence; see [Milestone 5](docs/MILESTONE_5.md). Grounded GenAI and an OPR scenario remain later work. See [Roadmap](docs/ROADMAP.md).
 
 ## 7. Learn through one working change
 

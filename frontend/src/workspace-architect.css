@@ -1,6 +1,16 @@
 /* Architect theme layer. Loaded after workspace.css; delete the import in main.jsx to revert.
    Screen only, so the A4 briefing print rules in workspace.css still apply. */
 @media screen {
+  .monitoring-counts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:18px 0; }
+  .monitoring-counts>div { background:#f8f9fb; border:1px solid #e5e9ef; border-radius:6px; padding:14px; }
+  .monitoring-counts span { display:block; font-size:11px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:#5f6a75; }
+  .monitoring-counts strong { display:block; margin-top:7px; font-size:24px; font-weight:650; color:#343a40; }
+  .monitoring-facts { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:9px 14px; }
+  .monitoring-facts dt { color:#5f6a75; }
+  .monitoring-facts dd { margin:0; font-weight:700; text-align:right; }
+  @media (max-width:1050px) { .monitoring-counts { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (max-width:760px) { .monitoring-counts { grid-template-columns:1fr 1fr; } }
+  @media (max-width:420px) { .monitoring-counts { grid-template-columns:1fr; } }
   :root {
     --ink:#343a40; --muted:#5f6a75; --accent:#3f6ad8; --accent-dark:#3057bc;
     --canvas:#f1f4f6; --line:#e5e9ef; --soft:#e8eefb; --danger:#c11f46;

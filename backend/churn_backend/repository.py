@@ -143,13 +143,24 @@ def customer_record(row, detail=False):
                   finance={label: features.get(field) for label, field in FINANCE_FIELDS.items()})
     record['workflow'] = workflow_context(row,record['review'],record['review_alert'],evidence['cutoff_month'])
     if detail:
+        observed = get_db().execute('SELECT * FROM observed_outcomes WHERE prediction_id=?',
+                                    (row['prediction_id'],)).fetchone()
+        outcome = (dict(outcome_month=observed['outcome_month'],
+                        observed_through=observed['observed_through'],
+                        target_churn=bool(observed['target_churn']),
+                        baseline_mean_12m_myr=observed['baseline_sum_cents']/1200,
+                        future_mean_3m_myr=observed['future_sum_cents']/300,
+                        future_flows=json.loads(observed['future_flows_json']),
+                        source_sha256=observed['source_sha256']) if observed else None)
         record.update(explanation=evidence, features=features,
                       feature_count=len(features), operations={name: features.get(name) for name in OPS_FIELDS},
                       flow_history=(json.loads(supplement['flows_json']) if supplement and json.loads(supplement['flows_json'])
                                     else json.loads(row["flows_json"])), actions=action_records(row["prediction_id"]),
                       supplemental_provenance=json.loads(supplement['provenance_json']) if supplement else None,
                       assessment_window_end=horizon_end(evidence["cutoff_month"]),
-                      outcome_status="not_loaded", actual_attrition=None,
+                      outcome_status="observed" if outcome else "not_loaded",
+                      actual_attrition=outcome['target_churn'] if outcome else None,
+                      observed_outcome=outcome,
                       finance_note="Fee and waiver figures are historical three-month monthly estimates; "
                                    "balances are exposures. These are not verified profit or retention savings.")
     return record

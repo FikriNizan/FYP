@@ -67,6 +67,7 @@ export const api = {
   followUp: (id, task, body) => request('/api/cases/' + encodeURIComponent(id) + '/follow-ups' + (task ? '/' + encodeURIComponent(task) + '/events' : ''), { method: 'POST', body }),
   months: () => request('/api/months'),
   summary: batch => request('/api/summary', { params: { batch_id: batch } }),
+  monitoring: batch => request('/api/monitoring', { params: { batch_id: batch } }),
   customers: (batch, params) => request('/api/customers', { params: { batch_id: batch, ...params } }),
   customer: (id, batch) => request('/api/customers/' + encodeURIComponent(id), { params: { batch_id: batch } }),
   saveReview: (prediction, body) => request('/api/predictions/' + encodeURIComponent(prediction) + '/review', { method: 'PUT', body }),

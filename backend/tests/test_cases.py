@@ -179,7 +179,7 @@ class MigrationTests(unittest.TestCase):
             case = db.execute('SELECT * FROM reviewed_cases').fetchone()
             self.assertEqual(json.loads(case['original_review_json'])['reason'],'Original')
             self.assertEqual(case['owner'],'RM B')
-            self.assertEqual(db.execute('SELECT COUNT(*) FROM schema_migrations').fetchone()[0],3)
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM schema_migrations').fetchone()[0],4)
         backups = list(self.path.parent.glob('legacy.sqlite-pre-migration-*'))
         self.assertEqual(len(backups),1)
         with closing(sqlite3.connect(backups[0])) as db:

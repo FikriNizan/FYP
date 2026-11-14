@@ -72,37 +72,41 @@ Implementation and software/PDF verification completed on 9 November 2026; see [
 
 ## Milestone 4 — Monthly package and automated processing
 
-The supporting-evidence and case-continuity refinement adds trusted optional enrichment and a linked reassessment write path; see the later section of MILESTONE\_4.md. Step 3 is implemented and historically replayed: see [MILESTONE\_4.md](MILESTONE_4.md) for the exact prepared two-file contract, fresh scoring adapter, atomic publication, measured 1,000-row comparison and Windows commands. The implementation items marked below are complete, but the damaged-package exercise, upstream audit, SMART targets and representative-user sign-off remain pending; this is not milestone-wide acceptance.
+The supporting-evidence and case-continuity refinement adds trusted optional enrichment and a linked reassessment write path; see the later section of MILESTONE\_4.md. Step 3 is implemented and historically replayed: see [MILESTONE\_4.md](MILESTONE_4.md) for the exact prepared two-file contract, fresh scoring adapter, atomic publication, measured 1,000-row comparison and Windows commands. The [research reference](../research/MILESTONE_4_DOCUMENTATION_REFERENCE.md) inventories the frozen upstream chain, audits its saved synthetic temporal/label evidence and proposes measurable latency targets. The owner additionally observed rejection of a malformed CSV and checked a closed March case that correctly remains closed while a flagged April assessment awaits reassessment. Repeat-submission browser evidence, full representative-user sign-off, repeated latency measurements and real-source observation-time assurance remain open; this is not milestone-wide acceptance.
 
 Start by choosing and documenting one input contract. Recommended first integration: a **new month's complete prepared feature table**, with required metadata/provenance, plus optional names/observed history. Do not require the user to re-upload the entire past feature table every month. Historical rows are preserved by the application. Rolling features still require the upstream pipeline to use adequate history.
 
-* [ ] Inventory the existing generation/cleaning/features/training/export files and their dependencies. The serving-side contract and trusted artifact fingerprints are documented; the broader upstream inventory is still pending.
+* [x] Inventory the existing generation/cleaning/features/training/export files and their dependencies. See the research reference for the frozen pipeline, manifests and historical notebooks.
 * [x] Extract reusable feature/scoring logic from notebooks where necessary, without changing research results silently. The frozen-model adapter loads the checked-in scoring contract and invokes the original research scorer without retraining.
 * [x] Formalise required keys, feature names/order/types, categorical values, units, cutoff, completeness, missing values and protocol version for the prepared CSV and manifest.
-* [ ] Verify outstanding raw/source-level temporal boundaries and label maturity checks; do not assume application tests complete that audit.
+* [ ] Verify outstanding raw/source-level temporal boundaries and label maturity checks; do not assume application tests complete that audit. The saved synthetic flows, labels, April flow features and temporal split have been independently reconciled. Real observation/ingestion timestamps are absent, so real-source point-in-time assurance remains open.
 * [x] Decide whether a supplied package contains ready features or raw source tables. The implemented first scope accepts one complete prepared feature CSV plus its matching manifest; raw ETL is not part of upload.
 * [x] Load the frozen model, calibrator and saved threshold; do not retrain on upload.
 * [x] Add validate → process → verify → publish states. Failed validation leaves the last published batch unchanged and returns useful errors.
 * [x] Use a separate upload limit and deliberate processing design. The package has dedicated 5 MiB/64 KiB bounds and a bounded synchronous scorer request because the measured 1,000-row replay completes within the configured timeout; background jobs are not introduced.
 * [x] Prevent duplicate/replaced imports from silently moving prior reviews. Same packages are idempotent, conflicting cutoffs are rejected, and publication is cutoff-guarded.
 * [x] Benchmark validation, scoring, evidence verification and publication latency separately at the 1,000-customer scale.
-* [ ] Set SMART latency/throughput targets from measured baselines and project requirements; record hardware and coverage.
-* [ ] Exercise damaged CSV/manifest packages and repeat submission in the browser, confirming rejection, unchanged database state and successful idempotent resubmission.
-* [ ] Complete representative Operations/Finance user walkthrough and record milestone sign-off.
+* [x] Set provisional SMART latency/throughput targets from the measured 1,000-row baseline, recording the available hardware and coverage; owner approval and repeated p95 measurement remain open in the research reference.
+* [ ] Exercise damaged CSV/manifest packages and repeat submission in the browser, confirming rejection, unchanged database state and successful idempotent resubmission. The owner reports a malformed CSV was rejected; the remaining cases and before/after record check were not reported.
+* [ ] Complete representative Operations/Finance user walkthrough and record milestone sign-off. The owner reports several case scenarios, including a March-closed/April-flagged customer correctly appearing as needing reassessment; a recorded representative-user sign-off was not reported.
 
-Acceptance for the implemented Step 3: [x] A genuinely new prepared monthly package was validated, scored and published reproducibly on an isolated April copy; failure/rollback, idempotence, conflict handling and score traceability are covered by automated checks and the historical comparison. Milestone-wide acceptance remains pending until the unchecked source audit, SMART targets, damaged-package exercise and representative-user sign-off are completed.
+Acceptance for the implemented Step 3: \[x] A genuinely new prepared monthly package was validated, scored and published reproducibly on an isolated April copy; failure/rollback, idempotence, conflict handling and score traceability are covered by automated checks and the historical comparison. Milestone-wide acceptance remains pending for the unchecked source assurance, remaining browser cases, repeated target measurement and representative-user sign-off.
 
 ## Milestone 5 — Outcomes and intervention-aware monitoring
 
-* [ ] Load observed outcomes only when the three-month horizon is fully available.
-* [ ] Retain prediction, committee decision, action delivery and realised outcome as distinct records.
-* [ ] Derive intervention exposure from actual action type/date and the assessment window; do not treat every note or planned contact as an intervention.
-* [ ] Report outcome maturity and intervention coverage counts.
-* [ ] Report descriptive outcomes for intervened customers separately. Non-intervened metrics are for a selected subset, not an unbiased portfolio estimate.
-* [ ] Document that no counterfactual/control design means no proven intervention effectiveness.
-* [ ] Monitor drift and predictive performance over time without inventing labels for unmatured cases.
+Implementation and isolated historical-copy checks are recorded in [MILESTONE\_5.md](MILESTONE_5.md). The items below describe implemented software behavior; the owner's acceptance walkthrough and real-bank source assurance are separate. A later score or follow-up does not import a label automatically.
+
+* [x] Load observed outcomes only when the three-month horizon is fully available through an explicit trusted-source administrator import.
+* [x] Retain prediction, committee decision, action delivery and realised outcome as distinct records.
+* [x] Derive documented delivery from a linked follow-up's actual type/date inside the assessment window; do not treat every note or planned contact as an intervention.
+* [x] Report verified outcome availability and documented-delivery coverage counts.
+* [x] Report descriptive outcomes for documented-delivery customers separately. The no-recorded-delivery group is a selected subset and does not prove no intervention occurred.
+* [x] Document that no counterfactual/control design means no proven intervention effectiveness.
+* [x] Monitor saved input/risk movement and observed predictive performance by assessment without inventing labels for unavailable horizons.
 
 Acceptance: the report can explain why a delivered intervention and a non-attrition outcome do not prove either a model error or successful retention.
+
+Milestone-wide sign-off remains pending representative-user inspection of the connected Monitoring view and the manual Milestone 4 items listed above. The historical synthetic replay is not live-bank validation.
 
 ## Milestone 6 — Grounded GenAI
 

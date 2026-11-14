@@ -14,7 +14,7 @@ The active stylesheets are `frontend/src/workspace.css` followed immediately by 
 
 ## Navigation and business flow
 
-Primary navigation: **Overview · Reviewed Customers · Monthly Assessments**. Desktop uses a persistent navy rail; narrow screens use horizontal navigation. Guide and Monitoring/OPR previews live under Help & previews. The exact assessment selector appears only where data is batch-scoped.
+Primary navigation: **Overview · Reviewed Customers · Monthly Assessments · Monitoring**. Desktop uses a persistent navy rail; narrow screens use horizontal navigation. Guide and the OPR preview live under Help & previews. The exact assessment selector appears on the Overview/Customer Review and Monitoring workspaces where data is batch-scoped.
 
 Overview is scoped to an exact batch. Search, decision filter, flag filter and pagination live in its URL; customer links retain a return URL so Back to review queue and workspace navigation restore the selected context. The three metrics and progress bar use complete API summary counts, never page totals. A visible Financial context for flagged customers section sits between review progress and the queue. Its four cards show operating balances, fixed deposits, estimated fees and estimated waivers, with Exposure/Historical estimate tags, formatted MYR totals and explicit record coverage. Coverage bars are decorative; counts remain text. The grid uses four columns, two at 1250px and one at 760px. Its interpretation footnote stays visible. Sample assessments are labelled explicitly.
 
@@ -49,7 +49,7 @@ Committee decision, case status, task state and observed outcome are distinct. A
 | Download PDF | Connected local download | Server revalidates eligibility and preview snapshots; changed evidence requires review before retry; no database writes or external renderer |
 | AI drafting | Unavailable, with optional labelled state examples | Grounded generation service, evidence validation and human-review flow required; Generate stays disabled |
 | Monthly package upload | Connected prepared CSV + manifest workflow | Server validation, trusted saved-model scoring, evidence verification and atomic publication; configuration required |
-| Monitoring | Unavailable | Data-quality/drift results, mature outcomes, periods/counts and intervention-window integration required |
+| Monitoring | Connected to saved outcomes when explicitly loaded | Outcome coverage, descriptive delivered-follow-up groups, saved-risk metrics and previous-batch input movement; no causal or real-bank claim |
 | OPR assumptions | Hypothetical local inputs only | Sourced assumptions and scenario engine required; baseline/scenario outputs remain uncalculated |
 | Lower next-month risk demonstration | Demo preview in Guide | Constructed 70% January / 18% February example, never mixed into saved cases or totals |
 

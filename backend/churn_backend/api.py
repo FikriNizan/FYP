@@ -42,7 +42,7 @@ def health():
 def metadata():
     return jsonify(version=VERSION, decisions=list(DECISIONS), action_types=list(ACTION_TYPES),
                    action_statuses=list(ACTION_STATUSES), display_timezone="Asia/Kuala_Lumpur",
-                   timestamps="UTC ISO 8601", outcome_monitoring=False, live_model_scoring=False,
+                   timestamps="UTC ISO 8601", outcome_monitoring=True, live_model_scoring=False,
                    prepared_month_scoring=True,
                    scoring_configured=bool(current_app.config.get('TXB_RESEARCH_ROOT') and current_app.config.get('TXB_MODEL_PYTHON')),
                    review_identity="User-entered attribution for this local prototype; not authenticated identity",
@@ -69,6 +69,13 @@ def upload_assessment():
 @api.get("/summary")
 def summary():
     return jsonify(repo.summary(selected_batch()))
+
+
+@api.get('/monitoring')
+def monitoring():
+    from . import outcomes
+    batch = selected_batch()
+    return jsonify(outcomes.report(batch['batch_id']))
 
 
 @api.get("/customers")

@@ -83,7 +83,7 @@ def create_app(test_config=None):
     def api_index():
         return jsonify(name="Corporate attrition backend", version=VERSION,
                        message="React full-stack foundation. Open / for the built dashboard.",
-                       endpoints=["/api/health", "/api/months", "/api/summary", "/api/customers"])
+                       endpoints=["/api/health", "/api/months", "/api/summary", "/api/monitoring", "/api/customers"])
 
     @app.cli.command("init-demo")
     def init_demo():
@@ -115,6 +115,19 @@ def create_app(test_config=None):
         try:
             result = enrichment.apply(batch_id,replace=replace,dry_run=not do_apply)
         except (ValidationError, ConflictError, OSError) as error:
+            raise click.ClickException(str(error)) from error
+        click.echo(json.dumps(result,indent=2))
+
+    @app.cli.command('load-outcomes')
+    @click.option('--batch-id',required=True)
+    @click.option('--observed-through',required=True,help='Latest complete observed month, YYYY-MM-DD.')
+    @click.option('--apply','do_apply',is_flag=True,help='Publish after validation; default previews only.')
+    def load_outcomes_command(batch_id,observed_through,do_apply):
+        """Derive mature outcomes from trusted recorded flows for one saved batch."""
+        from . import outcomes
+        try:
+            result=outcomes.publish(batch_id,observed_through,dry_run=not do_apply)
+        except (ValidationError,ConflictError,OSError,UnicodeError) as error:
             raise click.ClickException(str(error)) from error
         click.echo(json.dumps(result,indent=2))
 
