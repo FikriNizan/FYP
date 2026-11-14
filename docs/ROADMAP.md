@@ -72,23 +72,25 @@ Implementation and software/PDF verification completed on 9 November 2026; see [
 
 ## Milestone 4 — Monthly package and automated processing
 
-The supporting-evidence and case-continuity refinement adds trusted optional enrichment and a linked reassessment write path; see the later section of MILESTONE\_4.md. Step 3 is implemented and historically replayed: see [MILESTONE\_4.md](MILESTONE_4.md) for the exact prepared two-file contract, fresh scoring adapter, atomic publication, measured 1,000-row comparison and Windows commands. The owner Step 4 exercise and broader audits/targets below remain pending; this is not milestone-wide acceptance. The checklist below retains the wider research/application scope.
+The supporting-evidence and case-continuity refinement adds trusted optional enrichment and a linked reassessment write path; see the later section of MILESTONE\_4.md. Step 3 is implemented and historically replayed: see [MILESTONE\_4.md](MILESTONE_4.md) for the exact prepared two-file contract, fresh scoring adapter, atomic publication, measured 1,000-row comparison and Windows commands. The implementation items marked below are complete, but the damaged-package exercise, upstream audit, SMART targets and representative-user sign-off remain pending; this is not milestone-wide acceptance.
 
 Start by choosing and documenting one input contract. Recommended first integration: a **new month's complete prepared feature table**, with required metadata/provenance, plus optional names/observed history. Do not require the user to re-upload the entire past feature table every month. Historical rows are preserved by the application. Rolling features still require the upstream pipeline to use adequate history.
 
-* [ ] Inventory the existing generation/cleaning/features/training/export files and their dependencies.
-* [ ] Extract reusable feature/scoring logic from notebooks where necessary, without changing research results silently.
-* [ ] Formalise required keys, feature names/order/types, categorical values, units, cutoff, completeness, missing values and protocol version.
+* [ ] Inventory the existing generation/cleaning/features/training/export files and their dependencies. The serving-side contract and trusted artifact fingerprints are documented; the broader upstream inventory is still pending.
+* [x] Extract reusable feature/scoring logic from notebooks where necessary, without changing research results silently. The frozen-model adapter loads the checked-in scoring contract and invokes the original research scorer without retraining.
+* [x] Formalise required keys, feature names/order/types, categorical values, units, cutoff, completeness, missing values and protocol version for the prepared CSV and manifest.
 * [ ] Verify outstanding raw/source-level temporal boundaries and label maturity checks; do not assume application tests complete that audit.
-* [ ] Decide whether a supplied package contains ready features or raw source tables. Ready features are the smaller first application scope.
-* [ ] Load the frozen model, calibrator and saved threshold; do not retrain on upload.
-* [ ] Add validate → process → verify → publish states. Failed validation must leave the last published batch unchanged and return useful errors.
-* [ ] Use a separate upload limit and deliberate background-job design if processing is too slow for a request. The existing 64 KiB human-note limit is not a monthly-file upload limit.
-* [ ] Prevent duplicate/replaced imports from silently moving prior reviews.
-* [ ] Benchmark validation/ETL, feature calculation, model inference, SHAP, import and API latency separately at the 1,000-customer scale.
+* [x] Decide whether a supplied package contains ready features or raw source tables. The implemented first scope accepts one complete prepared feature CSV plus its matching manifest; raw ETL is not part of upload.
+* [x] Load the frozen model, calibrator and saved threshold; do not retrain on upload.
+* [x] Add validate → process → verify → publish states. Failed validation leaves the last published batch unchanged and returns useful errors.
+* [x] Use a separate upload limit and deliberate processing design. The package has dedicated 5 MiB/64 KiB bounds and a bounded synchronous scorer request because the measured 1,000-row replay completes within the configured timeout; background jobs are not introduced.
+* [x] Prevent duplicate/replaced imports from silently moving prior reviews. Same packages are idempotent, conflicting cutoffs are rejected, and publication is cutoff-guarded.
+* [x] Benchmark validation, scoring, evidence verification and publication latency separately at the 1,000-customer scale.
 * [ ] Set SMART latency/throughput targets from measured baselines and project requirements; record hardware and coverage.
+* [ ] Exercise damaged CSV/manifest packages and repeat submission in the browser, confirming rejection, unchanged database state and successful idempotent resubmission.
+* [ ] Complete representative Operations/Finance user walkthrough and record milestone sign-off.
 
-Acceptance: a genuinely new prepared monthly package is validated, scored and published reproducibly, while failure preserves prior data and scores/history remain traceable.
+Acceptance for the implemented Step 3: [x] A genuinely new prepared monthly package was validated, scored and published reproducibly on an isolated April copy; failure/rollback, idempotence, conflict handling and score traceability are covered by automated checks and the historical comparison. Milestone-wide acceptance remains pending until the unchecked source audit, SMART targets, damaged-package exercise and representative-user sign-off are completed.
 
 ## Milestone 5 — Outcomes and intervention-aware monitoring
 

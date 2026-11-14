@@ -45,7 +45,7 @@ export default function Overview({ batch, revision }) {
   const { summary, list } = data;
   const chooseFilter = value => update({filter:value,offset:0,decision:''});
   const awaiting = summary.needs_committee_review ?? summary.flagged_review_counts.awaiting_review;
-  const reviewed = summary.flagged-summary.flagged_review_counts.awaiting_review;
+  const reviewed = summary.flagged - summary.flagged_review_counts.awaiting_review;
   return <>
     <div className="heading"><div><h1>Overview</h1><p className="muted">Information through {monthLabel(summary.batch.cutoff_month)} · Forecast {forecastLabel(summary.batch.cutoff_month)} · Batch {batch.slice(0,8)}</p></div><ConnectionState /></div>
     {summary.batch.source_kind === 'notebook_case_sample' && <p className="scope-note">Single-case sample · These totals describe this saved case, not the full portfolio.</p>}
