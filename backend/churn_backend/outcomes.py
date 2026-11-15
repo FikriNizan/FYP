@@ -121,6 +121,13 @@ def prepare(batch_id, as_of):
                 rows=prepared,source_sha256=digest)
 
 
+def same_outcome_evidence(prior, row):
+    """Compare persisted outcome evidence, leaving full-file provenance untouched."""
+    return (all(prior[key] == row[key] for key in (
+        'prediction_id','outcome_month','baseline_sum_cents','future_sum_cents','target_churn'))
+        and json.loads(prior['future_flows_json']) == row['future_flows'])
+
+
 def publish(batch_id, as_of, dry_run=True):
     result = prepare(batch_id, as_of)
     rows = result.pop('rows')
@@ -134,8 +141,7 @@ def publish(batch_id, as_of, dry_run=True):
                                (row['prediction_id'],)).fetchone()
             if prior is None:
                 changed += 1
-            elif not all(prior[key] == row[key] for key in ('outcome_month','baseline_sum_cents',
-                    'future_sum_cents','target_churn','source_sha256')):
+            elif not same_outcome_evidence(prior,row):
                 raise ConflictError('A different outcome is already published for this prediction')
         return dict(**result,changed=changed,dry_run=True)
     db = get_db()
@@ -146,9 +152,7 @@ def publish(batch_id, as_of, dry_run=True):
             prior = db.execute('SELECT * FROM observed_outcomes WHERE prediction_id=?',
                                (row['prediction_id'],)).fetchone()
             if prior:
-                same = all(prior[key] == row[key] for key in ('outcome_month','baseline_sum_cents',
-                    'future_sum_cents','target_churn','source_sha256'))
-                if not same:
+                if not same_outcome_evidence(prior,row):
                     raise ConflictError('A different outcome is already published for this prediction')
                 continue
             db.execute('INSERT INTO observed_outcomes VALUES (?,?,?,?,?,?,?,?,?)',
@@ -178,16 +182,28 @@ def delivered_by_customer():
 def performance(rows):
     if not rows:
         return dict(records=0,positives=0,observed_rate=None,mean_risk=None,brier=None,
-                    reference_brier=None,flagged=0,flagged_positives=0,flagged_positive=None)
+                    reference_brier=None,flagged=0,flagged_positives=0,flagged_positive=None,
+                    true_positives=0,false_positives=0,false_negatives=0,true_negatives=0,
+                    precision=None,recall=None,f1=None)
     observed_rate = mean(row['target_churn'] for row in rows)
     flagged = sum(row['review_alert'] for row in rows)
     flagged_positives = sum(row['target_churn'] for row in rows if row['review_alert'])
+    false_positives = flagged - flagged_positives
+    false_negatives = sum(row['target_churn'] for row in rows) - flagged_positives
+    true_negatives = len(rows) - flagged_positives - false_positives - false_negatives
+    f1_denominator = 2*flagged_positives + false_positives + false_negatives
     return dict(records=len(rows),positives=sum(row['target_churn'] for row in rows),
                 observed_rate=observed_rate,reference_brier=observed_rate*(1-observed_rate),
                 mean_risk=mean(row['risk'] for row in rows),
                 brier=mean((row['risk']-row['target_churn'])**2 for row in rows),
                 flagged=flagged,flagged_positives=flagged_positives,
-                flagged_positive=flagged_positives/flagged if flagged else None)
+                flagged_positive=flagged_positives/flagged if flagged else None,
+                true_positives=flagged_positives,false_positives=false_positives,
+                false_negatives=false_negatives,true_negatives=true_negatives,
+                precision=flagged_positives/flagged if flagged else None,
+                recall=flagged_positives/(flagged_positives+false_negatives)
+                    if flagged_positives+false_negatives else None,
+                f1=2*flagged_positives/f1_denominator if f1_denominator else None)
 
 
 def outcome_state(outcome_month, loaded, records):

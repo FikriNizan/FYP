@@ -190,6 +190,8 @@ Panels use the largest recurring radius; controls and fields use smaller, precis
 
 The status strip uses the navy rail gradient and a text-bearing state badge. Predicted risk uses navy gradient tiles and chart bars; observed volume-drop rate uses rose gradient tiles and chart bars. Blue marks an open window, amber unavailable or partial loading, and green loaded outcomes. Every colour cue has adjacent text. Unloaded assessments have an empty labelled chart slot. The upload panel is white, with dashed file cards, selected/needed labels and an informational stage strip.
 
+Model performance has a compact population selector for all loaded outcomes or those without recorded delivery. Its tiles and Brier bars always use one selected group, while cross-month comparison remains all loaded outcomes. A collapsed classification table shows saved-flag versus observed-drop counts, precision, recall, F1 and missed drops with denominators. The same-group constant Brier reference is retrospective and carries no pass/fail colour.
+
 ### Buttons
 
 Compact, explicit actions. Primary buttons use cobalt and white; secondary buttons use white, a cool border and graphite text, with a pale-blue hover fill. Shared minimum height is 40px on desktop. Hover and active states change fill; primary hover deepens cobalt. Disabled controls lower opacity. Background and border transitions take 150ms with ease-out.

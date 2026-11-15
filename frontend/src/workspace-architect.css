@@ -20,6 +20,14 @@
   .mon-status code { overflow-wrap:anywhere; }
   .mon-panel { margin-top:20px; }
   .mon-panel>h2 { margin-bottom:4px; }
+  .mon-population-label { display:block; margin:12px 0 5px; font-size:12px; font-weight:700; color:#5f6a75; }
+  #mon-population { max-width:320px; }
+  .mon-classification { margin-top:14px; padding:12px 0; border-top:1px solid #e5e9ef; }
+  .mon-classification .mon-table { min-width:420px; }
+  .mon-classification-facts { display:grid; grid-template-columns:90px minmax(120px,auto) minmax(0,1fr); gap:8px 12px; align-items:start; }
+  .mon-classification-facts dt { font-weight:700; }
+  .mon-classification-facts dd { margin:0; }
+  .mon-classification-facts dd:last-of-type { color:#5f6a75; }
   .mon-performance { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(250px,1fr); gap:20px; margin-top:16px; }
   .mon-performance-tiles { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
   .mon-tile { padding:18px 20px; border-radius:6px; min-width:0; }
@@ -73,7 +81,7 @@
   .upl-success { background:#eff8f3; border:1px solid #c6e8d4; }
   .upl-busy { background:#e8eefb; border:1px solid #cfdcf7; }
   @media (max-width:1050px) { .mon-performance { grid-template-columns:1fr; } }
-  @media (max-width:760px) { .mon-performance-tiles { grid-template-columns:1fr; }.mon-delivery-grid,.mon-movement,.upl-files { grid-template-columns:1fr; }.mon-status-row { align-items:flex-start; } }
+  @media (max-width:760px) { .mon-performance-tiles { grid-template-columns:1fr; }.mon-delivery-grid,.mon-movement,.upl-files { grid-template-columns:1fr; }.mon-status-row { align-items:flex-start; }.mon-classification-facts { grid-template-columns:1fr; } }
   .monitoring-counts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:18px 0; }
   .monitoring-counts>div { background:#f8f9fb; border:1px solid #e5e9ef; border-radius:6px; padding:14px; }
   .monitoring-counts span { display:block; font-size:11px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:#5f6a75; }

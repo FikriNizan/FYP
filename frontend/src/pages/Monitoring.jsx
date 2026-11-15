@@ -6,7 +6,7 @@ import { ConnectionState } from '../components/Workspace.jsx';
 import { ErrorNotice } from '../components/Common.jsx';
 import { BrierBars, TrendChart } from '../components/MonitoringCharts.jsx';
 import { curatedFeatures, featureMeta } from '../monitoringFeatures.js';
-import { monitoringCopy } from '../monitoringCopy.js';
+import { classificationCopy, monitoringCopy } from '../monitoringCopy.js';
 
 const stateText={window_open:'Window open',not_loaded:'Not loaded',partly_loaded:'Partly loaded',loaded:'Loaded'};
 const shown=v=>v==null?'Not provided':percent(v);
@@ -27,6 +27,20 @@ function DeliveryCard({title,data}) {
     <dt>Mean predicted risk</dt><dd>{shown(data.mean_risk)}</dd>
     <dt>Flagged that dropped</dt><dd>{pair(data.flagged_positives,data.flagged)}</dd>
   </dl></article>;
+}
+function ClassificationDetails({stats}) {
+  return <details className="mon-classification"><summary>Classification details</summary>
+    <p className="muted">Descriptive results at the saved review policy. Missed observed drops: {count(stats.false_negatives)}.</p>
+    <div className="table-wrap"><table className="mon-table"><thead><tr><th scope="col">Saved flag</th><th scope="col">Observed drop</th><th scope="col">No observed drop</th></tr></thead><tbody>
+      <tr><th scope="row">Flagged</th><td>{count(stats.true_positives)}</td><td>{count(stats.false_positives)}</td></tr>
+      <tr><th scope="row">Not flagged</th><td>{count(stats.false_negatives)}</td><td>{count(stats.true_negatives)}</td></tr>
+    </tbody></table></div>
+    <dl className="mon-classification-facts">
+      <dt>Precision</dt><dd>{shown(stats.precision)} ({pair(stats.true_positives,stats.flagged)})</dd><dd>{classificationCopy.precision}</dd>
+      <dt>Recall</dt><dd>{shown(stats.recall)} ({pair(stats.true_positives,stats.positives)})</dd><dd>{classificationCopy.recall}</dd>
+      <dt>F1</dt><dd>{score(stats.f1)} ({count(2*stats.true_positives)} / {count(2*stats.true_positives+stats.false_positives+stats.false_negatives)})</dd><dd>{classificationCopy.f1}</dd>
+    </dl><p className="muted">These results do not justify changing the saved threshold on this historical cohort.</p>
+  </details>;
 }
 function featureValue(v,unit) {
   if (!isNumber(v)) return 'Not provided';
@@ -53,16 +67,20 @@ function FeatureRows({items,drift}) {
 }
 export default function Monitoring({batches=[]}) {
   const [params,setParams]=useSearchParams(),batch=params.get('batch_id')||batches[0]?.batch_id;
-  const [data,setData]=useState(null),[trend,setTrend]=useState(null),[error,setError]=useState('');
+  const [loadedData,setData]=useState(null),[trend,setTrend]=useState(null),[error,setError]=useState('');
+  const [population,setPopulation]=useState('all');
   useEffect(()=>{if(!batch)return;let active=true;setData(null);setTrend(null);setError('');
     Promise.all([api.monitoring(batch),api.monitoringTrend(batch)]).then(([report,series])=>{if(active){setData(report);setTrend(series);}})
       .catch(err=>{if(active)setError(err.message);});return()=>{active=false};},[batch]);
-  const coverage=data?.outcome_coverage,loaded=coverage?.loaded||0,stats=data?.observed_all,drift=data?.drift;
+  const data=loadedData?.batch_id===batch?loadedData:null;
+  const coverage=data?.outcome_coverage,loaded=coverage?.loaded||0;
+  const stats=population==='without_recorded_delivery'?data?.without_recorded_delivery:data?.observed_all;
+  const drift=data?.drift;
   const features=drift?.features||[];
   const curated=curatedFeatures.map(name=>features.find(item=>item.feature===name)).filter(Boolean);
   const grouped=items=>Object.values(items.reduce((a,item)=>{(a[featureMeta(item.feature).group]??=[]).push(item);return a;},{})).flat();
   return <>
-    <div className="heading"><div><h1>Outcome monitoring</h1><p className="muted">How saved predictions compare with what was later observed, by monthly assessment.</p></div><ConnectionState unavailable={!!error}>{error?'Saved data unavailable':data?'Connected to saved data':'Loading saved data…'}</ConnectionState></div>
+    <div className="heading"><div><h1>Outcome monitoring</h1><p className="muted">Model-owner and analyst review of saved predictions and later observed outcomes, by monthly assessment.</p></div><ConnectionState unavailable={!!error}>{error?'Saved data unavailable':data?'Connected to saved data':'Loading saved data…'}</ConnectionState></div>
     {error&&<ErrorNotice message={error}/>}
     <section className="panel mon-status"><div className="mon-batch-tabs">{batches.length>6?<><label htmlFor="monitoring-batch">Assessment</label><select id="monitoring-batch" value={batch} onChange={e=>setParams({batch_id:e.target.value})}>{batches.map(b=><option key={b.batch_id} value={b.batch_id}>{monthLabel(b.cutoff_month)}</option>)}</select></>:
       [...batches].reverse().map(b=><button key={b.batch_id} type="button" aria-pressed={batch===b.batch_id} onClick={()=>setParams({batch_id:b.batch_id})}>{shortMonth(b.cutoff_month)}</button>)}{!batches.length&&<p>No saved assessments.</p>}</div>
@@ -72,14 +90,24 @@ export default function Monitoring({batches=[]}) {
         {data.state==='partly_loaded'&&<p>{count(coverage.unavailable)} unavailable outcomes are excluded and never counted as zero.</p>}</>}
     </section>
     {data&&<>
-      {loaded>0&&<section className="panel mon-panel"><h2>Model performance</h2><p className="muted">Predicted and observed over the same {count(loaded)} customers. No verdict is assigned.</p>
-        <div className="mon-performance"><div><div className="mon-performance-tiles"><div className="mon-tile mon-tile-navy"><span>Mean predicted risk</span><strong>{shown(stats.mean_risk)}</strong></div><div className="mon-tile mon-tile-rose"><span>Observed drop rate</span><strong>{shown(stats.observed_rate)}</strong></div><div className="mon-tile mon-tile-plain"><span>Gap</span><strong>{points(stats.observed_rate-stats.mean_risk)}</strong></div></div><p className="muted">Navy is predicted, rose is observed, in every chart on this page.</p></div>
-          <div><span className="mon-label">Brier score, lower is better</span><BrierBars model={stats.brier} reference={stats.reference_brier}/><p>Flagged cases that dropped: {pair(stats.flagged_positives,stats.flagged)}</p></div></div><p className="muted">Based on {count(loaded)} of {count(data.records)} customers.</p></section>}
+      {loaded>0&&<section className="panel mon-panel"><h2>Model performance</h2>
+        <label className="mon-population-label" htmlFor="mon-population">Performance population</label>
+        <select id="mon-population" value={population} onChange={e=>setPopulation(e.target.value)}>
+          <option value="all">All customers with loaded outcomes</option>
+          <option value="without_recorded_delivery">Without recorded delivery</option>
+        </select>
+        <p className="muted">Predicted and observed over the same {count(stats.records)} customers. No verdict is assigned.</p>
+        {stats.records>0?<><div className="mon-performance"><div><div className="mon-performance-tiles"><div className="mon-tile mon-tile-navy"><span>Mean predicted risk</span><strong>{shown(stats.mean_risk)}</strong></div><div className="mon-tile mon-tile-rose"><span>Observed drop rate</span><strong>{shown(stats.observed_rate)}</strong></div><div className="mon-tile mon-tile-plain"><span>Gap</span><strong>{points(stats.observed_rate-stats.mean_risk)}</strong></div></div><p className="muted">Navy is predicted, rose is observed, in every chart on this page.</p></div>
+          <div><span className="mon-label">Brier score, lower is better</span><p className="muted">Same-group constant reference</p><BrierBars model={stats.brier} reference={stats.reference_brier}/><p>Flagged cases that dropped: {pair(stats.flagged_positives,stats.flagged)}</p></div></div>
+          <ClassificationDetails stats={stats}/></>:<p className="mon-empty">No customers with loaded outcomes in this selected population. Performance ratios are unavailable.</p>}
+        <p className="muted">Based on {count(stats.records)} of {count(loaded)} customers with loaded outcomes; {count(data.records)} saved predictions in this assessment.</p>
+        {coverage.documented_delivery>0&&<p className="muted">All-customer results include documented delivery during the outcome window. Without recorded delivery does not mean no intervention occurred.</p>}
+      </section>}
       {loaded>0&&<section className="panel mon-panel"><h2>Recorded delivery and outcomes</h2><p>{count(coverage.documented_delivery)} of {count(loaded)} loaded customers have a documented delivery.</p>
         {coverage.documented_delivery>0?<div className="mon-delivery-grid"><DeliveryCard title="Documented delivery" data={data.documented_delivery}/><DeliveryCard title="No recorded delivery" data={data.without_recorded_delivery}/></div>:<p className="mon-empty">No documented deliveries were recorded for customers with loaded outcomes.</p>}
         <p className="muted">Delivery actions: RM visit {count(data.delivery_types?.rm_visit||0)} · Customer contact {count(data.delivery_types?.customer_contact||0)} · Service fix {count(data.delivery_types?.service_fix||0)}. Counts are actions, not customers.</p>
         <p className="muted">Groups are selected, not controlled. No recorded delivery does not prove nothing happened.</p></section>}
-      <section className="panel mon-panel"><h2>Cross-month comparison</h2><p className="muted">{count(trend?.batches?.length)} assessments under the same frozen protocol. Not a fitted trend.</p><TrendChart batches={trend?.batches||[]}/>
+      <section className="panel mon-panel"><h2>Cross-month comparison</h2><p className="muted">{count(trend?.batches?.length)} assessments under the same frozen protocol. Each month uses all customers with loaded outcomes, independent of the Model performance selector. Not a fitted trend.</p><TrendChart batches={trend?.batches||[]}/>
         <div className="table-wrap"><table className="mon-table"><thead><tr>{['Assessment','State','Loaded','Predicted','Observed','Gap','Brier','Reference','Flagged share'].map(label=><th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{trend?.batches?.map(item=><tr key={item.batch_id} className={item.batch_id===batch?'mon-selected':''}><th scope="row">{shortMonth(item.cutoff_month)}</th><td><span className={`mon-state mon-state-${item.state}`}>{stateText[item.state]}</span></td><td>{count(item.loaded)} of {count(item.records)}</td><td>{item.loaded?shown(item.mean_risk_loaded):'Not provided'}</td><td>{shown(item.observed_rate)}</td><td>{points(item.gap)}</td><td>{score(item.brier)}</td><td>{score(item.reference_brier)}</td><td>{shown(item.flagged_rate_all)}</td></tr>)}</tbody></table></div></section>
       <section className="panel mon-panel"><h2>Input and risk movement</h2>{drift?<><p className="muted">Compared with {shortMonth(drift.previous_month)}, same protocol. Descriptive only; no alert threshold.</p><div className="mon-movement"><div><span className="mon-label">Mean predicted risk</span><strong>from {shown(drift.previous_mean_risk)} to {shown(drift.current_mean_risk)}, {points(drift.current_mean_risk-drift.previous_mean_risk)}</strong></div><div><span className="mon-label">Flagged share</span><strong>from {shown(drift.previous_flagged_rate)} to {shown(drift.current_flagged_rate)}, {points(drift.current_flagged_rate-drift.previous_flagged_rate)}</strong></div></div>
         <div className="table-wrap"><table className="mon-table"><thead><tr><th>Feature</th><th>Earlier</th><th>Selected</th><th>Change</th></tr></thead><tbody><FeatureRows items={grouped(curated)} drift={drift}/></tbody></table></div>

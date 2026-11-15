@@ -6,7 +6,7 @@ const score = value => value == null ? 'Not provided' : Number(value).toFixed(3)
 export function BrierBars({ model, reference }) {
   const max = Math.max(model || 0,reference || 0,0.01);
   const width = value => value == null ? 0 : 160*value/max;
-  return <svg className="mon-brier" viewBox="0 0 360 88" role="img" aria-label={`Brier score: model ${score(model)}, reference ${score(reference)}`}>
+  return <svg className="mon-brier" viewBox="0 0 360 88" role="img" aria-label={`Brier score: model ${score(model)}, same-group constant reference ${score(reference)}`}>
     <text x="0" y="29">Model</text><rect x="85" y="14" width={width(model)} height="20" rx="3" className="mon-chart-navy"/><text x={Math.min(250,92+width(model))} y="29">{score(model)}</text>
     <text x="0" y="65">Reference</text><rect x="85" y="50" width={width(reference)} height="20" rx="3" className="mon-chart-reference"/><text x={Math.min(250,92+width(reference))} y="65">{score(reference)}</text>
   </svg>;
