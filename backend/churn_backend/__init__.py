@@ -18,7 +18,9 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_path=str(root / "instance"),
                 static_folder=str(frontend / "assets"), static_url_path="/assets")
     app.config.from_mapping(DATABASE=str(Path(os.environ.get("CHURN_DB_PATH", root / "instance" / "churn.sqlite")).resolve()),
-                            MAX_CONTENT_LENGTH=64 * 1024, TRUSTED_HOSTS=["localhost", "127.0.0.1", "[::1]"])
+                            MAX_CONTENT_LENGTH=64 * 1024, TRUSTED_HOSTS=["localhost", "127.0.0.1", "[::1]"],
+                            TXB_LOCAL_SESSION=os.environ.get('TXB_LOCAL_SESSION') == '1',
+                            TXB_LOCAL_MODE=os.environ.get('TXB_LOCAL_MODE'))
     if test_config:
         app.config.update(test_config)
     app.config.setdefault('TXB_RESEARCH_ROOT', os.environ.get('TXB_RESEARCH_ROOT'))

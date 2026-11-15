@@ -56,21 +56,14 @@ cd "D:\Degree Life\FYP Full-Stack Development\corporate-attrition-app\frontend"
 npm ci
 ```
 
-Terminal 1 — Flask:
+For an ordinary local session, choose the confirmed database explicitly from the repository root:
 
 ```PowerShell
 cd "D:\Degree Life\FYP Full-Stack Development\corporate-attrition-app"
-.\.venv\Scripts\python.exe backend\app.py
+.\.venv\Scripts\python.exe scripts\local_session.py test
 ```
 
-Terminal 2 — React development:
-
-```PowerShell
-cd "D:\Degree Life\FYP Full-Stack Development\corporate-attrition-app\frontend"
-npm run dev
-```
-
-Open **<http://127.0.0.1:5173/>**. Vite forwards `/api` to Flask at port 5000. Keep both terminals running. React changes update in the browser as you edit.
+The helper runs Flask at 5000 and Vite at 5173, checks that the frontend proxy reaches the selected backend/database, and prints the verified link. Use `working` in place of `test` only when you deliberately want the Working database. Ctrl+C stops the two child servers. See [Local database workflow](docs/LOCAL_DATABASE_WORKFLOW.md) for the confirmed paths, reusable Test sandbox, deliberate new-copy command and safeguards. React changes update in the browser as you edit.
 
 For a single Flask address, run `npm run build` in `frontend` and open **<http://127.0.0.1:5000/>**. Flask serves the generated `frontend/dist` files. Rebuild after frontend changes when using this address. An unbuilt Flask root returns a useful 503 setup response while API endpoints remain available.
 

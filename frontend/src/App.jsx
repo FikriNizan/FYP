@@ -20,6 +20,7 @@ function description(batch) {
 }
 
 export default function App() {
+  const [runtime,setRuntime] = useState(null);
   const [batches, setBatches] = useState(null);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -49,6 +50,13 @@ export default function App() {
       .catch(error => { if (active) setError(error.message); });
     return () => { active = false; };
   }, [attempt]);
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    let active=true;
+    api.runtimeContext?.().then(value=>{if(active)setRuntime(value);})
+      .catch(()=>{if(active)setRuntime({mode:'unknown',database_filename:'unverified'});});
+    return ()=>{active=false;};
+  }, []);
   useEffect(() => {
     if (assessmentScoped && batch && !requested) { const next=new URLSearchParams(params); next.set('batch_id',batch); setParams(next,{replace:true}); }
   }, [assessmentScoped,batch, requested, setParams,params]);
@@ -116,6 +124,9 @@ export default function App() {
         {batches?.map(item => <option key={item.batch_id} value={item.batch_id}>{description(item)}</option>)}
       </select></div>}
     </header>
+    {import.meta.env.DEV && <div className="local-db-indicator no-print" role="status" aria-label="Local database mode">
+      {runtime ? `${runtime.mode==='unknown'?'Unknown database':runtime.mode==='working'?'Working database':'Test database'} · ${runtime.database_filename}` : 'Checking local database…'}
+    </div>}
     <main id="workspace" tabIndex={-1}>{content}</main>
     <div id="notification" role="status" aria-live="polite">{notice}</div>
     </div></div>

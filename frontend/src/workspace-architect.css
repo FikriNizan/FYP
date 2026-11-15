@@ -1,6 +1,7 @@
 /* Architect theme layer. Loaded after workspace.css; delete the import in main.jsx to revert.
    Screen only, so the A4 briefing print rules in workspace.css still apply. */
 @media screen {
+  .local-db-indicator { position:fixed; z-index:20; right:14px; bottom:12px; max-width:calc(100vw - 28px); padding:5px 9px; border:1px solid #d3dbe8; border-radius:4px; background:#fff; box-shadow:0 2px 5px #04091409; color:#5f6a75; font-size:11px; line-height:1.4; pointer-events:none; }
   .mon-status { background:linear-gradient(180deg,#16305a,#102340,#0d1c34); color:#fff; }
   .mon-status .mon-label,.mon-status p,.mon-status .mon-coverage span { color:#d9e5f7; }
   .mon-batch-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; align-items:center; }

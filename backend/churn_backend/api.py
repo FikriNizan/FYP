@@ -1,5 +1,8 @@
 from flask import Blueprint, abort, current_app, jsonify, request, send_file
 from io import BytesIO
+import hashlib
+import os
+from pathlib import Path
 
 from . import repository as repo
 from . import cases
@@ -36,6 +39,27 @@ def existing_prediction(prediction_id):
 @api.get("/health")
 def health():
     return jsonify(status="ok", version=VERSION, batches=len(repo.batches()))
+
+
+@api.get('/runtime-context')
+def runtime_context():
+    if not current_app.config.get('TXB_LOCAL_SESSION'):
+        abort(404)
+    database = Path(current_app.config['DATABASE']).resolve()
+    root = Path(__file__).resolve().parents[2]
+    expected = {'working': root / 'backend' / 'instance' / 'churn.sqlite',
+                'test': root / 'artifacts' / 'm5-review-20261116-030542.sqlite'}
+    declared = current_app.config.get('TXB_LOCAL_MODE')
+    mode = declared if declared in expected and database == expected[declared].absolute() else 'unknown'
+    if mode == 'test' and expected['working'].exists() and os.path.samefile(database,expected['working']):
+        mode = 'unknown'
+    db = get_db()
+    version = db.execute('SELECT COALESCE(MAX(version),0) FROM schema_migrations').fetchone()[0]
+    months = [row[0] for row in db.execute('SELECT cutoff_month FROM batches ORDER BY cutoff_month')]
+    return jsonify(mode=mode, declared_mode=declared, database_filename=database.name,
+        database_path_sha256=hashlib.sha256(str(database).casefold().encode('utf-8')).hexdigest(),
+        schema_version=version, assessment_months=months,
+        batches=len(months), predictions=db.execute('SELECT COUNT(*) FROM predictions').fetchone()[0])
 
 
 @api.get("/metadata")

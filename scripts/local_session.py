@@ -1,0 +1,192 @@
+"""Explicit Working/Test launch and deliberate SQLite sandbox creation."""
+import argparse
+from contextlib import closing
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import socket
+import sqlite3
+import subprocess
+import sys
+import time
+from urllib.request import urlopen
+
+from copy_database import copy_database, inspect
+
+ROOT = Path(__file__).resolve().parents[1]
+WORKING = ROOT / 'backend' / 'instance' / 'churn.sqlite'
+TEST = ROOT / 'artifacts' / 'm5-review-20261116-030542.sqlite'
+BACKEND_URL = 'http://127.0.0.1:5000'
+FRONTEND_URL = 'http://127.0.0.1:5173'
+
+
+def resolved_existing(path):
+    target = Path(path).resolve(strict=True)
+    if not target.is_file():
+        raise ValueError('Database path is not a file: ' + str(target))
+    with closing(sqlite3.connect(target.as_uri() + '?mode=ro', uri=True)) as db:
+        counts = inspect(db)
+        has_version = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='schema_migrations'").fetchone()
+        version = db.execute('SELECT COALESCE(MAX(version),0) FROM schema_migrations').fetchone()[0] if has_version else 0
+        months = db.execute('SELECT cutoff_month,record_count FROM batches ORDER BY cutoff_month').fetchall()
+    return target, version, months, counts
+
+
+def selected_database(mode):
+    if mode not in ('working','test'):
+        raise ValueError('Choose Working or Test explicitly')
+    target, version, months, counts = resolved_existing(WORKING if mode == 'working' else TEST)
+    if mode == 'working' and target != WORKING.absolute():
+        raise ValueError('Working path resolves outside the confirmed Working database')
+    if mode == 'test' and (target != TEST.absolute() or os.path.samefile(target,WORKING)):
+        raise ValueError('Test path is not the confirmed reusable sandbox')
+    if mode == 'working' and version < 4:
+        raise ValueError('Working schema is old. Exercise the migration on a copy first.')
+    if version > 4:
+        raise ValueError('Database schema is newer than this app')
+    return target, version, months, counts
+
+
+def free_port(port):
+    with socket.socket() as listener:
+        listener.settimeout(.3)
+        try:
+            listener.bind(('127.0.0.1',port))
+        except OSError as error:
+            raise RuntimeError(f'Port {port} is occupied. Stop the existing server yourself, then retry.') from error
+
+
+def child_environment(mode, database):
+    env = os.environ.copy()
+    env.pop('CHURN_DB_PATH',None)
+    env.pop('VITE_API_TARGET',None)
+    env.update(CHURN_DB_PATH=str(database), VITE_API_TARGET=BACKEND_URL,
+               TXB_LOCAL_SESSION='1', TXB_LOCAL_MODE=mode)
+    return env
+
+
+def expected_identity(mode, database):
+    return dict(mode=mode,database_filename=database.name,
+        database_path_sha256=hashlib.sha256(str(database).casefold().encode('utf-8')).hexdigest())
+
+
+def read_context(url):
+    with urlopen(url+'/api/runtime-context', timeout=2) as response:
+        return json.load(response)
+
+
+def await_context(url, child, expected, deadline=25):
+    end=time.monotonic()+deadline
+    while time.monotonic()<end:
+        if child.poll() is not None:
+            raise RuntimeError(f'Server process {child.pid} exited before readiness')
+        try:
+            context=read_context(url)
+            if all(context.get(key)==value for key,value in expected.items()):
+                return context
+            raise RuntimeError('Runtime database identity does not match the selected mode/path')
+        except (OSError,TimeoutError,ValueError):
+            time.sleep(.2)
+    raise RuntimeError('Server did not become ready at '+url)
+
+
+def stop_owned(children):
+    for child in reversed(children):
+        if child.poll() is None:
+            child.terminate()
+    for child in reversed(children):
+        if child.poll() is None:
+            try:
+                child.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                child.wait(timeout=5)
+
+
+def launch(mode):
+    database, prior_version, months, counts = selected_database(mode)
+    free_port(5000)
+    free_port(5173)
+    env=child_environment(mode,database)
+    python=ROOT/'.venv'/'Scripts'/'python.exe'
+    node=Path(os.environ.get('TXB_NODE_EXE') or r'C:\Program Files\nodejs\node.exe')
+    vite=ROOT/'frontend'/'node_modules'/'vite'/'bin'/'vite.js'
+    if not python.is_file() or not node.is_file() or not vite.is_file():
+        raise ValueError('Local Python, Node or Vite is missing; install the existing project dependencies')
+    before_backups=set(database.parent.glob(database.name+'-pre-migration-*'))
+    children=[]
+    expected=expected_identity(mode,database)
+    try:
+        backend=subprocess.Popen([str(python),'-m','flask','--app','app','run','--host','127.0.0.1',
+                                  '--port','5000','--no-reload'],cwd=ROOT/'backend',env=env)
+        children.append(backend)
+        backend_context=await_context(BACKEND_URL,backend,expected)
+        frontend=subprocess.Popen([str(node),str(vite),'--host','127.0.0.1','--port','5173','--strictPort'],
+                                  cwd=ROOT/'frontend',env=env)
+        children.append(frontend)
+        frontend_context=await_context(FRONTEND_URL,frontend,expected)
+        if backend_context != frontend_context:
+            raise RuntimeError('Frontend proxy and backend runtime contexts differ')
+        new_backups=sorted(set(database.parent.glob(database.name+'-pre-migration-*'))-before_backups)
+        print('\nLOCAL SESSION',flush=True)
+        print('Mode:',mode.title(),'| Database:',database,flush=True)
+        print('Schema:',prior_version,'->',backend_context['schema_version'],
+              '| Backup:',', '.join(map(str,new_backups)) if new_backups else 'none',flush=True)
+        print('Assessments:',', '.join(f'{month} ({count})' for month,count in months),
+              '| Predictions:',counts['predictions'],flush=True)
+        print('Backend:',BACKEND_URL,'PID:',backend.pid,flush=True)
+        print('Frontend:',FRONTEND_URL,'PID:',frontend.pid,flush=True)
+        print('Verified: Vite /api -> this backend ->',database.name,flush=True)
+        print('Stop: Ctrl+C in this terminal.\n',flush=True)
+        while all(child.poll() is None for child in children):
+            time.sleep(.5)
+        raise RuntimeError('A local server exited; the owned companion will be stopped')
+    except KeyboardInterrupt:
+        print('\nStopping this local session.',flush=True)
+    finally:
+        stop_owned(children)
+
+
+def new_test(source, destination, purpose):
+    source,_,_,_=resolved_existing(source)
+    destination=Path(destination).resolve()
+    if destination.parent != (ROOT/'artifacts').resolve():
+        raise ValueError('New test sandbox must be directly inside artifacts/')
+    if destination.exists():
+        raise FileExistsError('Destination already exists: '+str(destination))
+    if destination in (WORKING.resolve(),TEST.resolve()):
+        raise ValueError('Cannot overwrite a confirmed database')
+    metadata=Path(str(destination)+'.origin.json')
+    if metadata.exists():
+        raise FileExistsError('Copy metadata already exists: '+str(metadata))
+    result=copy_database(source,destination)
+    record=dict(source=str(source),destination=str(destination),
+                created_at_utc=datetime.now(timezone.utc).isoformat(),purpose=purpose)
+    with metadata.open('x',encoding='utf-8') as handle:
+        json.dump(record,handle,indent=2)
+    return dict(**result,metadata=str(metadata))
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    sub=parser.add_subparsers(dest='command',required=True)
+    sub.add_parser('working')
+    sub.add_parser('test')
+    fresh=sub.add_parser('new-test')
+    fresh.add_argument('--source',required=True)
+    fresh.add_argument('--destination',required=True)
+    fresh.add_argument('--purpose',required=True)
+    args=parser.parse_args()
+    try:
+        if args.command=='new-test':
+            print(json.dumps(new_test(args.source,args.destination,args.purpose),indent=2))
+        else:
+            launch(args.command)
+    except (OSError,ValueError,RuntimeError,sqlite3.Error) as error:
+        parser.exit(1,str(error)+'\n')
+
+
+if __name__=='__main__':
+    main()

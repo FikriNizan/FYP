@@ -30,6 +30,7 @@ export async function request(path, { params, method = 'GET', body, signal } = {
 }
 
 export const api = {
+  runtimeContext: () => request('/api/runtime-context'),
   uploadAssessment: async (features, manifest) => {
     const body = new FormData(); body.append('features',features); body.append('manifest',manifest);
     let response;
