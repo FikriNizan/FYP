@@ -186,6 +186,10 @@ Panels use the largest recurring radius; controls and fields use smaller, precis
 
 ## Components
 
+### Monitoring page
+
+The status strip uses the navy rail gradient and a text-bearing state badge. Predicted risk uses navy gradient tiles and chart bars; observed volume-drop rate uses rose gradient tiles and chart bars. Blue marks an open window, amber unavailable or partial loading, and green loaded outcomes. Every colour cue has adjacent text. Unloaded assessments have an empty labelled chart slot. The upload panel is white, with dashed file cards, selected/needed labels and an informational stage strip.
+
 ### Buttons
 
 Compact, explicit actions. Primary buttons use cobalt and white; secondary buttons use white, a cool border and graphite text, with a pale-blue hover fill. Shared minimum height is 40px on desktop. Hover and active states change fill; primary hover deepens cobalt. Disabled controls lower opacity. Background and border transitions take 150ms with ease-out.

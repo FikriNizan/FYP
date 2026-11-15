@@ -37,3 +37,12 @@ The first import is a dry run; inspect 1,000 available / zero unavailable before
 * Chrome inspected the connected Monitoring page on the copied database at 1440, 760 and 380px: no horizontal overflow, script exceptions, response alerts or remote font requests. The April customer detail rendered its separate outcome. Screenshots and the browser result are in ignored `.impeccable/review/milestone5/` and `artifacts/m5-browser.json`.
 * The active database and original research artifacts were not written. All pre-existing rows in `batches`, `predictions`, `reviews`, review history, cases, case events, follow-ups, follow-up events, supplemental evidence and review-case links matched the active database after the copied outcome imports. User acceptance and broader raw-source point-in-time assurance remain open; the latter needs real observation/ingestion timestamps (see [research reference](../research/MILESTONE_4_DOCUMENTATION_REFERENCE.md)).
 
+## Monitoring refinement — 15 November 2026
+
+* Monitoring distinguishes `window_open`, `not_loaded`, `partly_loaded` and `loaded` from the selected horizon and saved coverage. Unavailable rows never enter observed denominators.
+* `GET /api/monitoring/trend` reads same-protocol portfolio batches in cutoff order and excludes `notebook_case_sample`. Unloaded outcome metrics are null.
+* Performance adds flagged-positive count and reference Brier, computed from the observed rate. It is a descriptive yardstick, not a pass threshold. Drift excludes notebook case samples when choosing the earlier batch.
+* Monitoring adds status, model performance, delivery groups, cross-month comparison and saved-feature movement. Navy denotes predicted and rose observed. The Monthly Assessments upload panel has visible file states and an informational stage strip; it does not claim individual stages finished while the request runs.
+* **Correction:** the delivery window formerly started at the end of its first month. Completed deliveries earlier in that month were excluded. It now starts the day after the cutoff; delivery counts reported before this fix may differ.
+* The owner's representative-user acceptance remains pending.
+

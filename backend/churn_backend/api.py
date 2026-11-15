@@ -78,6 +78,13 @@ def monitoring():
     return jsonify(outcomes.report(batch['batch_id']))
 
 
+@api.get('/monitoring/trend')
+def monitoring_trend():
+    from . import outcomes
+    batch = selected_batch()
+    return jsonify(outcomes.trend(batch['batch_id']))
+
+
 @api.get("/customers")
 def customers():
     batch = selected_batch()

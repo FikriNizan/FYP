@@ -2,7 +2,7 @@
 import calendar
 import csv
 from collections import Counter, defaultdict
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 import hashlib
 import json
@@ -178,14 +178,65 @@ def delivered_by_customer():
 def performance(rows):
     if not rows:
         return dict(records=0,positives=0,observed_rate=None,mean_risk=None,brier=None,
-                    flagged=0,flagged_positive=None)
+                    reference_brier=None,flagged=0,flagged_positives=0,flagged_positive=None)
+    observed_rate = mean(row['target_churn'] for row in rows)
+    flagged = sum(row['review_alert'] for row in rows)
+    flagged_positives = sum(row['target_churn'] for row in rows if row['review_alert'])
     return dict(records=len(rows),positives=sum(row['target_churn'] for row in rows),
-                observed_rate=mean(row['target_churn'] for row in rows),
+                observed_rate=observed_rate,reference_brier=observed_rate*(1-observed_rate),
                 mean_risk=mean(row['risk'] for row in rows),
                 brier=mean((row['risk']-row['target_churn'])**2 for row in rows),
-                flagged=sum(row['review_alert'] for row in rows),
-                flagged_positive=(sum(row['target_churn'] for row in rows if row['review_alert']) /
-                    sum(row['review_alert'] for row in rows) if any(row['review_alert'] for row in rows) else None))
+                flagged=flagged,flagged_positives=flagged_positives,
+                flagged_positive=flagged_positives/flagged if flagged else None)
+
+
+def outcome_state(outcome_month, loaded, records):
+    if outcome_month > date.today().isoformat():
+        return 'window_open'
+    if loaded == 0:
+        return 'not_loaded'
+    if loaded < records:
+        return 'partly_loaded'
+    return 'loaded'
+
+
+def batch_rows(batch_id):
+    return get_db().execute('SELECT p.prediction_id,p.cus_id,p.risk,p.review_alert,o.target_churn,o.outcome_month '
+        'FROM predictions p LEFT JOIN observed_outcomes o USING(prediction_id) WHERE p.batch_id=?',(batch_id,)).fetchall()
+
+
+def mature_rows(batch, rows, delivered):
+    start = (date.fromisoformat(batch['cutoff_month']) + timedelta(days=1)).isoformat()
+    return [dict(row,delivered_actions=actions,documented_exposure=bool(actions))
+        for row in rows if row['target_churn'] is not None
+        for actions in [[item for item in delivered[row['cus_id']]
+                         if start <= item['date'] <= row['outcome_month']]]]
+
+
+def trend(batch_id):
+    db = get_db()
+    selected = db.execute('SELECT * FROM batches WHERE batch_id=?',(batch_id,)).fetchone()
+    require(selected is not None, 'Assessment batch not found')
+    batches = db.execute("SELECT * FROM batches WHERE protocol_sha256=? AND source_kind<>'notebook_case_sample' "
+        'ORDER BY cutoff_month ASC, imported_at ASC',(selected['protocol_sha256'],)).fetchall()
+    delivered = delivered_by_customer()
+    items = []
+    for batch in batches:
+        rows = batch_rows(batch['batch_id'])
+        mature = mature_rows(batch,rows,delivered)
+        stats = performance(mature)
+        outcome_month = horizon_end(batch['cutoff_month'])
+        items.append(dict(batch_id=batch['batch_id'],cutoff_month=batch['cutoff_month'],
+            outcome_month=outcome_month,records=len(rows),state=outcome_state(outcome_month,len(mature),len(rows)),
+            loaded=len(mature),unavailable=len(rows)-len(mature),
+            documented_delivery=sum(row['documented_exposure'] for row in mature),
+            mean_risk_all=mean(row['risk'] for row in rows) if rows else None,
+            flagged_rate_all=mean(row['review_alert'] for row in rows) if rows else None,
+            mean_risk_loaded=stats['mean_risk'],observed_rate=stats['observed_rate'],
+            gap=stats['observed_rate']-stats['mean_risk'] if mature else None,
+            brier=stats['brier'],reference_brier=stats['reference_brier'],
+            flagged_positive=stats['flagged_positive']))
+    return dict(protocol_sha256=selected['protocol_sha256'],batches=items)
 
 
 def drift(current, previous):
@@ -229,22 +280,16 @@ def report(batch_id):
     db = get_db()
     batch = db.execute('SELECT * FROM batches WHERE batch_id=?',(batch_id,)).fetchone()
     require(batch is not None, 'Assessment batch not found')
-    rows = db.execute('SELECT p.prediction_id,p.cus_id,p.risk,p.review_alert,o.target_churn,o.outcome_month '
-        'FROM predictions p LEFT JOIN observed_outcomes o USING(prediction_id) WHERE p.batch_id=?',(batch_id,)).fetchall()
+    rows = batch_rows(batch_id)
     delivered = delivered_by_customer()
-    mature = []
-    for row in rows:
-        if row['target_churn'] is None:
-            continue
-        start = shift_month(batch['cutoff_month'],1)
-        applicable = [item for item in delivered[row['cus_id']] if start <= item['date'] <= row['outcome_month']]
-        mature.append(dict(row,delivered_actions=applicable,documented_exposure=bool(applicable)))
+    mature = mature_rows(batch,rows,delivered)
     exposed = [row for row in mature if row['documented_exposure']]
     unrecorded = [row for row in mature if not row['documented_exposure']]
-    previous = db.execute('SELECT * FROM batches WHERE cutoff_month<? AND protocol_sha256=? '
+    previous = db.execute("SELECT * FROM batches WHERE cutoff_month<? AND protocol_sha256=? AND source_kind<>'notebook_case_sample' "
         'ORDER BY cutoff_month DESC, imported_at DESC LIMIT 1',
         (batch['cutoff_month'],batch['protocol_sha256'])).fetchone()
     return dict(batch_id=batch_id,cutoff_month=batch['cutoff_month'],
+                state=outcome_state(horizon_end(batch['cutoff_month']),len(mature),len(rows)),
                 outcome_month=horizon_end(batch['cutoff_month']),records=len(rows),
                 outcome_coverage=dict(loaded=len(mature),unavailable=len(rows)-len(mature),
                     documented_delivery=len(exposed),without_recorded_delivery=len(unrecorded)),

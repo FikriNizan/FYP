@@ -1,56 +1,90 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { count, monthLabel, percent } from '../format.js';
+import { count, isNumber, money, monthLabel, percent } from '../format.js';
 import { ConnectionState } from '../components/Workspace.jsx';
 import { ErrorNotice } from '../components/Common.jsx';
+import { BrierBars, TrendChart } from '../components/MonitoringCharts.jsx';
+import { curatedFeatures, featureMeta } from '../monitoringFeatures.js';
+import { monitoringCopy } from '../monitoringCopy.js';
 
-const shown = value => value == null ? 'Not available' : percent(value);
-const fixed = value => value == null ? 'Not available' : Number(value).toFixed(3);
-
-function Group({ title, data }) {
-  return <article className="context-card"><h3>{title}</h3><p><strong>{count(data.records)}</strong> outcomes</p>
-    <dl className="monitoring-facts"><dt>Observed volume-drop rate</dt><dd>{shown(data.observed_rate)}</dd>
-      <dt>Mean saved predicted risk</dt><dd>{shown(data.mean_risk)}</dd>
-      <dt>Brier score</dt><dd>{fixed(data.brier)}</dd>
-      <dt>Flagged cases with observed drop</dt><dd>{shown(data.flagged_positive)}</dd></dl></article>;
+const stateText={window_open:'Window open',not_loaded:'Not loaded',partly_loaded:'Partly loaded',loaded:'Loaded'};
+const shown=v=>v==null?'Not provided':percent(v);
+const points=v=>v==null?'Not provided':`${v>=0?'+':''}${(v*100).toFixed(1)} pts`;
+const score=v=>v==null?'Not provided':Number(v).toFixed(3);
+const pair=(a,b)=>`${count(a)} of ${count(b)}`;
+const shortMonth=v=>new Date(v+'T00:00:00Z').toLocaleDateString('en-MY',{month:'short',year:'numeric',timeZone:'UTC'});
+function windowLabel(cutoff) {
+  const [year,month]=cutoff.split('-').map(Number);
+  const start=new Date(Date.UTC(year,month,1)).toISOString().slice(0,10);
+  const end=new Date(Date.UTC(year,month+2,1)).toISOString().slice(0,10);
+  return `${shortMonth(start).split(' ')[0]} to ${shortMonth(end)}`;
 }
-
-export default function Monitoring({ batches }) {
-  const [params, setParams] = useSearchParams();
-  const batch = params.get('batch_id') || batches[0]?.batch_id;
-  const [data, setData] = useState(null);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    if (!batch) return;
-    let active = true;
-    setData(null); setError('');
-    api.monitoring(batch).then(result => { if (active) setData(result); })
-      .catch(err => { if (active) setError(err.message); });
-    return () => { active = false; };
-  }, [batch]);
-  const drift = data?.drift;
-  const examples = ['combined_flow_mean_3m_myr','combined_flow_mean_12m_myr','login_failure_rate_3m',
-    'outbound_failure_rate_3m','non_fd_balance_myr','fd_balance_myr','tier_id','customer_type','sector_code'];
+function DeliveryCard({title,data}) {
+  return <article className="mon-delivery-card"><h3>{title}</h3><dl>
+    <dt>Customers</dt><dd>{count(data.records)}</dd>
+    <dt>Observed drop rate</dt><dd>{pair(data.positives,data.records)} ({shown(data.observed_rate)})</dd>
+    <dt>Mean predicted risk</dt><dd>{shown(data.mean_risk)}</dd>
+    <dt>Flagged that dropped</dt><dd>{pair(data.flagged_positives,data.flagged)}</dd>
+  </dl></article>;
+}
+function featureValue(v,unit) {
+  if (!isNumber(v)) return 'Not provided';
+  if(unit==='money') return money(v);
+  if(unit==='fraction') return percent(v);
+  if(unit==='ratio') return `${new Intl.NumberFormat('en-MY',{maximumFractionDigits:2}).format(v)}×`;
+  return new Intl.NumberFormat('en-MY',{maximumFractionDigits:2}).format(v)+(unit==='days'||unit==='months'||unit==='seconds'||unit==='milliseconds'?` ${unit}`:'');
+}
+function FeatureRows({items,drift}) {
+  let last='';
+  return items.map(item=>{const meta=featureMeta(item.feature), group=meta.group!==last?meta.group:null;last=meta.group;
+    const categorical=item.unit==='categorical total variation';
+    const change=categorical?(item.distribution_difference==null?'-':Number(item.distribution_difference).toFixed(2)):
+      !isNumber(item.previous_median)||item.previous_median===0||!isNumber(item.current_median)?'-':
+      `${((item.current_median/item.previous_median-1)*100).toFixed(1)}%`;
+    const availability=item.previous_available<drift.previous_records||item.current_available<drift.current_records?
+      <small>Available {count(item.previous_available)} of {count(drift.previous_records)} / {count(item.current_available)} of {count(drift.current_records)}</small>:null;
+    return <React.Fragment key={item.feature}>{group&&<tr className="mon-feature-group"><th colSpan="4" scope="rowgroup">{group}</th></tr>}
+      <tr><th scope="row">{meta.label}{meta.unit==='saved units'&&<small>Saved units</small>}{availability}</th>
+      <td>{categorical?'Category mix':featureValue(item.previous_median,meta.unit)}</td>
+      <td>{categorical?'Category mix':featureValue(item.current_median,meta.unit)}</td>
+      <td>{categorical?`Mix difference ${change} (0 same, 1 no overlap)`:change}</td></tr></React.Fragment>;
+  });
+}
+export default function Monitoring({batches=[]}) {
+  const [params,setParams]=useSearchParams(),batch=params.get('batch_id')||batches[0]?.batch_id;
+  const [data,setData]=useState(null),[trend,setTrend]=useState(null),[error,setError]=useState('');
+  useEffect(()=>{if(!batch)return;let active=true;setData(null);setTrend(null);setError('');
+    Promise.all([api.monitoring(batch),api.monitoringTrend(batch)]).then(([report,series])=>{if(active){setData(report);setTrend(series);}})
+      .catch(err=>{if(active)setError(err.message);});return()=>{active=false};},[batch]);
+  const coverage=data?.outcome_coverage,loaded=coverage?.loaded||0,stats=data?.observed_all,drift=data?.drift;
+  const features=drift?.features||[];
+  const curated=curatedFeatures.map(name=>features.find(item=>item.feature===name)).filter(Boolean);
+  const grouped=items=>Object.values(items.reduce((a,item)=>{(a[featureMeta(item.feature).group]??=[]).push(item);return a;},{})).flat();
   return <>
-    <div className="heading"><div><h1>Outcome monitoring</h1><p className="muted">Observed volume drops, recorded follow-up delivery and saved predictions remain separate.</p></div><ConnectionState unavailable={!!error}>{error ? 'Saved data unavailable' : data ? 'Connected to saved data' : 'Loading saved data…'}</ConnectionState></div>
-    <section className="panel"><h2>Assessment to inspect</h2><label htmlFor="monitoring-batch">Assessment</label>{batches.length ?
-      <select id="monitoring-batch" value={batch} onChange={event=>setParams({batch_id:event.target.value})}>{batches.map(item=><option key={item.batch_id} value={item.batch_id}>{monthLabel(item.cutoff_month)} · {count(item.record_count)} customers · {item.batch_id.slice(0,6)}</option>)}</select> : <p>No saved assessments.</p>}
-      <p className="muted">Outcomes are loaded by an explicit administrator action after the full three-month window is recorded. This page does not create labels from later assessments.</p></section>
-    {error && <ErrorNotice message={error}/>}
-    {data && <>
-      <section className="panel"><h2>Outcome availability</h2><p className="muted">{monthLabel(data.cutoff_month)} assessment · outcome window ends {monthLabel(data.outcome_month)}.</p>
-        <div className="monitoring-counts"><div><span>Saved predictions</span><strong>{count(data.records)}</strong></div><div><span>Observed outcomes loaded</span><strong>{count(data.outcome_coverage.loaded)}</strong></div><div><span>Outcome unavailable</span><strong>{count(data.outcome_coverage.unavailable)}</strong></div><div><span>Documented delivery in window</span><strong>{count(data.outcome_coverage.documented_delivery)}</strong></div></div>
-        <p className="muted">Unavailable includes outcomes not imported or incomplete source coverage. It is never counted as a zero or a negative outcome.</p></section>
-      <section className="panel"><h2>Descriptive observed outcomes</h2><p className="muted">Delivery means a saved, completed RM visit, customer contact or service fix dated inside this assessment's next three months. Planned work, attempts and notes do not qualify.</p>
-        <div className="context-grid"><Group title="Documented delivery" data={data.documented_delivery}/><Group title="No recorded delivery" data={data.without_recorded_delivery}/></div>
-        <p className="muted">No recorded delivery does not prove that no action occurred. These groups are selected, not a controlled comparison. Differences do not prove retention benefit or model error.</p></section>
-      <section className="panel"><h2>Input and risk movement</h2>{drift ? <><p className="muted">Compared with {monthLabel(drift.previous_month)} under the same frozen protocol. Descriptive movement only; no alert threshold is assigned.</p>
-        <div className="monitoring-counts"><div><span>Mean risk, earlier</span><strong>{shown(drift.previous_mean_risk)}</strong></div><div><span>Mean risk, selected</span><strong>{shown(drift.current_mean_risk)}</strong></div><div><span>Flagged share, earlier</span><strong>{shown(drift.previous_flagged_rate)}</strong></div><div><span>Flagged share, selected</span><strong>{shown(drift.current_flagged_rate)}</strong></div></div>
-        <div className="table-wrap"><table><thead><tr><th scope="col">Saved feature</th><th scope="col">Earlier available</th><th scope="col">Selected available</th><th scope="col">Earlier median / distribution</th><th scope="col">Selected median / distribution</th></tr></thead><tbody>
-          {examples.map(name=>drift.features.find(item=>item.feature===name)).filter(Boolean).map(item=><tr key={item.feature}><th scope="row">{item.feature.replaceAll('_',' ')}</th><td>{count(item.previous_available)} / {count(drift.previous_records)}</td><td>{count(item.current_available)} / {count(drift.current_records)}</td><td>{item.previous_median == null ? 'Category mix' : fixed(item.previous_median)}</td><td>{item.current_median == null ? (item.distribution_difference == null ? 'Not available' : `Category distribution difference ${fixed(item.distribution_difference)}`) : fixed(item.current_median)}</td></tr>)}
-        </tbody></table></div><p className="muted">Numeric medians use each feature's saved units. Category difference ranges from 0 (same mix) to 1 (no overlap). Availability is shown beside every comparison.</p></> : <p>There is no earlier saved assessment under the same protocol to compare.</p>}</section>
-      <p className="muted">{data.interpretation}</p>
+    <div className="heading"><div><h1>Outcome monitoring</h1><p className="muted">How saved predictions compare with what was later observed, by monthly assessment.</p></div><ConnectionState unavailable={!!error}>{error?'Saved data unavailable':data?'Connected to saved data':'Loading saved data…'}</ConnectionState></div>
+    {error&&<ErrorNotice message={error}/>}
+    <section className="panel mon-status"><div className="mon-batch-tabs">{batches.length>6?<><label htmlFor="monitoring-batch">Assessment</label><select id="monitoring-batch" value={batch} onChange={e=>setParams({batch_id:e.target.value})}>{batches.map(b=><option key={b.batch_id} value={b.batch_id}>{monthLabel(b.cutoff_month)}</option>)}</select></>:
+      [...batches].reverse().map(b=><button key={b.batch_id} type="button" aria-pressed={batch===b.batch_id} onClick={()=>setParams({batch_id:b.batch_id})}>{shortMonth(b.cutoff_month)}</button>)}{!batches.length&&<p>No saved assessments.</p>}</div>
+      {data&&<><div className="mon-status-row"><span className={`mon-state mon-state-${data.state}`}>{stateText[data.state]}</span><div><span className="mon-label">Outcome window</span><strong>{windowLabel(data.cutoff_month)}</strong></div><div className="mon-coverage"><progress value={loaded} max={data.records||1} aria-label="Observed outcome coverage"/><span>{count(loaded)} of {count(data.records)} predictions have an observed outcome</span></div></div>
+        {data.state==='window_open'&&<p>Outcomes cannot be assessed yet. The three-month window ends {shortMonth(data.outcome_month)}.</p>}
+        {data.state==='not_loaded'&&<><p>The window has ended, but no outcomes are loaded for this assessment.</p><details><summary>Administrator import command</summary><code>python -m flask --app app load-outcomes --batch-id {data.batch_id} --observed-through {data.outcome_month}</code><p>Add <code>--apply</code> to save; requires <code>TXB_RESEARCH_ROOT</code>.</p></details></>}
+        {data.state==='partly_loaded'&&<p>{count(coverage.unavailable)} unavailable outcomes are excluded and never counted as zero.</p>}</>}
+    </section>
+    {data&&<>
+      {loaded>0&&<section className="panel mon-panel"><h2>Model performance</h2><p className="muted">Predicted and observed over the same {count(loaded)} customers. No verdict is assigned.</p>
+        <div className="mon-performance"><div><div className="mon-performance-tiles"><div className="mon-tile mon-tile-navy"><span>Mean predicted risk</span><strong>{shown(stats.mean_risk)}</strong></div><div className="mon-tile mon-tile-rose"><span>Observed drop rate</span><strong>{shown(stats.observed_rate)}</strong></div><div className="mon-tile mon-tile-plain"><span>Gap</span><strong>{points(stats.observed_rate-stats.mean_risk)}</strong></div></div><p className="muted">Navy is predicted, rose is observed, in every chart on this page.</p></div>
+          <div><span className="mon-label">Brier score, lower is better</span><BrierBars model={stats.brier} reference={stats.reference_brier}/><p>Flagged cases that dropped: {pair(stats.flagged_positives,stats.flagged)}</p></div></div><p className="muted">Based on {count(loaded)} of {count(data.records)} customers.</p></section>}
+      {loaded>0&&<section className="panel mon-panel"><h2>Recorded delivery and outcomes</h2><p>{count(coverage.documented_delivery)} of {count(loaded)} loaded customers have a documented delivery.</p>
+        {coverage.documented_delivery>0?<div className="mon-delivery-grid"><DeliveryCard title="Documented delivery" data={data.documented_delivery}/><DeliveryCard title="No recorded delivery" data={data.without_recorded_delivery}/></div>:<p className="mon-empty">No documented deliveries were recorded for customers with loaded outcomes.</p>}
+        <p className="muted">Delivery actions: RM visit {count(data.delivery_types?.rm_visit||0)} · Customer contact {count(data.delivery_types?.customer_contact||0)} · Service fix {count(data.delivery_types?.service_fix||0)}. Counts are actions, not customers.</p>
+        <p className="muted">Groups are selected, not controlled. No recorded delivery does not prove nothing happened.</p></section>}
+      <section className="panel mon-panel"><h2>Cross-month comparison</h2><p className="muted">{count(trend?.batches?.length)} assessments under the same frozen protocol. Not a fitted trend.</p><TrendChart batches={trend?.batches||[]}/>
+        <div className="table-wrap"><table className="mon-table"><thead><tr>{['Assessment','State','Loaded','Predicted','Observed','Gap','Brier','Reference','Flagged share'].map(label=><th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{trend?.batches?.map(item=><tr key={item.batch_id} className={item.batch_id===batch?'mon-selected':''}><th scope="row">{shortMonth(item.cutoff_month)}</th><td><span className={`mon-state mon-state-${item.state}`}>{stateText[item.state]}</span></td><td>{count(item.loaded)} of {count(item.records)}</td><td>{item.loaded?shown(item.mean_risk_loaded):'Not provided'}</td><td>{shown(item.observed_rate)}</td><td>{points(item.gap)}</td><td>{score(item.brier)}</td><td>{score(item.reference_brier)}</td><td>{shown(item.flagged_rate_all)}</td></tr>)}</tbody></table></div></section>
+      <section className="panel mon-panel"><h2>Input and risk movement</h2>{drift?<><p className="muted">Compared with {shortMonth(drift.previous_month)}, same protocol. Descriptive only; no alert threshold.</p><div className="mon-movement"><div><span className="mon-label">Mean predicted risk</span><strong>from {shown(drift.previous_mean_risk)} to {shown(drift.current_mean_risk)}, {points(drift.current_mean_risk-drift.previous_mean_risk)}</strong></div><div><span className="mon-label">Flagged share</span><strong>from {shown(drift.previous_flagged_rate)} to {shown(drift.current_flagged_rate)}, {points(drift.current_flagged_rate-drift.previous_flagged_rate)}</strong></div></div>
+        <div className="table-wrap"><table className="mon-table"><thead><tr><th>Feature</th><th>Earlier</th><th>Selected</th><th>Change</th></tr></thead><tbody><FeatureRows items={grouped(curated)} drift={drift}/></tbody></table></div>
+        <details className="mon-expander"><summary>Show all 78 features</summary><div className="table-wrap"><table className="mon-table"><thead><tr><th>Feature</th><th>Earlier</th><th>Selected</th><th>Change</th></tr></thead><tbody><FeatureRows items={features} drift={drift}/></tbody></table></div></details></>:<p>There is no earlier saved assessment under the same protocol to compare.</p>}</section>
+      <section className="panel mon-panel"><details><summary>How to read this page</summary>{monitoringCopy.map(text=><p key={text}>{text}</p>)}<p>{data.interpretation}</p></details></section>
     </>}
   </>;
 }

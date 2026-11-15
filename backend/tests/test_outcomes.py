@@ -152,6 +152,75 @@ class OutcomeTests(unittest.TestCase):
             report=outcomes.report(self.batch)
             self.assertEqual(report['outcome_coverage']['documented_delivery'],0)
 
+    def test_first_window_month_dates_count_and_endpoints_do_not_write(self):
+        self.cutoff='2024-04-30'
+        self.end=outcomes.horizon_end(self.cutoff)
+        self.write_flows()
+        with self.app.app_context():
+            get_db().execute("UPDATE batches SET cutoff_month=?,source_kind='prepared_month_scored' WHERE batch_id=?",(self.cutoff,self.batch))
+            get_db().commit()
+            self.assertEqual(outcomes.performance([])['reference_brier'],None)
+            self.assertEqual(outcomes.outcome_state('2999-07-31',0,1),'window_open')
+            self.assertEqual(outcomes.outcome_state('2024-07-31',0,1),'not_loaded')
+            self.assertEqual(outcomes.outcome_state('2024-07-31',1,2),'partly_loaded')
+            self.assertEqual(outcomes.outcome_state('2024-07-31',1,1),'loaded')
+            outcomes.publish(self.batch,self.end,dry_run=False)
+            db=get_db()
+            # An eligible completed task is attached to the saved case; use direct rows
+            # to cover dates that the human action API may reject for its own reasons.
+            db.execute("INSERT INTO reviews(prediction_id,version,body_json,updated_at) VALUES(?,1,'{}','2024-05-01T00:00:00Z')",(self.prediction,))
+            db.execute("INSERT INTO reviewed_cases(case_id,prediction_id,original_review_json,status,owner,next_action_date,version,created_at,updated_at) VALUES(?,?,'{}','open','',NULL,1,'2024-05-01T00:00:00Z','2024-05-01T00:00:00Z')",(self.prediction,self.prediction))
+            for i,day in enumerate(('2024-04-30','2024-05-01','2024-05-10','2024-08-01')):
+                task=f'task-{i}'
+                db.execute("INSERT INTO follow_ups(follow_up_id,case_id,action_type,planned_date,created_at) VALUES(?,?,'rm_visit',?,'2024-05-01T00:00:00Z')",(task,self.prediction,day))
+                db.execute("INSERT INTO follow_up_events(follow_up_id,body_json,recorded_at) VALUES(?,?,'2024-05-01T00:00:00Z')",(task,json.dumps(dict(action_date=day,action_status='delivered'))))
+            db.commit()
+            report=outcomes.report(self.batch)
+            self.assertEqual(report['outcome_coverage']['documented_delivery'],1)
+            self.assertEqual(report['delivery_types'],{'rm_visit':2})
+            self.assertEqual(report['observed_all']['flagged_positives'],report['observed_all']['positives'] if report['observed_all']['flagged'] else 0)
+            p=report['observed_all']['observed_rate']
+            self.assertAlmostEqual(report['observed_all']['reference_brier'],p*(1-p))
+        before=hashlib.sha256((self.root/'test.sqlite').read_bytes()).digest()
+        self.assertEqual(self.client.get('/api/monitoring?batch_id='+self.batch).status_code,200)
+        response=self.client.get('/api/monitoring/trend?batch_id='+self.batch)
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json['batches'][0]['state'],'loaded')
+        self.assertEqual(before,hashlib.sha256((self.root/'test.sqlite').read_bytes()).digest())
+
+    def test_trend_filters_protocol_sample_orders_and_keeps_unloaded_null(self):
+        with self.app.app_context():
+            db=get_db()
+            for batch_id,cutoff,source,protocol in (
+                ('prepared-march','2024-03-31','prepared_month_scored',None),
+                ('prepared-april','2024-04-30','prepared_month_scored',None),
+                ('other-protocol','2024-01-31','prepared_month_scored','other')):
+                db.execute("INSERT INTO batches(batch_id,cutoff_month,source_kind,protocol_sha256,record_count,source_json,imported_at) "
+                    "SELECT ?,?,?,COALESCE(?,protocol_sha256),1,'{}','2024-05-01T00:00:00Z' FROM batches WHERE batch_id=?",
+                    (batch_id,cutoff,source,protocol,self.batch))
+                db.execute("INSERT INTO predictions(prediction_id,batch_id,cus_id,risk,review_alert,evidence_json,features_json,customer_json,flows_json) "
+                    "SELECT ?,?,cus_id,risk,review_alert,evidence_json,features_json,customer_json,flows_json FROM predictions WHERE prediction_id=?",
+                    ('prediction-'+batch_id,batch_id,self.prediction))
+            db.commit()
+            series=outcomes.trend('prepared-april')
+            self.assertEqual([b['batch_id'] for b in series['batches']],['prepared-march','prepared-april'])
+            self.assertTrue(all(b['state']=='not_loaded' for b in series['batches']))
+            self.assertTrue(all(b['observed_rate'] is None and b['brier'] is None and b['gap'] is None
+                and b['reference_brier'] is None for b in series['batches']))
+            self.assertEqual(outcomes.report('prepared-april')['drift']['previous_batch_id'],'prepared-march')
+
+    def test_performance_counts_flagged_positives_and_reference_brier(self):
+        rows=[dict(target_churn=1,risk=.8,review_alert=1),
+              dict(target_churn=0,risk=.2,review_alert=1),
+              dict(target_churn=1,risk=.3,review_alert=0),
+              dict(target_churn=0,risk=.1,review_alert=0)]
+        result=outcomes.performance(rows)
+        self.assertEqual(result['flagged_positives'],1)
+        self.assertEqual(result['flagged'],2)
+        self.assertEqual(result['flagged_positive'],.5)
+        self.assertEqual(result['observed_rate'],.5)
+        self.assertEqual(result['reference_brier'],.25)
+
 
 if __name__=='__main__':
     unittest.main()
