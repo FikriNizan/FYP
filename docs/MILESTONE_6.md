@@ -320,3 +320,39 @@ Stage 2 (separate approval) moves the discussion purpose, the Briefing screen an
 - **Where they are used:** the weighed section, placeholder names in AI notes and questions, and the provider payload. Gemini therefore sees the same vocabulary as the reader.
 
 Card sentences and labels use **collections** for inbound flows and **payments** for outbound flows; combined flow stays "transaction value". The evidence panel's fact labels and the discussion purpose are unchanged. The renderer version is `render-2`, which is part of cache identity; the evidence hash is unchanged. After this change, April 2024 flagged cards measure 208–234 words (median 221).
+
+### Evaluation finding: live summary run (m6-narrative-5), 21 November 2026
+
+**Run:** the owner ran the batch on 5 flagged April 2024 customers (synthetic M6 Test data, "Customer A" payloads) under `m6-narrative-5`. **4 outputs were accepted and 1 was rejected.** Retry and backoff behaved as designed.
+
+**What the model wrote:**
+- **The rejected output:** a Finance note that cited **8 facts in 52 words** (over the note limits). Its notes only **listed fact names the card already shows**, for example "Exposures include {{a}}, {{b}}, …".
+- **One accepted card had no AI notes at all** (every note empty). Its AI questions asked for values already on the card or for raw data:
+  - "What are the current operating account balances?"
+  - "How many login attempts were recorded during the period?"
+
+**Owner judgement (reading as the target user):**
+- These AI questions were **worse than the deterministic template questions**.
+- **The server-rendered card alone is understandable and is the main comprehension layer.**
+
+This is a small, single-reviewer qualitative finding. It is not a measured comprehension result.
+
+**Design change (`m6-narrative-6`).** The summary AI role is narrowed to:
+- **one optional link note,** shown as "What links these signals" after the Bottom line;
+- **exactly one Operations and one Finance question.** A missing audience is filled with the template question.
+
+**Link note rules:**
+- at most 25 words;
+- 2–3 cited facts from at least two different card sections;
+- rejected as **list-only** if it has more than 3 placeholders, or if it has 2 or more placeholders with fewer than 4 connecting words outside them.
+
+**Question rules:**
+- at most one per audience;
+- must open with Has/Have/Is/Are/Could/Did/Does/Do/Can, so "What is/are…" and "How many/much…" value requests are rejected;
+- the existing audience, relevance and reference rules still apply.
+
+All existing safety rules are unchanged: prohibited/causal, comparison, quantity/date, markup and references.
+
+The prompt now carries two good and two bad examples for the link note and for each question audience. One of the owner's good link examples ("…alongside the fall in payments") had to use "…the change in payments", because the comparison rule rejects model-written directions; the card states the direction from the exact saved ratio. The Finance example "Is the customer moving part of its payments to another bank?" is kept by owner decision. It is the core silent-churn hypothesis, framed as an internal verification question, and asserting switching remains forbidden. If later runs show it repeated on most cards, it will be revisited.
+
+The deterministic card is unchanged: April 2024 flagged cards are 207–236 words. The next live run will show whether the narrowed role adds useful links and questions.
