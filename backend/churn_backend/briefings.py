@@ -86,30 +86,86 @@ def driver_value(driver):
     return f'{value:,.2f}'.rstrip('0').rstrip('.') if number(value) else str(value)
 
 
+# Client-safe RM question bank (wording approved by the project owner). Every predictor in
+# feature_schema.json maps to one family; families without a client question are listed in
+# NO_CLIENT_QUESTION. Questions never mention the model, scores, internal records or other banks.
+CLIENT_FAMILY_FEATURES = {
+    'collections': ['inbound_flow_mean_1m_myr', 'inbound_flow_mean_3m_myr', 'inbound_flow_mean_6m_myr', 'inbound_flow_mean_12m_myr',
+                    'inbound_flow_change_3m_vs_previous_3m', 'inbound_flow_ratio_3m_to_12m', 'inbound_flow_cv_12m',
+                    'inbound_zero_months_3m', 'inbound_count_mean_3m', 'inbound_count_mean_12m', 'inbound_share_3m',
+                    'inbound_recency_months'],
+    'payments': ['outbound_flow_mean_1m_myr', 'outbound_flow_mean_3m_myr', 'outbound_flow_mean_6m_myr', 'outbound_flow_mean_12m_myr',
+                 'outbound_flow_change_3m_vs_previous_3m', 'outbound_flow_ratio_3m_to_12m', 'outbound_flow_cv_12m',
+                 'outbound_zero_months_3m', 'outbound_count_mean_3m', 'outbound_count_mean_12m', 'outbound_success_recency_days',
+                 'outbound_submitted_count_mean_3m'],
+    'transaction_value': ['combined_flow_mean_1m_myr', 'combined_flow_mean_3m_myr', 'combined_flow_mean_6m_myr',
+                          'combined_flow_mean_12m_myr', 'combined_flow_change_3m_vs_previous_3m', 'combined_flow_ratio_3m_to_12m',
+                          'combined_flow_cv_12m', 'combined_zero_months_3m'],
+    'login': ['login_failure_rate_3m'],
+    'online_banking': ['passive_session_rate_3m', 'session_duration_mean_3m_sec', 'session_transactions_mean_3m',
+                       'session_started_count_mean_3m', 'session_started_count_mean_12m',
+                       'session_started_count_change_3m_vs_previous_3m', 'session_completed_count_mean_3m',
+                       'active_login_users_mean_3m', 'active_login_users_mean_12m', 'active_login_users_change_3m_vs_previous_3m',
+                       'login_success_count_mean_3m', 'login_success_count_mean_12m',
+                       'login_success_count_change_3m_vs_previous_3m', 'login_success_recency_days', 'approver_session_share_3m'],
+    'payment_failures': ['outbound_failure_rate_3m', 'outbound_bank_failure_rate_3m', 'outbound_processing_rate_3m',
+                         'outbound_failure_count_mean_3m', 'outbound_processing_count_mean_3m'],
+    'service_friction': ['session_timeout_rate_3m', 'session_forced_drop_rate_3m', 'friction_count_mean_3m',
+                         'bank_friction_count_mean_3m', 'friction_response_mean_3m_ms', 'friction_retries_mean_3m'],
+    'fixed_deposits': ['fd_maturing_30d_count', 'fd_balance_myr', 'fd_average_balance_myr', 'fd_balance_mean_3m_myr',
+                       'fd_balance_mean_12m_myr', 'fd_balance_change_3m_vs_previous_3m', 'active_fd_count', 'closed_fd_count',
+                       'fd_balance_weighted_offer_rate'],
+    'fees': ['estimated_fee_mean_3m_myr', 'estimated_waiver_mean_3m_myr', 'catalog_effective_fee_mean_myr', 'catalog_waiver_mean_pct'],
+    'accounts': ['non_fd_balance_myr', 'active_account_count'],
+}
+# Static attributes, and device-security monitoring that should not be raised in a sales conversation.
+NO_CLIENT_QUESTION = ('tier_id', 'customer_type', 'sector_code', 'untrusted_device_session_share_3m')
+CLIENT_FAMILIES = {feature: family for family, features in CLIENT_FAMILY_FEATURES.items() for feature in features}
+CLIENT_QUESTIONS = {
+    'collections': 'Have there been any changes in how or when your customers pay you?',
+    'payments': 'Have your supplier or payroll payments changed recently, for example in timing or in how you make them?',
+    'transaction_value': 'How has business activity been for you lately, and do you expect any changes ahead?',
+    'login': 'Have you or your team had any difficulty signing in to online banking?',
+    'online_banking': "Is our online banking still meeting your team's day-to-day needs?",
+    'payment_failures': 'Have any of your payments been delayed or not gone through as expected?',
+    'service_friction': 'Has online banking been slow, timed out or disconnected for you recently?',
+    'fees': 'Are the fees and charges on your accounts clear and in line with what you expected?',
+    'accounts': 'Are your current accounts still set up the way you need for day-to-day operations?',
+}
+FD_PLANS_QUESTION = 'What are your plans for your fixed deposits, including any coming up for renewal?'
+FD_SURPLUS_QUESTION = "Do you have any surplus funds you're planning to place, now or in the coming months?"
+FALLBACK_QUESTION = 'How is your business going, and is there anything we could do to support you better?'
+QUESTION_LIMIT = 3
+
+
+def has_fixed_deposits(customer):
+    """Presence check on saved values (not a threshold): any active FD count or FD balance above zero."""
+    features = customer.get('features') or {}
+    values = [features.get('active_fd_count'), features.get('fd_balance_myr'), (customer.get('finance') or {}).get('fd_balance_myr')]
+    return any(number(value) and value > 0 for value in values)
+
+
 def discussion_questions(customer):
-    """Same bounded evidence rules as the existing discussionQuestions helper; no padding."""
-    ops = customer.get('operations') or {}
+    """Client-safe questions an RM can ask directly. Triggers are the saved higher-risk drivers only,
+    strongest first; at most one question per family and three in total. The source (plain driver
+    label and value) is for the RM's eyes only and never appears in the question text."""
+    from .ai_render import driver_name
+    drivers = sorted((customer.get('explanation') or {}).get('higher_risk_drivers') or [],
+                     key=lambda d: -(d.get('contribution_logodds') or 0))
     questions, seen = [], set()
-    recent, usual = ops.get('combined_flow_mean_3m_myr'), ops.get('combined_flow_mean_12m_myr')
-    if number(recent) and number(usual) and usual > 0 and recent < usual:
-        questions.append(dict(source='Observed three- and twelve-month flow averages', text=
-                              'Recent recorded transaction activity is lower than the trailing average. Has the way you use these accounts changed?'))
-    for driver in (customer.get('explanation') or {}).get('higher_risk_drivers', []):
-        feature, value = driver['feature'], driver.get('value')
-        if not number(value) or value <= 0:
+    for driver in drivers:
+        family = CLIENT_FAMILIES.get(driver['feature'])
+        if family is None or family in seen:
             continue
-        if feature == 'login_failure_rate_3m':
-            category, text = 'login', 'The recorded login difficulty rate contributed to this estimate. Have you experienced difficulties signing in?'
-        elif feature == 'passive_session_rate_3m':
-            category, text = 'sessions', 'Some recorded sessions had no transactions. Was that consistent with what your team intended to do?'
-        elif feature in ('outbound_failure_rate_3m', 'outbound_bank_failure_rate_3m'):
-            category, text = 'payment', 'The recorded payment failure rate contributed to this estimate. Have you experienced difficulties completing payments?'
+        seen.add(family)
+        if family == 'fixed_deposits':
+            text = FD_PLANS_QUESTION if has_fixed_deposits(customer) else FD_SURPLUS_QUESTION
         else:
-            continue
-        if category not in seen:
-            questions.append(dict(source=driver_label(driver), text=text))
-            seen.add(category)
-    return questions[:3]
+            text = CLIENT_QUESTIONS[family]
+        questions.append(dict(family=family, source=driver_name(driver['feature'], driver) + ': ' + driver_value(driver), text=text))
+        if len(questions) == QUESTION_LIMIT:
+            break
+    return questions or [dict(family='general', source='General relationship check-in', text=FALLBACK_QUESTION)]
 
 
 def selected_ids(values):

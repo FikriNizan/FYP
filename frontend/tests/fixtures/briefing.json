@@ -117,18 +117,18 @@
       "questions": [
         {
           "month": "February 2024",
-          "source": "Observed three- and twelve-month flow averages",
-          "text": "Recent recorded transaction activity is lower than the trailing average. Has the way you use these accounts changed?"
+          "source": "Transaction value vs 12-month average: 0.87% of the twelve-month average",
+          "text": "How has business activity been for you lately, and do you expect any changes ahead?"
         },
         {
           "month": "February 2024",
           "source": "Payment failures",
-          "text": "The recorded payment failure rate contributed to this estimate. Have you experienced difficulties completing payments?"
+          "text": "Have any of your payments been delayed or not gone through as expected?"
         },
         {
           "month": "February 2024",
           "source": "Login difficulties",
-          "text": "The recorded login difficulty rate contributed to this estimate. Have you experienced difficulties signing in?"
+          "text": "Have you or your team had any difficulty signing in to online banking?"
         }
       ],
       "sample_note": "Single-case sample evidence is included. This briefing does not represent a complete portfolio.",

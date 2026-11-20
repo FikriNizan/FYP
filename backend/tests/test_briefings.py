@@ -175,10 +175,69 @@ class BriefingTests(unittest.TestCase):
         self.assertEqual(self.pdf(preview).status_code, 200)
 
     def test_question_evidence_is_not_padded_or_duplicated(self):
-        self.assertEqual(discussion_questions({}), [])
+        # No triggering driver: one general check-in question (previously an empty list).
+        from churn_backend.briefings import FALLBACK_QUESTION
+        self.assertEqual([q['text'] for q in discussion_questions({})], [FALLBACK_QUESTION])
         drivers = [dict(feature='outbound_failure_rate_3m',value=.2), dict(feature='outbound_bank_failure_rate_3m',value=.1), dict(feature='login_failure_rate_3m',value=None)]
-        self.assertEqual(len(discussion_questions(dict(explanation=dict(higher_risk_drivers=drivers)))), 1)
-        self.assertEqual(discussion_questions(dict(operations=dict(combined_flow_mean_3m_myr=0,combined_flow_mean_12m_myr=0))), [])
+        # Two payment-failure drivers share one family; login is its own family (values are not inspected).
+        self.assertEqual([q['family'] for q in discussion_questions(dict(explanation=dict(higher_risk_drivers=drivers)))],
+                         ['payment_failures', 'login'])
+        self.assertEqual([q['text'] for q in discussion_questions(dict(operations=dict(combined_flow_mean_3m_myr=0,combined_flow_mean_12m_myr=0)))],
+                         [FALLBACK_QUESTION])
+
+    def test_client_questions_follow_driver_strength_one_per_family_and_at_most_three(self):
+        def driver(feature, weight, value=0.5):
+            return dict(feature=feature, contribution_logodds=weight, value=value)
+        drivers = [driver('login_failure_rate_3m', 0.2), driver('combined_flow_ratio_3m_to_12m', 0.9), driver('combined_flow_cv_12m', 0.8),
+                   driver('outbound_failure_rate_3m', 0.5), driver('tier_id', 0.7), driver('estimated_fee_mean_3m_myr', 0.1)]
+        questions = discussion_questions(dict(explanation=dict(higher_risk_drivers=drivers)))
+        # Strongest first; the second transaction-value driver and the static attribute add nothing; capped at three.
+        self.assertEqual([q['family'] for q in questions], ['transaction_value', 'payment_failures', 'login'])
+
+    def test_client_families_cover_every_predictor_exactly_once(self):
+        from churn_backend.briefings import CLIENT_FAMILY_FEATURES, NO_CLIENT_QUESTION
+        from churn_backend.constants import PREDICTORS
+        mapped = [f for features in CLIENT_FAMILY_FEATURES.values() for f in features] + list(NO_CLIENT_QUESTION)
+        self.assertEqual(len(mapped), len(set(mapped)))
+        self.assertEqual(set(mapped), set(PREDICTORS))
+        self.assertEqual(len(PREDICTORS), 78)
+        no_question = discussion_questions(dict(explanation=dict(higher_risk_drivers=[
+            dict(feature=f, contribution_logodds=1, value=1) for f in NO_CLIENT_QUESTION])))
+        self.assertEqual([q['family'] for q in no_question], ['general'])
+
+    def test_fixed_deposit_question_uses_presence_not_threshold(self):
+        from churn_backend.briefings import FD_PLANS_QUESTION, FD_SURPLUS_QUESTION
+        trigger = dict(higher_risk_drivers=[dict(feature='fd_balance_change_3m_vs_previous_3m', contribution_logodds=1, value=-0.4)])
+        for features, expected in [(dict(active_fd_count=2, fd_balance_myr=0), FD_PLANS_QUESTION),
+                                   (dict(active_fd_count=0, fd_balance_myr=150000.0), FD_PLANS_QUESTION),
+                                   (dict(active_fd_count=0, fd_balance_myr=0), FD_SURPLUS_QUESTION),
+                                   ({}, FD_SURPLUS_QUESTION)]:
+            with self.subTest(features=features):
+                [question] = discussion_questions(dict(explanation=trigger, features=features))
+                self.assertEqual(question['text'], expected)
+
+    def test_every_client_question_is_client_safe(self):
+        import re
+        from churn_backend import briefings
+        texts = list(briefings.CLIENT_QUESTIONS.values()) + [briefings.FD_PLANS_QUESTION, briefings.FD_SURPLUS_QUESTION,
+                                                            briefings.FALLBACK_QUESTION]
+        self.assertEqual(len(texts), 12)  # 9 single-text families + both FD branches + fallback.
+        banned = re.compile(r'\b(?:model\w*|estimat\w*|risk\w*|scor\w*|flag\w*|threshold\w*|churn\w*|attrition|predict\w*|'
+                            r'recorded|records?|data|other banks?|another bank|competitor\w*|switch\w*)\b', re.I)
+        numbers = re.compile(r'\d|\b(?:one|two|three|four|five|six|seven|eight|nine|ten|twelve|first|second|third|half|percent|'
+                             r'January|February|March|April|May|June|July|August|September|October|November|December|20\d\d)\b', re.I)
+        for text in texts:
+            with self.subTest(text=text):
+                self.assertIsNone(banned.search(text))
+                self.assertIsNone(numbers.search(text))
+                self.assertTrue(text.endswith('?'))
+
+    def test_question_source_is_for_the_rm_and_never_in_the_question(self):
+        drivers = [dict(feature='login_failure_rate_3m', contribution_logodds=1, value=0.5)]
+        [question] = discussion_questions(dict(explanation=dict(higher_risk_drivers=drivers)))
+        self.assertEqual(question['source'], 'Login failure rate: 50.0%')
+        self.assertNotIn('50', question['text'])
+        self.assertNotIn('failure rate', question['text'].lower())
 
     def test_money_rounding_and_unsupported_font_error_preserve_exact_saved_data(self):
         self.assertEqual(money(78.705), 'RM\u00a078.71')

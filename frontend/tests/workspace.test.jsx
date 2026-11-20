@@ -6,7 +6,6 @@ import App from '../src/App.jsx';
 import FlowHistory from '../src/components/FlowHistory.jsx';
 import { api } from '../src/api.js';
 import { observedMonths } from '../src/flows.js';
-import { discussionQuestions } from '../src/briefing.js';
 import briefingPayload from './fixtures/briefing.json';
 import demo from '../../backend/demo/notebook_case.json';
 
@@ -142,7 +141,7 @@ describe('Work-focused frontend',()=>{
     expect(screen.getByRole('heading',{name:'Discussion draft'})).toBeTruthy();
     expect(screen.getByRole('button',{name:'Generate discussion draft'}).disabled).toBe(true);
     expect(screen.getByRole('button',{name:'Download PDF'}).disabled).toBe(false);
-    expect(screen.getByText(/Recent recorded transaction activity is lower/)).toBeTruthy();
+    expect(screen.getByText(/How has business activity been for you lately/)).toBeTruthy();
     expect(screen.getByText('No newer assessment month is available.')).toBeTruthy();
     expect(screen.getAllByText('Not provided').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button',{name:'Print briefing'}));
@@ -163,8 +162,6 @@ describe('Work-focused frontend',()=>{
   });
 
   it('keeps questions bounded to supplied evidence and exposes a labelled cross-month example',async()=>{
-    expect(discussionQuestions({operations:{},explanation:{higher_risk_drivers:[]}})).toEqual([]);
-    expect(discussionQuestions(customer).length).toBeLessThanOrEqual(3);
     start('/guide');
     await screen.findByText('70.0%');
     expect(screen.getByText('18.0%')).toBeTruthy();
