@@ -125,6 +125,13 @@ Acceptance: generated questions help the RM investigate evidence without inventi
 
 Implementation, the live evaluations and remaining work are recorded in [MILESTONE_6.md](MILESTONE_6.md). External generation defaults off. Monitoring visual redesign remains deferred. No improved-comprehension claim is made: the evaluation is a single-reviewer qualitative judgement.
 
+## IR Objective 3 — Revenue at Risk and Fee Subsidy Leakage (branch `finance-metrics`)
+
+* [x] Stage 1: deterministic RaR (3 x monthly relationship contribution, shown next to the risk %) and FSL checks A ("deal broken") and B ("deal not paying") from saved features; verified BNM OPR/SRR tables; API fields; one Finance sentence on the summary card (kept out of the Gemini payload). See [FINANCE_METRICS.md](FINANCE_METRICS.md).
+* [ ] Stage 2: Finance tab breakdown with sensitivity, and portfolio table by tier and flag in the Overview.
+* [ ] Primary sources for the owner-cited references (AFP earnings credit, FTP, FCA cash savings, BNM 2013 pricing reform).
+* [ ] Resume the full summary batch once the Finance section is final.
+
 ## Milestone 7 — OPR demonstration, evaluation and release
 
 * [ ] Define OPR as a separate assumptions-based scenario rather than observed portfolio truth.
