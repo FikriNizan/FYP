@@ -173,4 +173,6 @@ it('places the 12-month footnote after the questions and before the decision, wi
   expect(text.indexOf('12-month averages include')).toBeLessThan(text.indexOf('Decision'));
   expect(footnote.tagName).toBe('P');
   expect(screen.getAllByRole('heading',{level:4}).map(h=>h.textContent)).not.toContain('');
+  // The summary card is screen-only; print/PDF never show it, so no blank heading can be printed.
+  expect(view.container.querySelector('section').classList.contains('no-print')).toBe(true);
 });

@@ -10,7 +10,7 @@ from datetime import date
 from . import briefings
 from .ai_evidence import DICTIONARY
 
-VERSION = 'render-1'
+VERSION = 'render-2'
 TOKEN = re.compile(r'\{\{([a-zA-Z0-9_.]+)\}\}')
 NOTE_SECTIONS = ('bottom_line', 'operations', 'finance', 'weighed')
 TITLES = dict(bottom_line='Bottom line', operations='Operations: what is happening',
@@ -26,6 +26,96 @@ SERVICE_CLOSING = 'Service issues can be checked and fixed independently of the 
 QUESTION_LIMIT = 3
 BASE_CHECKS = ['saved_prediction_identity', 'shap_reconstruction_2e-10', 'raw_calibration_2e-10', 'deterministic_formatting']
 AI_CHECKS = ['known_references', 'section_references', 'numeric_date_rules', 'interpretation_rules', 'note_bounds']
+
+
+# Plain driver labels for every predictor (2-5 words, no values). Meanings follow the research
+# project's data/features_v1/feature_dictionary.csv and, where its definition is generic, the actual
+# computation in feature_engineering_v1.py (both read-only sources). inbound = "collections",
+# outbound = "payments", combined = "transaction value".
+DRIVER_LABELS = {
+    'inbound_flow_mean_1m_myr': 'Collections, latest month',
+    'inbound_flow_mean_3m_myr': 'Collections, 3-month average',
+    'inbound_flow_mean_6m_myr': 'Collections, 6-month average',
+    'inbound_flow_mean_12m_myr': 'Collections, 12-month average',
+    'inbound_flow_change_3m_vs_previous_3m': 'Collections, quarter-on-quarter change',
+    'inbound_flow_ratio_3m_to_12m': 'Collections vs 12-month average',
+    'inbound_flow_cv_12m': 'Collection variability, 12 months',
+    'inbound_zero_months_3m': 'Months without collections',
+    'outbound_flow_mean_1m_myr': 'Payments, latest month',
+    'outbound_flow_mean_3m_myr': 'Payments, 3-month average',
+    'outbound_flow_mean_6m_myr': 'Payments, 6-month average',
+    'outbound_flow_mean_12m_myr': 'Payments, 12-month average',
+    'outbound_flow_change_3m_vs_previous_3m': 'Payments, quarter-on-quarter change',
+    'outbound_flow_ratio_3m_to_12m': 'Payments vs 12-month average',
+    'outbound_flow_cv_12m': 'Payment variability, 12 months',
+    'outbound_zero_months_3m': 'Months without payments',
+    'combined_flow_mean_1m_myr': 'Transaction value, latest month',
+    'combined_flow_mean_3m_myr': 'Transaction value, 3-month average',
+    'combined_flow_mean_6m_myr': 'Transaction value, 6-month average',
+    'combined_flow_mean_12m_myr': 'Transaction value, 12-month average',
+    'combined_flow_change_3m_vs_previous_3m': 'Transaction value, quarter-on-quarter change',
+    'combined_flow_ratio_3m_to_12m': 'Transaction value vs 12-month average',
+    'combined_flow_cv_12m': 'Transaction value variability, 12 months',
+    'combined_zero_months_3m': 'Months without transactions',
+    'inbound_count_mean_3m': 'Collection count, 3 months',
+    'inbound_count_mean_12m': 'Collection count, 12 months',
+    'outbound_count_mean_3m': 'Successful payments, 3 months',
+    'outbound_count_mean_12m': 'Successful payments, 12 months',
+    'inbound_share_3m': 'Collections share of transaction value',
+    'outbound_success_recency_days': 'Days since last successful payment',
+    'inbound_recency_months': 'Months since last collection',
+    'outbound_submitted_count_mean_3m': 'Payments submitted per month',
+    'outbound_failure_count_mean_3m': 'Failed payments per month',
+    'outbound_processing_count_mean_3m': 'Payments in processing per month',
+    'outbound_failure_rate_3m': 'Payment failure rate',
+    'outbound_bank_failure_rate_3m': 'Bank-side payment failure rate',
+    'outbound_processing_rate_3m': 'Share of payments in processing',
+    'session_started_count_mean_3m': 'Online sessions started, 3 months',
+    'session_started_count_mean_12m': 'Online sessions started, 12 months',
+    'session_started_count_change_3m_vs_previous_3m': 'Online sessions, quarter-on-quarter change',
+    'login_success_count_mean_3m': 'Successful logins, 3 months',
+    'login_success_count_mean_12m': 'Successful logins, 12 months',
+    'login_success_count_change_3m_vs_previous_3m': 'Successful logins, quarter-on-quarter change',
+    'active_login_users_mean_3m': 'Active login users, 3 months',
+    'active_login_users_mean_12m': 'Active login users, 12 months',
+    'active_login_users_change_3m_vs_previous_3m': 'Active login users, quarter-on-quarter change',
+    'session_completed_count_mean_3m': 'Online sessions completed per month',
+    'login_success_recency_days': 'Days since last successful login',
+    'session_duration_mean_3m_sec': 'Average online session length',
+    'session_transactions_mean_3m': 'Transactions per online session',
+    'passive_session_rate_3m': 'Sessions without transactions',
+    'session_timeout_rate_3m': 'Sessions ended by timeout',
+    'session_forced_drop_rate_3m': 'Sessions ended by forced drop',
+    'approver_session_share_3m': 'Sessions by approver users',
+    'untrusted_device_session_share_3m': 'Sessions from untrusted devices',
+    'login_failure_rate_3m': 'Login failure rate',
+    'friction_count_mean_3m': 'Service friction events per month',
+    'bank_friction_count_mean_3m': 'Bank-side friction events per month',
+    'friction_response_mean_3m_ms': 'Response time during friction events',
+    'friction_retries_mean_3m': 'Retries per friction event',
+    'active_account_count': 'Active accounts',
+    'active_fd_count': 'Active fixed deposits',
+    'closed_fd_count': 'Inactive fixed deposits',  # Computed as FD status not ACTIVE.
+    'fd_maturing_30d_count': 'Deposits maturing within 30 days',
+    'fd_balance_myr': 'Fixed deposit balance',
+    'fd_average_balance_myr': 'Fixed deposit average-balance total',  # Sum of each active FD's average_amount.
+    'non_fd_balance_myr': 'Operating account balance',
+    'fd_balance_mean_3m_myr': 'Fixed deposit balance, 3-month average',
+    'fd_balance_mean_12m_myr': 'Fixed deposit balance, 12-month average',
+    'fd_balance_change_3m_vs_previous_3m': 'Fixed deposits, quarter-on-quarter change',
+    'fd_balance_weighted_offer_rate': 'Fixed deposit offered rate',
+    'tier_id': 'Customer tier',
+    'customer_type': 'Customer type',
+    'sector_code': 'Business sector',
+    'catalog_effective_fee_mean_myr': 'Contracted fee per transaction',
+    'catalog_waiver_mean_pct': 'Contracted fee waiver level',
+    'estimated_fee_mean_3m_myr': 'Estimated monthly fees',
+    'estimated_waiver_mean_3m_myr': 'Estimated monthly waivers',
+}
+
+
+def driver_name(feature, driver=None):
+    return DRIVER_LABELS.get(feature) or briefings.driver_label(driver or dict(feature=feature))
 
 
 def day(value):
@@ -44,7 +134,11 @@ def pct(value, digits=1):
 
 
 def name(fact_id, facts):
-    return PLAIN_NAMES.get(fact_id) or facts[fact_id]['label'].lower()
+    """Name a placeholder resolves to; feature/signal facts use the same plain driver labels as the card."""
+    if fact_id in PLAIN_NAMES:
+        return PLAIN_NAMES[fact_id]
+    feature = fact_id.split('.', 1)[1] if fact_id.startswith(('feature.', 'signal.')) else None
+    return (DRIVER_LABELS.get(feature) or facts[fact_id]['label']).lower()
 
 
 def resolve(text, facts):
@@ -76,21 +170,21 @@ def operations(evidence, w):
         return facts.get('feature.' + feature)
     lines = []
     for feature, template in [('login_failure_rate_3m', '{p} of login attempts failed ({period}).'),
-                              ('outbound_failure_rate_3m', '{p} of outgoing payments failed ({period}).'),
-                              ('outbound_bank_failure_rate_3m', '{p} of outgoing payments failed for bank-side reasons ({period}).'),
+                              ('outbound_failure_rate_3m', '{p} of payments failed ({period}).'),
+                              ('outbound_bank_failure_rate_3m', '{p} of payments failed for bank-side reasons ({period}).'),
                               ('passive_session_rate_3m', '{p} of online banking sessions had no transaction ({period}).')]:
         fact = get(feature)
         if fact:
             lines.append(line(template.format(p=pct(fact['value'], 1), period=span(fact['period'])), [fact['id']], [feature]))
     context = []
-    for recency, noun, short, long in [('outbound_success_recency_days', 'outgoing payment', 'outbound_count_mean_3m', 'outbound_count_mean_12m'),
+    for recency, noun, short, long in [('outbound_success_recency_days', 'payment', 'outbound_count_mean_3m', 'outbound_count_mean_12m'),
                                        ('login_success_recency_days', 'login', 'login_success_count_mean_3m', 'login_success_count_mean_12m')]:
         fact = get(recency)
         if fact:
             days = f'{fact["value"]:,.0f}'
             context.append(line(f'Last successful {noun}: {days} day{"" if days == "1" else "s"} before {cutoff}.', [fact['id']], [recency]))
         a, b = get(short), get(long)
-        label = 'Successful outgoing payments' if noun == 'outgoing payment' else 'Successful logins'
+        label = 'Successful payments' if noun == 'payment' else 'Successful logins'
         if a and b:
             relation = 'below' if a['value'] < b['value'] else 'above' if a['value'] > b['value'] else 'equal to'
             context.append(line(f'{label}: {a["value"]:,.1f} a month in {span(a["period"])}, {relation} the 12-month '
@@ -115,10 +209,10 @@ def finance(evidence, w):
         trend.append(line(f'Transaction value in {span(ratio["period"])} {relative(ratio["value"], "its")}.', [ratio['id']],
                           ['combined_flow_ratio_3m_to_12m'], twelve=True))
     lines = []
-    for feature, noun in [('inbound_flow_ratio_3m_to_12m', 'Incoming'), ('outbound_flow_ratio_3m_to_12m', 'Outgoing')]:
+    for feature, noun in [('inbound_flow_ratio_3m_to_12m', 'Collections'), ('outbound_flow_ratio_3m_to_12m', 'Payments')]:
         fact = get(feature)
         if fact:
-            lines.append(line(f'{noun} payments in {span(fact["period"])} {relative(fact["value"], "their")}.', [fact['id']],
+            lines.append(line(f'{noun} in {span(fact["period"])} {relative(fact["value"], "their")}.', [fact['id']],
                               [feature], twelve=True))
     operating = get('non_fd_balance_myr')
     if operating:
@@ -162,7 +256,7 @@ def bottom_line(evidence):
     if risk:
         lines.append(line('Estimated chance that average monthly transaction value over '
                           f'{briefings.forecast(evidence["identity"]["cutoff"])} falls to half or less of its 12-month average: '
-                          f'{pct(risk["value"], 1)}.', ['prediction.risk']))
+                          f'{pct(risk["value"], 1)}.', ['prediction.risk'], twelve=True))  # Baseline: 12 months ending at cutoff.
     flag, threshold = facts.get('prediction.flag'), facts.get('prediction.threshold')
     if flag and threshold:
         t = pct(threshold['value'], 1)
@@ -190,7 +284,7 @@ def weighed(evidence):
     lines = []
     for driver in drivers:
         feature = driver['feature']
-        label = DICTIONARY[feature][0] if feature in DICTIONARY else briefings.driver_label(driver)
+        label = driver_name(feature, driver)
         direction = 'higher' if driver['contribution_logodds'] > 0 else 'lower'
         signal = 'signal.' + feature
         lines.append(line(f'{label}: weighed toward {direction} risk.', [signal] if signal in facts else [], [feature]))
@@ -220,7 +314,7 @@ def templates(evidence, card_plan):
         friction = [d['feature'] for d in sorted(evidence['explanation']['higher_risk_drivers'], key=lambda d: -d['contribution_logodds'])
                     if d['feature'] in FRICTION and 'feature.' + d['feature'] in ids['operations']]
         if friction:
-            text = f'Could Operations check whether recorded {DICTIONARY[friction[0]][0].lower()} point to a fixable service problem?'
+            text = f'Could Operations check whether the recorded {driver_name(friction[0]).lower()} points to a fixable service problem?'
             cited = ['feature.' + friction[0]]
         else:
             text = 'Could Operations confirm whether recent online-banking and payment activity matches what the relationship team expects?'
@@ -248,7 +342,7 @@ def render_summary(evidence, notes=None, questions=None):
     for template in templates(evidence, card_plan):
         if len(asked) < QUESTION_LIMIT and not any(q['audience'] == template['audience'] for q in asked):
             asked.append(template)
-    if any(l['twelve'] for lines in card_plan.values() for l in lines):  # One note for every 12-month comparison.
+    if any(l['twelve'] for lines in card_plan.values() for l in lines):  # Every card: the risk sentence uses a 12-month average.
         sections.append(dict(id='footnote', title='', items=[dict(text=FOOTNOTE, source='standard', evidence_ids=[])]))
     closing = [CLOSING] + ([SERVICE_CLOSING] if service_issue(evidence) else [])
     sections.append(dict(id='closing', title=TITLES['closing'],

@@ -76,7 +76,7 @@ class RenderTests(unittest.TestCase):
         self.assertIn('Operating account balances on 29 Feb 2024: RM 2,016,997.13.', finance)
         self.assertIn('Fixed deposits on 29 Feb 2024: RM\u00a00.00; none due to mature within 30 days.', finance)
         operations = [item['text'] for item in section(card, 'operations')['items']]
-        self.assertEqual(operations[0], '40% of outgoing payments failed (Dec 2023–Feb 2024).')  # Largest friction driver first; whole % without .0.
+        self.assertEqual(operations[0], '40% of payments failed (Dec 2023–Feb 2024).')  # Largest friction driver first; whole % without .0.
         unflagged = copy.deepcopy(self.evidence)
         unflagged['facts']['prediction.flag']['value'] = False
         self.assertIn('Not flagged: below the 25.9% threshold.',
@@ -101,9 +101,9 @@ class RenderTests(unittest.TestCase):
                           evidence_ids=['feature.non_fd_balance_myr'])]
         card = render.render_summary(self.evidence, notes, questions)
         note = section(card, 'operations')['items'][-1]
-        self.assertEqual((note['source'], note['text']), ('ai', 'The team may want to look at login difficulties together.'))
+        self.assertEqual((note['source'], note['text']), ('ai', 'The team may want to look at login failure rate together.'))
         self.assertNotIn('50.0%', note['text'])
-        self.assertEqual(card['questions'][0]['text'], 'Could Finance check operating account balances?')
+        self.assertEqual(card['questions'][0]['text'], 'Could Finance check operating account balance?')
         # An AI finance question is kept; only the missing Operations audience gets a template.
         self.assertEqual([(q['audience'], q['source']) for q in card['questions']], [('finance', 'ai'), ('operations', 'template')])
         self.assertIn('note_bounds', card['checks'])
@@ -113,20 +113,20 @@ class RenderTests(unittest.TestCase):
         flow = ai.fallback(self.with_drivers([('combined_flow_ratio_3m_to_12m', 2.0), ('inbound_flow_ratio_3m_to_12m', 0.5)]))
         self.assertEqual(section(friction, 'operations')['items'][0]['text'], '50% of login attempts failed (Dec 2023–Feb 2024).')
         self.assertEqual(section(flow, 'operations')['items'][0]['text'], render.NOT_NOTABLE)
-        self.assertIn('Last successful outgoing payment: 41 days before 29 Feb 2024.',
+        self.assertIn('Last successful payment: 41 days before 29 Feb 2024.',
                       [item['text'] for item in section(flow, 'operations')['items']])
-        self.assertEqual(section(friction, 'weighed')['items'][0]['text'], 'Login difficulties: weighed toward higher risk.')
-        self.assertEqual(section(flow, 'weighed')['items'][0]['text'], 'Transaction activity: weighed toward higher risk.')
+        self.assertEqual(section(friction, 'weighed')['items'][0]['text'], 'Login failure rate: weighed toward higher risk.')
+        self.assertEqual(section(flow, 'weighed')['items'][0]['text'], 'Transaction value vs 12-month average: weighed toward higher risk.')
         self.assertIn('Strongest signals: service and online banking.', text_of(friction))
         self.assertIn('Strongest signals: transaction value and balances.', text_of(flow))
         self.assertIn(render.SERVICE_CLOSING, text_of(friction))
         self.assertNotIn(render.SERVICE_CLOSING, text_of(flow))
-        self.assertTrue(friction['questions'][0]['text'].startswith('Could Operations check whether recorded login difficulties'))
+        self.assertTrue(friction['questions'][0]['text'].startswith('Could Operations check whether the recorded login failure rate points'))
 
     def test_frequency_pair_states_direction_from_exact_values(self):
         card = ai.fallback(self.with_drivers([('outbound_count_mean_3m', 1.0)]))
         self.assertEqual(section(card, 'operations')['items'][0]['text'],
-                         'Successful outgoing payments: 1.3 a month in Dec 2023–Feb 2024, below the 12-month average (14.2).')
+                         'Successful payments: 1.3 a month in Dec 2023–Feb 2024, below the 12-month average (14.2).')
 
     def test_finance_is_trend_first_and_neutral(self):
         finance = [item['text'] for item in section(ai.fallback(self.evidence), 'finance')['items']]
@@ -167,7 +167,7 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(sum(item['source'] == 'ai' for s in card['sections'] for item in s['items']), 4)
         self.assertGreater(render.card_words(card), 320)  # Formerly rejected; now accepted because server text sets length.
 
-    def test_footnote_appears_once_whenever_any_section_uses_a_12_month_average(self):
+    def test_footnote_appears_once_on_every_card(self):
         # Only Operations compares with a 12-month average: no Finance ratios and no bottom-line usual value.
         only_ops = self.with_drivers([('outbound_count_mean_3m', 1.0)])
         for fact in ['feature.combined_flow_ratio_3m_to_12m', 'feature.inbound_flow_ratio_3m_to_12m',
@@ -180,13 +180,43 @@ class RenderTests(unittest.TestCase):
         self.assertIn('12-month average', section(card, 'operations')['items'][0]['text'])
         self.assertEqual([s['id'] for s in card['sections']][-2:], ['footnote', 'closing'])
         self.assertEqual(text_of(card).count(render.FOOTNOTE), 1)
-        # No sentence uses a 12-month average: no footnote at all.
+        # No other 12-month sentence remains: the risk sentence's baseline (12 months ending at cutoff,
+        # outcomes.py) still uses a 12-month average, so the footnote stays (owner decision).
         for fact in ['feature.outbound_count_mean_12m', 'feature.login_success_count_mean_12m']:
             del only_ops['facts'][fact]
         card = ai.fallback(only_ops)
         risk_sentence = section(card, 'bottom_line')['items'][0]['text']
-        self.assertNotIn('12-month', text_of(card).replace(risk_sentence, ''))
-        self.assertNotIn('footnote', [s['id'] for s in card['sections']])
+        self.assertNotIn('12-month average', text_of(card).replace(risk_sentence, '').replace(render.FOOTNOTE, ''))
+        self.assertEqual([s['id'] for s in card['sections']][-2:], ['footnote', 'closing'])
+        self.assertEqual(text_of(card).count(render.FOOTNOTE), 1)
+
+    def test_every_predictor_has_a_short_plain_driver_label(self):
+        predictors = json.loads((Path(render.__file__).parent / 'feature_schema.json').read_text())['predictor_columns']
+        self.assertEqual(set(render.DRIVER_LABELS), set(predictors))
+        for feature, label in render.DRIVER_LABELS.items():
+            with self.subTest(feature=feature):
+                self.assertTrue(2 <= len(label.split()) <= 5, label)
+                self.assertNotIn('_', label)
+                self.assertIsNone(re.search(r'\b(?:myr|sec|ms|pct|cv)\b', label, re.I), label)
+                self.assertIsNone(re.search(r'\b(?:inbound|outbound|incoming|outgoing)\b', label, re.I), label)
+
+    def test_weighed_section_and_provider_payload_use_the_same_plain_labels(self):
+        data = self.with_drivers([('session_duration_mean_3m_sec', 2.0), ('closed_fd_count', -1.0), ('inbound_share_3m', 0.5)])
+        weighed_lines = [item['text'] for item in section(ai.fallback(data), 'weighed')['items']]
+        self.assertEqual(weighed_lines[:3], ['Average online session length: weighed toward higher risk.',
+                                             'Inactive fixed deposits: weighed toward lower risk.',
+                                             'Collections share of transaction value: weighed toward higher risk.'])
+        payload = render.provider_payload(self.evidence)
+        names = {fact['id']: fact['name'] for s in payload['sections'] for l in s['lines'] for fact in l['facts']}
+        self.assertEqual(names['feature.login_failure_rate_3m'], 'login failure rate')
+        self.assertEqual(names['signal.combined_flow_ratio_3m_to_12m'], 'transaction value vs 12-month average')
+        self.assertEqual(names['feature.non_fd_balance_myr'], 'operating account balance')
+
+    def test_card_uses_collections_and_payments_terminology(self):
+        text = text_of(ai.fallback(self.evidence))
+        self.assertIsNone(re.search(r'\b(?:incoming|outgoing|inbound|outbound)\b', text, re.I))
+        self.assertIn('Collections in Dec 2023–Feb 2024 averaged 84.98% below their 12-month average.', text)
+        self.assertIn('Payments in Dec 2023–Feb 2024 averaged 98% below their 12-month average.', text)
 
 
 if __name__ == '__main__':
