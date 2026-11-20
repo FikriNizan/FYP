@@ -248,3 +248,50 @@ The owner's first live batch request returned **HTTP 400 INVALID_ARGUMENT** befo
 The batch command now also stops (exit code 2) on errors that would repeat for every customer: `not_configured`, `invalid_key_format`, `provider_authentication_failed`, `provider_access_denied`, `provider_model_unavailable` and `provider_request_rejected`. It also stops after **three consecutive customers** end in `provider_unavailable` (a likely outage). It reports how many flagged customers remain in each case.
 
 Possible effect: without the enum, Gemini may cite unknown IDs or the wrong number of IDs more often. Those outputs fall back to deterministic text. `--keep-rejected` records them for owner review. Whether the 400 is resolved can only be confirmed by a live run.
+
+### Summary card redesign (m6-narrative-5, stage 1) — 21 November 2026
+
+**Evidence.** The owner's live Flash-Lite batch (`artifacts/m6-rejected-20261120T175116Z.jsonl`, synthetic, "Customer A") rejected **5 of 6** summaries, and every rejection included `placeholder_boundary`: the model kept embedding full-sentence fact placeholders mid-sentence (one also wrote "because"). Retry and backoff behaved correctly. The single accepted summary was judged by the owner, reading as the target user, to be hard to understand. It listed metrics without saying what happened, repeated itself, used system jargon, omitted the transaction trend and asked off-target questions.
+
+**Design.** The summary is a shared card for the monthly retention meeting, so that non-technical Operations and Finance staff can each justify a decision. The **server** now owns structure and every fact sentence, in fixed sections:
+
+1. **Bottom line:** risk and forecast window, saved flag versus threshold, main driver family, usual monthly value.
+2. **Operations:** what is happening.
+3. **Finance:** what is at stake; transaction-value trend first.
+4. **What the model weighed:** the top three saved drivers with their direction.
+5. **Questions:** at least one Operations and one Finance question when evidence allows.
+6. **Decision:** a deterministic closing; plus a "service issues can be fixed independently" line only when a friction driver raised the estimate.
+
+Gemini writes only one optional short note per section and audience-tagged questions. A `{{fact}}` placeholder in its text resolves to the fact's **name, never its value**. The deterministic fallback is the same card without AI notes, with template questions. On screen, AI sentences carry an "AI note" label. The Operations and Finance tabs are unchanged.
+
+**Facts and wording.** The risk sentence states the target exactly: "Estimated chance that average monthly transaction value over {forecast window} falls to half or less of its 12-month average." Ratio sentences say "{r} of its 12-month average (which includes these 3 months)". Dates read "29 Feb 2024"; the jargon "saved model estimate" is gone. Values come from the saved evidence through the existing formatters, and the exact value, ID and units remain under "View supporting evidence".
+
+The evidence dictionary is now `m6-evidence-2`, adding six recency/frequency concepts:
+- successful outgoing payments per month (3 and 12 months);
+- successful logins per month (3 and 12 months);
+- days since the last successful outgoing payment;
+- days since the last successful login.
+
+Their definitions are copied from the research project's `data/features_v1/feature_dictionary.csv` (read-only) and cited in code. A null value means no event yet or an incomplete window, and is omitted.
+
+**Ranking without thresholds.** A fact is *notable* only if its feature is among this customer's saved top-5 higher- or lower-risk SHAP drivers. Within a section, notable facts come first, ordered by |saved contribution|, then other facts in fixed order. If no service or online-banking measure is notable, the card says so ("None of the service or online-banking measures are among the main signals for this estimate."). It does not claim that anything is "usual".
+
+**Validation.** Model text keeps the following rules:
+- the prohibited/causal, comparison, quantity/date and markup rules;
+- known, unique 1–4 references, with every placeholder cited;
+- question form and relevance, and the 0–3 question count.
+
+New rules:
+- notes cite only their own section's facts;
+- questions cite their audience's section;
+- notes and questions are at most 25 words each;
+- model text totals at most 100 words;
+- the rendered card is at most 320 words.
+
+`placeholder_boundary`, `missing_protected_clause`, `statement_kind`, `block_count` and the old resolved-length rule do not apply to summaries (obsolete by construction). They still apply to the discussion purpose until stage 2. Contract version is **`m6-narrative-5`**. The renderer version is part of cache identity, so drafts stored under earlier versions are not shown as current.
+
+**Measured length.**
+- Fallback cards for the six summary fixtures: 207–226 words.
+- The 206 flagged April 2024 customers in M6 Test (read-only): 257–305 words, median 269.
+
+Stage 2 (separate approval) moves the discussion purpose, the Briefing screen and print/PDF to the same contract. Comprehension improvement has not been measured.
