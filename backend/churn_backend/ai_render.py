@@ -10,7 +10,7 @@ from datetime import date
 from . import briefings
 from .ai_evidence import DICTIONARY
 
-VERSION = 'render-2'
+VERSION = 'render-3'
 TOKEN = re.compile(r'\{\{([a-zA-Z0-9_.]+)\}\}')
 NOTE_SECTIONS = ('bottom_line', 'operations', 'finance', 'weighed')
 TITLES = dict(bottom_line='Bottom line', operations='Operations: what is happening',
@@ -249,6 +249,29 @@ def relative(ratio, possessive):
     return f'averaged {pct(abs(1 - ratio), 2)} {"below" if ratio < 1 else "above"} {possessive} 12-month average'
 
 
+# Payment-outcome features are service friction, not payment volume.
+SERVICE_FEATURES = {'outbound_failure_rate_3m', 'outbound_bank_failure_rate_3m', 'outbound_processing_rate_3m',
+                    'outbound_failure_count_mean_3m', 'outbound_processing_count_mean_3m'}
+
+
+def driver_family(feature):
+    """Family of the single top positive saved driver, named from that feature only."""
+    if feature in SERVICE_FEATURES or feature.startswith(('friction_', 'bank_friction_', 'session_', 'login_',
+                                                         'active_login_users', 'passive_session', 'approver_', 'untrusted_')):
+        return 'service and online banking'
+    if feature.startswith('combined_'):
+        return 'transaction value'
+    if feature.startswith('inbound_'):
+        return 'collections'
+    if feature.startswith('outbound_'):
+        return 'payments'
+    if feature.startswith(('fd_', 'non_fd_', 'active_account', 'active_fd', 'closed_fd')):
+        return 'balances and deposits'
+    if feature.startswith(('estimated_fee', 'estimated_waiver', 'catalog_')):
+        return 'fees and waivers'
+    return 'customer profile'  # tier_id, customer_type, sector_code
+
+
 def bottom_line(evidence):
     facts, saved = evidence['facts'], evidence['explanation']
     lines = []
@@ -265,12 +288,7 @@ def bottom_line(evidence):
         lines.append(line(text, ['prediction.flag', 'prediction.threshold']))
     if saved['higher_risk_drivers']:
         top = max(saved['higher_risk_drivers'], key=lambda d: d['contribution_logodds'])
-        if top['feature'] in DICTIONARY:
-            family = ('service and online banking' if DICTIONARY[top['feature']][1] == 'Operations'
-                      else 'transaction value and balances')
-        else:
-            family = (top.get('group') or 'other measures').lower()
-        lines.append(line(f'Strongest signals: {family}.', []))
+        lines.append(line(f'Strongest signals: {driver_family(top["feature"])}.', []))
     usual = facts.get('feature.combined_flow_mean_12m_myr')
     if usual:
         lines.append(line(f'Usual monthly transaction value (12-month average): {briefings.money(usual["value"])}.', [usual['id']],

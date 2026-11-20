@@ -118,7 +118,7 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(section(friction, 'weighed')['items'][0]['text'], 'Login failure rate: weighed toward higher risk.')
         self.assertEqual(section(flow, 'weighed')['items'][0]['text'], 'Transaction value vs 12-month average: weighed toward higher risk.')
         self.assertIn('Strongest signals: service and online banking.', text_of(friction))
-        self.assertIn('Strongest signals: transaction value and balances.', text_of(flow))
+        self.assertIn('Strongest signals: transaction value.', text_of(flow))
         self.assertIn(render.SERVICE_CLOSING, text_of(friction))
         self.assertNotIn(render.SERVICE_CLOSING, text_of(flow))
         self.assertTrue(friction['questions'][0]['text'].startswith('Could Operations check whether the recorded login failure rate points'))
@@ -217,13 +217,30 @@ class RenderTests(unittest.TestCase):
         self.assertIsNone(re.search(r'\b(?:incoming|outgoing|inbound|outbound)\b', text, re.I))
         self.assertIn('Collections in Dec 2023–Feb 2024 averaged 84.98% below their 12-month average.', text)
         self.assertIn('Payments in Dec 2023–Feb 2024 averaged 98% below their 12-month average.', text)
-        # The supporting-evidence panel on the same screen uses the same terms (m6-evidence-3).
-        self.assertEqual(evidence.VERSION, 'm6-evidence-3')
+        # The supporting-evidence panel on the same screen uses the same terms (m6-evidence-4).
+        self.assertEqual(evidence.VERSION, 'm6-evidence-4')
+        self.assertEqual(self.evidence['facts']['feature.login_failure_rate_3m']['label'], 'Login failure rate')
         for fact in self.evidence['facts'].values():
             with self.subTest(fact=fact['id']):
                 self.assertIsNone(re.search(r'\b(?:incoming|outgoing|inbound|outbound)\b', fact['label'] + ' ' + fact['meaning'], re.I))
         self.assertEqual(self.evidence['facts']['feature.inbound_flow_ratio_3m_to_12m']['label'], 'Collections')
         self.assertEqual(render.DRIVER_LABELS['fd_average_balance_myr'], 'Total average fixed deposit balance')
+
+    def test_bottom_line_family_names_only_the_top_positive_driver(self):
+        demo = [item['text'] for item in section(ai.fallback(self.evidence), 'bottom_line')['items']]
+        self.assertIn('Strongest signals: transaction value.', demo)  # Top driver: combined_flow_ratio_3m_to_12m.
+        balance = text_of(ai.fallback(self.with_drivers([('non_fd_balance_myr', 2.0), ('combined_flow_ratio_3m_to_12m', 0.5)])))
+        self.assertIn('Strongest signals: balances and deposits.', balance)
+        for feature, family in [('combined_flow_ratio_3m_to_12m', 'transaction value'), ('inbound_flow_mean_3m_myr', 'collections'),
+                                ('outbound_flow_ratio_3m_to_12m', 'payments'), ('estimated_fee_mean_3m_myr', 'fees and waivers'),
+                                ('outbound_failure_rate_3m', 'service and online banking'), ('login_failure_rate_3m', 'service and online banking')]:
+            with self.subTest(feature=feature):
+                card = ai.fallback(self.with_drivers([(feature, 2.0)]))
+                strongest = next(item['text'] for item in section(card, 'bottom_line')['items'] if item['text'].startswith('Strongest'))
+                self.assertEqual(strongest, f'Strongest signals: {family}.')
+                self.assertNotIn('balance', strongest)
+        predictors = json.loads((Path(render.__file__).parent / 'feature_schema.json').read_text())['predictor_columns']
+        self.assertEqual({f for f in predictors if render.driver_family(f) == 'customer profile'}, {'tier_id', 'customer_type', 'sector_code'})
 
 
 if __name__ == '__main__':

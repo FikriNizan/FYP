@@ -6,7 +6,7 @@ from . import repository as repo, cases, briefings
 from .validation import validate_record, require
 from .db import get_db
 
-VERSION = 'm6-evidence-3'  # m6-evidence-3: collections (inbound) / payments (outbound) terminology.
+VERSION = 'm6-evidence-4'  # m6-evidence-3: collections/payments terms; m6-evidence-4: 'Login failure rate'.
 # Definitions intentionally cover only verified existing UI/export concepts.
 # Unknown predictors are excluded, even if the export provides a plausible label.
 DICTIONARY = {
@@ -16,7 +16,7 @@ DICTIONARY = {
  'combined_flow_ratio_3m_to_12m': ('Transaction activity', 'Activity', 'baseline ratio', 3, 'Recent mean as a proportion of the trailing mean; not a reduction'),
  'inbound_flow_ratio_3m_to_12m': ('Collections', 'Activity', 'baseline ratio', 3, 'Recent collections mean as a proportion of trailing mean; not a reduction'),
  'outbound_flow_ratio_3m_to_12m': ('Payments', 'Activity', 'baseline ratio', 3, 'Recent payments mean as a proportion of trailing mean; not a reduction'),
- 'login_failure_rate_3m': ('Login difficulties', 'Operations', 'rate', 3, 'Recorded login failure rate; cause and customer experience unknown'),
+ 'login_failure_rate_3m': ('Login failure rate', 'Operations', 'rate', 3, 'Recorded login failure rate; cause and customer experience unknown'),
  'outbound_failure_rate_3m': ('Payment failures', 'Operations', 'rate', 3, 'Recorded payment failure rate; cause and complaint unknown'),
  'outbound_bank_failure_rate_3m': ('Bank-attributed payment failures', 'Operations', 'rate', 3, 'Recorded bank-attributed failure rate; precise technical cause unknown'),
  'passive_session_rate_3m': ('Sessions without transactions', 'Operations', 'rate', 3, 'Recorded session rate; customer intention unknown'),
