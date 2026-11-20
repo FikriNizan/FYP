@@ -27,6 +27,7 @@ artifacts/*
 .DS_Store
 Thumbs.db
 .idea/
+.claude/
 .upgrade-backups/
 .impeccable/review/
 .impeccable/mocks/
