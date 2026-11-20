@@ -6,7 +6,7 @@ from . import repository as repo, cases, briefings
 from .validation import validate_record, require
 from .db import get_db
 
-VERSION = 'm6-evidence-2'
+VERSION = 'm6-evidence-3'  # m6-evidence-3: collections (inbound) / payments (outbound) terminology.
 # Definitions intentionally cover only verified existing UI/export concepts.
 # Unknown predictors are excluded, even if the export provides a plausible label.
 DICTIONARY = {
@@ -14,10 +14,10 @@ DICTIONARY = {
  'combined_flow_mean_3m_myr': ('Recent transaction flow', 'Activity', 'MYR/month', 3, 'Mean combined transaction flow'),
  'combined_flow_mean_12m_myr': ('Trailing transaction flow', 'Activity', 'MYR/month', 12, 'Mean combined transaction flow'),
  'combined_flow_ratio_3m_to_12m': ('Transaction activity', 'Activity', 'baseline ratio', 3, 'Recent mean as a proportion of the trailing mean; not a reduction'),
- 'inbound_flow_ratio_3m_to_12m': ('Incoming payments', 'Activity', 'baseline ratio', 3, 'Recent incoming mean as a proportion of trailing mean; not a reduction'),
- 'outbound_flow_ratio_3m_to_12m': ('Outgoing payments', 'Activity', 'baseline ratio', 3, 'Recent outgoing mean as a proportion of trailing mean; not a reduction'),
+ 'inbound_flow_ratio_3m_to_12m': ('Collections', 'Activity', 'baseline ratio', 3, 'Recent collections mean as a proportion of trailing mean; not a reduction'),
+ 'outbound_flow_ratio_3m_to_12m': ('Payments', 'Activity', 'baseline ratio', 3, 'Recent payments mean as a proportion of trailing mean; not a reduction'),
  'login_failure_rate_3m': ('Login difficulties', 'Operations', 'rate', 3, 'Recorded login failure rate; cause and customer experience unknown'),
- 'outbound_failure_rate_3m': ('Payment failures', 'Operations', 'rate', 3, 'Recorded outgoing payment failure rate; cause and complaint unknown'),
+ 'outbound_failure_rate_3m': ('Payment failures', 'Operations', 'rate', 3, 'Recorded payment failure rate; cause and complaint unknown'),
  'outbound_bank_failure_rate_3m': ('Bank-attributed payment failures', 'Operations', 'rate', 3, 'Recorded bank-attributed failure rate; precise technical cause unknown'),
  'passive_session_rate_3m': ('Sessions without transactions', 'Operations', 'rate', 3, 'Recorded session rate; customer intention unknown'),
  'fd_maturing_30d_count': ('Fixed deposits approaching maturity', 'Finance', 'count', 0, 'Deposits scheduled to mature within thirty days of cutoff; no inference of withdrawal'),
@@ -28,9 +28,9 @@ DICTIONARY = {
  # m6-evidence-2: recency/frequency definitions copied from the research project's
  # data/features_v1/feature_dictionary.csv (read-only source). Null = no event yet or an
  # incomplete window, and is omitted; there are no sentinel values.
- 'outbound_count_mean_3m': ('Successful outgoing payments per month', 'Operations', 'transactions/month', 3, 'Mean monthly count of successful outgoing payments over trailing 3 months'),
- 'outbound_count_mean_12m': ('Usual successful outgoing payments per month', 'Operations', 'transactions/month', 12, 'Mean monthly count of successful outgoing payments over trailing 12 months'),
- 'outbound_success_recency_days': ('Days since last successful outgoing payment', 'Operations', 'days', 0, 'Calendar days from last known successful payment date to cutoff'),
+ 'outbound_count_mean_3m': ('Successful payments per month', 'Operations', 'transactions/month', 3, 'Mean monthly count of successful payments over trailing 3 months'),
+ 'outbound_count_mean_12m': ('Usual successful payments per month', 'Operations', 'transactions/month', 12, 'Mean monthly count of successful payments over trailing 12 months'),
+ 'outbound_success_recency_days': ('Days since last successful payment', 'Operations', 'days', 0, 'Calendar days from last known successful payment date to cutoff'),
  'login_success_count_mean_3m': ('Successful logins per month', 'Operations', 'events/month', 3, 'Mean monthly login success count over trailing 3 months'),
  'login_success_count_mean_12m': ('Usual successful logins per month', 'Operations', 'events/month', 12, 'Mean monthly login success count over trailing 12 months'),
  'login_success_recency_days': ('Days since last successful login', 'Operations', 'days', 0, 'Calendar days since last successful login available by cutoff'),
@@ -138,7 +138,7 @@ def build(purpose, record_id):
         observation_month=flow.get('snapshot_month')
         if not isinstance(observation_month,str) or observation_month>cutoff:
             continue
-        for key,label in [('combined_flow_myr','Combined monthly flow'),('inbound_myr','Incoming monthly payments'),('outbound_success_myr','Successful outgoing monthly payments')]:
+        for key,label in [('combined_flow_myr','Combined monthly flow'),('inbound_myr','Monthly collections'),('outbound_success_myr','Successful monthly payments')]:
             value=flow.get(key)
             if briefings.number(value):
                 add('flow.'+observation_month.replace('-','')+'.'+key,label,value,'MYR',dict(as_of=observation_month),
@@ -191,7 +191,7 @@ def external(evidence):
         return provider_payload(evidence)
     facts = []
     for fact in evidence['facts'].values():
-        # Monthly combined totals provide the trajectory; incoming/outgoing ratios above
+        # Monthly combined totals provide the trajectory; collections/payments ratios above
         # already supply the channel comparison. Keep redundant monthly channels local.
         if fact['id'].startswith('flow.') and not fact['id'].endswith('.combined_flow_myr'):
             continue

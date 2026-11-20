@@ -98,7 +98,7 @@ DRIVER_LABELS = {
     'closed_fd_count': 'Inactive fixed deposits',  # Computed as FD status not ACTIVE.
     'fd_maturing_30d_count': 'Deposits maturing within 30 days',
     'fd_balance_myr': 'Fixed deposit balance',
-    'fd_average_balance_myr': 'Fixed deposit average-balance total',  # Sum of each active FD's average_amount.
+    'fd_average_balance_myr': 'Total average fixed deposit balance',  # Sum of each active FD's average_amount.
     'non_fd_balance_myr': 'Operating account balance',
     'fd_balance_mean_3m_myr': 'Fixed deposit balance, 3-month average',
     'fd_balance_mean_12m_myr': 'Fixed deposit balance, 12-month average',

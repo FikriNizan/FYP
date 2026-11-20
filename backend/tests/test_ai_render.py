@@ -217,6 +217,13 @@ class RenderTests(unittest.TestCase):
         self.assertIsNone(re.search(r'\b(?:incoming|outgoing|inbound|outbound)\b', text, re.I))
         self.assertIn('Collections in Dec 2023–Feb 2024 averaged 84.98% below their 12-month average.', text)
         self.assertIn('Payments in Dec 2023–Feb 2024 averaged 98% below their 12-month average.', text)
+        # The supporting-evidence panel on the same screen uses the same terms (m6-evidence-3).
+        self.assertEqual(evidence.VERSION, 'm6-evidence-3')
+        for fact in self.evidence['facts'].values():
+            with self.subTest(fact=fact['id']):
+                self.assertIsNone(re.search(r'\b(?:incoming|outgoing|inbound|outbound)\b', fact['label'] + ' ' + fact['meaning'], re.I))
+        self.assertEqual(self.evidence['facts']['feature.inbound_flow_ratio_3m_to_12m']['label'], 'Collections')
+        self.assertEqual(render.DRIVER_LABELS['fd_average_balance_myr'], 'Total average fixed deposit balance')
 
 
 if __name__ == '__main__':
