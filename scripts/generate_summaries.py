@@ -17,6 +17,10 @@ from local_session import ROOT, selected_database
 ARTIFACTS = ROOT / 'artifacts'
 # Daily quota is gone, or the per-minute limit persisted through every retry: stop, do not burn calls.
 STOP_CODES = {'provider_quota_exhausted', 'provider_rate_limited'}
+# Configuration/request failures that would repeat identically for every remaining customer.
+STOP_IMMEDIATE = {'not_configured', 'invalid_key_format', 'provider_authentication_failed', 'provider_access_denied',
+                  'provider_model_unavailable', 'provider_request_rejected'}
+OUTAGE_LIMIT = 3  # Consecutive customers ending in provider_unavailable (each already retried).
 
 
 def eligible_ids(db, batch_id):
@@ -68,7 +72,7 @@ def run(args, out=print):
     base = max(ai_drafts.BATCH['base'], 2 * args.min_interval)
     policy = dict(ai_drafts.BATCH, base=base, cap=max(ai_drafts.BATCH['cap'], base))
     rejected_path = ARTIFACTS / ('m6-rejected-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '.jsonl')
-    generated, rejected_count, fallbacks, stopped, last = 0, 0, Counter(), None, None
+    generated, rejected_count, fallbacks, stopped, last, outage = 0, 0, Counter(), None, None, 0
     for prediction_id in pending[:args.limit]:
         if last is not None:
             wait = args.min_interval - (time.monotonic() - last)
@@ -82,22 +86,34 @@ def run(args, out=print):
                                         retry=policy)
         except ConflictError:
             fallbacks['conflict'] += 1
+            outage = 0
             continue
         if result['state'] == 'saved':
             generated += 1
+            outage = 0
             continue
         code = result['failure_code']
         fallbacks[code] += 1
+        outage = outage + 1 if code == 'provider_unavailable' else 0
         if args.keep_rejected and g.get('genai_rejected_output') is not None:
             write_rejected(rejected_path, prediction_id, result.get('model'), g.get('genai_diagnostic'),
                            g.genai_rejected_output)
             rejected_count += 1
-        if code in STOP_CODES:
+        if code in STOP_CODES or code in STOP_IMMEDIATE:
             stopped = code
+            break
+        if outage >= OUTAGE_LIMIT:
+            stopped = 'outage'
             break
     remaining = len(pending) - generated
     if stopped == 'provider_quota_exhausted':
         out(f'Stopped: daily quota exhausted. {remaining} flagged customers remain without a stored summary.')
+    elif stopped in STOP_IMMEDIATE:
+        out(f'Stopped: {stopped} would repeat for every customer; fix configuration or request first. '
+            f'{remaining} flagged customers remain.')
+    elif stopped == 'outage':
+        out(f'Stopped: Gemini unavailable for {OUTAGE_LIMIT} consecutive customers (likely outage). '
+            f'{remaining} flagged customers remain.')
     elif stopped:
         out(f'Stopped: rate limit persisted after retries. {remaining} flagged customers remain.')
     if rejected_count:

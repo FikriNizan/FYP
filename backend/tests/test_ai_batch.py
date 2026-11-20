@@ -189,8 +189,8 @@ class BatchCommandTests(Base):
         self.assertIn('Generated: 0 | Fallback by reason: {} | Skipped (cached): 1 | Remaining: 0', text)
         self.assertRegex(text, r'Elapsed: \d+\.\ds')
 
-    def simulated(self, results, **options):
-        ids = ['a', 'b', 'c']
+    def simulated(self, results, ids=('a', 'b', 'c'), **options):
+        ids = list(ids)
         load = lambda purpose, pid: (dict(state='not_generated', evidence_hash='h-'+pid), None, None)
         with patch.object(batch, 'eligible_ids', return_value=ids), patch.object(ai, 'load', side_effect=load), \
              patch.object(ai, 'generate', side_effect=results) as generate:
@@ -220,6 +220,26 @@ class BatchCommandTests(Base):
         code, text, generate = self.simulated([fallback('provider_unavailable'), fallback('output_validation_failed'), dict(state='saved')])
         self.assertEqual((code, generate.call_count), (0, 3))
         self.assertIn('{"output_validation_failed": 1, "provider_unavailable": 1}', text)
+
+    def test_repeating_configuration_or_request_errors_stop_immediately(self):
+        for failure in ['not_configured', 'invalid_key_format', 'provider_authentication_failed',
+                        'provider_access_denied', 'provider_model_unavailable', 'provider_request_rejected']:
+            with self.subTest(failure=failure):
+                code, text, generate = self.simulated([dict(state='fallback', failure_code=failure),
+                                                       dict(state='saved'), dict(state='saved')])
+                self.assertEqual((code, generate.call_count), (2, 1))
+                self.assertIn(f'Stopped: {failure} would repeat for every customer', text)
+                self.assertIn('3 flagged customers remain', text)
+                self.assertIn('Generated: 0 | Fallback by reason: {"'+failure+'": 1}', text)
+
+    def test_three_consecutive_unavailable_customers_stop_the_run(self):
+        unavailable = dict(state='fallback', failure_code='provider_unavailable')
+        # A success resets the count: stop only after the third consecutive outage (6th call); 7th never runs.
+        code, text, generate = self.simulated([unavailable, unavailable, dict(state='saved'), unavailable, unavailable,
+                                               unavailable, dict(state='saved')], ids='abcdefg')
+        self.assertEqual((code, generate.call_count), (2, 6))
+        self.assertIn('Stopped: Gemini unavailable for 3 consecutive customers (likely outage). 6 flagged customers remain.', text)
+        self.assertIn('Generated: 1 | Fallback by reason: {"provider_unavailable": 5}', text)
 
     def test_keep_rejected_writes_ignored_jsonl_without_console_text(self):
         artifacts = Path(self.temp.name) / 'artifacts'
