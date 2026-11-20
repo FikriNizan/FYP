@@ -643,7 +643,8 @@ class DraftTests(unittest.TestCase):
                     data['identity']['purpose']=purpose
                     ai.Gemini().generate(data,config)
                     sent=client.models.generate_content.call_args.kwargs['config']
-                    self.assertEqual(sent.response_json_schema,schema_for(purpose,[f['id'] for f in evidence.external(data)['facts']]))
+                    self.assertEqual(sent.response_json_schema,schema_for(purpose))
+                    self.assertNotIn('prediction.risk',json.dumps(sent.response_json_schema))
                     self.assertIn('0–'+str(maximum)+' verification questions',sent.system_instruction)
                     self.assertIn('return []',sent.system_instruction)
                     self.assertIn('Never invent or pad questions',sent.system_instruction)
@@ -688,18 +689,86 @@ class DraftTests(unittest.TestCase):
             self.assertIn('evidence_references',{f['rule'] for f in replay['failures']})
             provider.assert_not_called()
 
-    def test_live_reference_schema_enumerates_only_payload_ids(self):
-        from churn_backend.ai_contract import schema_for,reference_registry
+    def test_reference_registry_rejects_mismatched_identity(self):
+        # Formerly also asserted a provider-schema ID enum and nested 1–4 bounds. Those were removed
+        # (Gemini HTTP 400 "too many states"); the validator tests below enforce the same rules.
+        from churn_backend.ai_contract import reference_registry
         with self.app.app_context():
             data=evidence.build('summary',self.id)
-            allowed=reference_registry(data)
-            schema=schema_for('summary',list(allowed))
-            for section in ['blocks','questions']:
-                refs=schema['properties'][section]['items']['properties']['evidence_ids']
-                self.assertEqual(refs['minItems'],1)
-                self.assertEqual(refs['maxItems'],4)
-                self.assertEqual(set(refs['items']['enum']),set(allowed))
             wrong=copy.deepcopy(data)
             wrong['facts']['prediction.risk']['id']='mismatched.registry'
             with self.assertRaises(ValidationError):reference_registry(wrong)
+
+    def test_provider_schema_has_no_reference_enum_or_nested_array_bounds(self):
+        from churn_backend.ai_contract import schema_for
+        for purpose in ['summary','discussion']:
+            with self.subTest(purpose=purpose):
+                schema=schema_for(purpose)
+                encoded=json.dumps(schema)
+                for fact_id in ['prediction.risk','feature.','signal.','flow.','committee.']:
+                    self.assertNotIn(fact_id,encoded)
+                found={'enum':[],'minItems':[],'maxItems':[]}
+                def walk(node,path):
+                    if isinstance(node,dict):
+                        for key,value in node.items():
+                            if key in found:
+                                found[key].append(path)
+                            walk(value,path+'.'+key)
+                    elif isinstance(node,list):
+                        for index,value in enumerate(node):
+                            walk(value,path+'['+str(index)+']')
+                walk(schema,'$')
+                self.assertEqual(found['enum'],['$.properties.blocks.items.properties.kind'])
+                self.assertEqual(sorted(found['minItems']),['$.properties.blocks','$.properties.questions'])
+                self.assertEqual(sorted(found['maxItems']),['$.properties.blocks','$.properties.questions'])
+                for section in ['blocks','questions']:
+                    self.assertEqual(schema['properties'][section]['items']['properties']['evidence_ids'],
+                                     {'type':'array','items':{'type':'string'}})
+
+    def test_validator_enforces_reference_count_uniqueness_and_known_ids(self):
+        from churn_backend.ai_contract import reference_registry
+        with self.app.app_context():
+            data=evidence.build('summary',self.id)
+            ids=[k for k,f in reference_registry(data).items() if f['kind']=='recorded_observation']
+            self.assertGreaterEqual(len(ids),5)
+            def block(refs):
+                text=' '.join('{{'+r+'}}.' for r in dict.fromkeys(refs))
+                return dict(kind='recorded_observation',evidence_ids=refs,
+                            text='Recorded context for discussion. '+text+' The context remains a matter to verify.')
+            def question(refs):
+                return dict(text='Could we verify the recorded context?',evidence_ids=refs)
+            # Boundary: exactly four distinct known references are accepted in blocks and questions.
+            accepted=ai.validate(json.dumps(dict(blocks=[block(ids[:4])],questions=[question(ids[:4])])),data)
+            self.assertEqual(accepted['blocks'][0]['evidence_ids'],ids[:4])
+            for section in ['blocks','questions']:
+                for name,refs in [('zero',[]),('five',ids[:5]),('duplicate',[ids[0],ids[0]]),('unknown',['unknown.fact'])]:
+                    with self.subTest(section=section,case=name):
+                        payload=dict(blocks=[block(ids[:1])],questions=[question(ids[:1])])
+                        payload[section]=[block(refs) if section=='blocks' else question(refs)]
+                        raw=json.dumps(payload)
+                        with self.assertRaises(ValidationError):
+                            ai.validate(raw,data)
+                        failure=next(f for f in ai.audit_output(raw,data)['failures']
+                                     if f['rule']=='evidence_references' and f['path']==section+'[0].evidence_ids')
+                        if name=='duplicate':
+                            self.assertTrue(failure['duplicate_references'])
+                        if name=='unknown':
+                            self.assertEqual(failure['unknown_fact_ids'],['unknown_1'])
+
+    def test_validator_enforces_block_count_for_both_purposes(self):
+        with self.app.app_context():
+            data=evidence.build('summary',self.id)
+            one=json.loads(self.output())['blocks'][0]
+            for purpose,maximum in [('summary',4),('discussion',6)]:
+                data['identity']['purpose']=purpose
+                payload=dict(blocks=[copy.deepcopy(one) for _ in range(maximum)],questions=[])
+                with self.subTest(purpose=purpose,count=maximum):
+                    self.assertEqual(len(ai.validate(json.dumps(payload),data)['blocks']),maximum)
+                for count in [0,maximum+1]:
+                    payload['blocks']=[copy.deepcopy(one) for _ in range(count)]
+                    raw=json.dumps(payload)
+                    with self.subTest(purpose=purpose,count=count):
+                        with self.assertRaisesRegex(ValidationError,'Invalid narrative block count'):
+                            ai.validate(raw,data)
+                        self.assertIn('block_count',{f['rule'] for f in ai.audit_output(raw,data)['failures']})
 

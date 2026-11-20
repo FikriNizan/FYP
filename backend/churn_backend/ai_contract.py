@@ -1,7 +1,7 @@
 """Purpose-specific output bounds shared by SDK schema, instructions and validation."""
 from .validation import require, strict_json, ValidationError
 
-CONTRACT_VERSION='m6-narrative-3'
+CONTRACT_VERSION='m6-narrative-4'
 KINDS=['recorded_observation','model_signal','recorded_committee_context']
 REFERENCE_MIN=1
 REFERENCE_MAX=4
@@ -33,14 +33,13 @@ def reference_registry(evidence,payload=None):
     return registry
 
 
-def schema_for(purpose,allowed_ids=None):
+def schema_for(purpose):
+    """Provider schema describes shape only. Gemini rejects schemas whose constraints have
+    'too many states' (long enums, nested array bounds), so known IDs, 1–4 reference counts
+    and uniqueness are enforced by ai_output_audit.inspect_output, not here."""
     limits=limits_for(purpose)
     def references():
-        items=dict(type='string')
-        if allowed_ids is not None:
-            require(bool(allowed_ids) and all(isinstance(key,str) for key in allowed_ids),'Invalid provider reference allowlist')
-            items['enum']=sorted(set(allowed_ids))
-        return dict(type='array',minItems=REFERENCE_MIN,maxItems=REFERENCE_MAX,items=items)
+        return dict(type='array',items=dict(type='string'))
     block=dict(type='object',additionalProperties=False,required=['kind','text','evidence_ids'],properties={
         'kind':dict(type='string',enum=list(KINDS)),'text':dict(type='string'),'evidence_ids':references()})
     question=dict(type='object',additionalProperties=False,required=['text','evidence_ids'],properties={

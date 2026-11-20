@@ -152,7 +152,7 @@ class Gemini:
             record_diagnostic('configuration',started,reason='invalid_key_format')
             raise ProviderFailure('invalid_key_format')
         provider_payload=ai_evidence.external(evidence)
-        allowed_ids=reference_registry(evidence,provider_payload)
+        reference_registry(evidence,provider_payload)  # Raises on payload/evidence identity mismatch.
         content = repo.encode(provider_payload)
         if len(content.encode()) > 32000:
             record_diagnostic('evidence_size',started,reason='evidence_too_large')
@@ -169,7 +169,7 @@ class Gemini:
             stage='build_request'
             purpose=evidence['identity']['purpose']
             request_config=types.GenerateContentConfig(system_instruction=purpose_instruction(purpose)+'\n'+reference_instruction()+'\n'+INSTRUCTION,
-                        response_mime_type='application/json', response_json_schema=schema_for(purpose,list(allowed_ids)),
+                        response_mime_type='application/json', response_json_schema=schema_for(purpose),
                         max_output_tokens=config['tokens'],
                         tools=[], automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True))
             stage='create_client'
