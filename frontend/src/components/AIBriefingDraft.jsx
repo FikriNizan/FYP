@@ -27,7 +27,7 @@ export default function AIBriefingDraft({ purpose='discussion', recordId, onRevi
     return ()=>{++lifetime.current;controller.abort();};
   },[purpose,recordId,attempt]);
   async function generate() {
-    if(pending.current || !state)return;
+    if(purpose==='summary' || pending.current || !state)return;
     pending.current=true;setBusy(true);setError('');setReviewed(false);onReview?.(null);
     const generation=lifetime.current;
     try {
@@ -37,20 +37,23 @@ export default function AIBriefingDraft({ purpose='discussion', recordId, onRevi
     finally {if(lifetime.current===generation){setBusy(false);pending.current=false;}}
   }
   const draft=state?.draft, content=draft?.content || state?.fallback;
-  const label=busy ? 'Generating' : draft ? 'Saved AI draft' : state?.state==='fallback' ? 'Deterministic fallback' : state?.state==='evidence_changed' ? 'Evidence changed · regenerate and review' : 'Not generated · deterministic fallback';
-  return <section className={purpose==='summary' ? 'panel ai-draft no-print' : 'ai-draft briefing-section no-print'}>
-    <h3>{purpose==='summary' ? 'What stands out' : 'Discussion draft'}</h3>
+  // Summaries are generated only by the offline batch for flagged customers; this view only reads them.
+  const summary=purpose==='summary';
+  const label=summary ? (draft ? 'AI-generated summary (stored)' : 'Deterministic summary · no stored AI draft for this assessment')
+    : busy ? 'Generating' : draft ? 'Saved AI draft' : state?.state==='fallback' ? 'Deterministic fallback' : state?.state==='evidence_changed' ? 'Evidence changed · regenerate and review' : 'Not generated · deterministic fallback';
+  return <section className={summary ? 'panel ai-draft no-print' : 'ai-draft briefing-section no-print'}>
+    <h3>{summary ? 'What stands out' : 'Discussion draft'}</h3>
     <p role="status"><strong>{label}</strong>{draft && ' · '+new Date(draft.generated_at).toLocaleString('en-MY',{timeZone:'Asia/Kuala_Lumpur'})}</p>
     {draft && <p className="muted">AI draft · review before use</p>}
     {error && <p role="alert">Request failed. {error}</p>}
-    {state?.failure_code && <p className="muted">{state.failure_code==='provider_unavailable'
-      ? 'Gemini is temporarily unavailable. The deterministic fallback is shown. No automatic retry was made.'
+    {!summary && state?.failure_code && <p className="muted">{state.failure_code==='provider_unavailable'
+      ? 'Gemini is temporarily unavailable. The deterministic fallback is shown. '+(state.attempts>1 ? 'One automatic retry was attempted.' : 'No automatic retry was made.')
       : state.failure_code==='invalid_key_format'
       ? 'The backend API key has invalid formatting. Re-enter it locally and restart the session. No Gemini request was sent.'
       : 'Gemini did not return a usable draft ('+state.failure_code.replaceAll('_',' ')+'). The saved evidence remains available.'}</p>}
     {content?.blocks.map((block,i)=><p key={i}>{block.text}</p>)}
     {!!content?.questions.length && <ul>{content.questions.map((q,i)=><li key={i}>{q.text}</li>)}</ul>}
-    <button disabled={!state || busy} onClick={generate}>{busy ? 'Generating…' : draft ? 'Regenerate draft' : purpose==='summary' ? 'Generate summary' : 'Generate discussion draft'}</button>
+    {!summary && <button disabled={!state || busy} onClick={generate}>{busy ? 'Generating…' : draft ? 'Regenerate draft' : 'Generate discussion draft'}</button>}
     {error && <button disabled={busy} onClick={()=>setAttempt(n=>n+1)}>Reload saved evidence</button>}
     {draft && purpose==='discussion' && <label className="field-label"><input type="checkbox" checked={reviewed} onChange={e=>{
       setReviewed(e.target.checked);onReview?.(e.target.checked ? {case_id:recordId,draft_id:draft.draft_id,evidence_hash:state.evidence_hash,acknowledged:true} : null);

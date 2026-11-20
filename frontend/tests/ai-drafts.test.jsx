@@ -10,13 +10,14 @@ const fallback={state:'not_generated',evidence_hash:'hash',fallback:content,draf
 const saved={...fallback,state:'saved',draft:{draft_id:'draft-a',generated_at:'2026-11-19T10:00:00Z',validation_version:'m6-narrative-1',content}};
 beforeEach(()=>{vi.clearAllMocks();api.aiDraft.mockResolvedValue(fallback);});
 
+// On-demand generation exists only for RM discussion drafts.
 it('reads without generation, generates explicitly once while pending and discloses evidence',async()=>{
   let finish;const promise=new Promise(resolve=>{finish=resolve;});
   api.aiDraft.mockResolvedValueOnce(fallback).mockReturnValueOnce(promise);
-  render(<AIBriefingDraft purpose="summary" recordId="p" />);
-  const button=await screen.findByRole('button',{name:'Generate summary'});
+  render(<AIBriefingDraft recordId="case-a" />);
+  const button=await screen.findByRole('button',{name:'Generate discussion draft'});
   await waitFor(()=>expect(button.disabled).toBe(false));
-  expect(api.aiDraft.mock.calls[0].slice(0,3)).toEqual(['summary','p',null]);
+  expect(api.aiDraft.mock.calls[0].slice(0,3)).toEqual(['discussion','case-a',null]);
   fireEvent.click(button);fireEvent.click(button);
   expect(api.aiDraft).toHaveBeenCalledTimes(2);
   expect(screen.getByText('Generating')).toBeTruthy();
@@ -29,8 +30,8 @@ it('reads without generation, generates explicitly once while pending and disclo
 
 it('keeps evidence on failure and offers reload/retry without fake success',async()=>{
   api.aiDraft.mockResolvedValueOnce(fallback).mockRejectedValueOnce(new Error('Offline'));
-  render(<AIBriefingDraft purpose="summary" recordId="p" />);
-  const button=await screen.findByRole('button',{name:'Generate summary'});
+  render(<AIBriefingDraft recordId="case-a" />);
+  const button=await screen.findByRole('button',{name:'Generate discussion draft'});
   await waitFor(()=>expect(button.disabled).toBe(false));fireEvent.click(button);
   expect(await screen.findByRole('alert')).toHaveProperty('textContent','Request failed. Offline');
   expect(screen.getByText('Recorded evidence for discussion.')).toBeTruthy();
@@ -50,13 +51,13 @@ it('requires exact draft acknowledgement and resets it on regeneration',async()=
   await waitFor(()=>expect(check.checked).toBe(false));
 });
 
-it('suppresses generation results after changing customer or component lifetime',async()=>{
+it('suppresses generation results after changing case or component lifetime',async()=>{
   let finish;const promise=new Promise(resolve=>{finish=resolve;});
   api.aiDraft.mockResolvedValueOnce(fallback).mockReturnValueOnce(promise).mockResolvedValueOnce({...fallback,evidence_hash:'other'});
-  const view=render(<AIBriefingDraft purpose="summary" recordId="first" />);
-  const button=await screen.findByRole('button',{name:'Generate summary'});
+  const view=render(<AIBriefingDraft recordId="first" />);
+  const button=await screen.findByRole('button',{name:'Generate discussion draft'});
   await waitFor(()=>expect(button.disabled).toBe(false));fireEvent.click(button);
-  view.rerender(<AIBriefingDraft purpose="summary" recordId="second" />);
+  view.rerender(<AIBriefingDraft recordId="second" />);
   await waitFor(()=>expect(api.aiDraft).toHaveBeenCalledTimes(3));
   finish(saved);await new Promise(resolve=>setTimeout(resolve,10));
   expect(screen.queryByText('Saved AI draft')).toBeNull();view.unmount();
@@ -71,19 +72,49 @@ it('labels fallback and changed evidence honestly',async()=>{
   expect(screen.getByText(/not configured/)).toBeTruthy();
 });
 
-it('explains provider unavailability without implying a successful draft or automatic retry',async()=>{
-  api.aiDraft.mockResolvedValue({...fallback,state:'fallback',failure_code:'provider_unavailable'});
-  render(<AIBriefingDraft purpose="summary" recordId="p" />);
+it('explains provider unavailability without implying a successful draft and states retry honestly',async()=>{
+  api.aiDraft.mockResolvedValue({...fallback,state:'fallback',failure_code:'provider_unavailable',attempts:1});
+  const view=render(<AIBriefingDraft recordId="case-a" />);
   expect(await screen.findByText('Gemini is temporarily unavailable. The deterministic fallback is shown. No automatic retry was made.')).toBeTruthy();
   expect(screen.queryByText('Saved AI draft')).toBeNull();
   expect(api.aiDraft).toHaveBeenCalledTimes(1);
-  expect(screen.getByRole('button',{name:'Generate summary'}).disabled).toBe(false);
+  expect(screen.getByRole('button',{name:'Generate discussion draft'}).disabled).toBe(false);
+  view.unmount();
+  api.aiDraft.mockResolvedValue({...fallback,state:'fallback',failure_code:'provider_unavailable',attempts:2});
+  render(<AIBriefingDraft recordId="case-b" />);
+  expect(await screen.findByText('Gemini is temporarily unavailable. The deterministic fallback is shown. One automatic retry was attempted.')).toBeTruthy();
 });
 
 it('reports malformed backend key configuration without exposing credentials',async()=>{
   api.aiDraft.mockResolvedValue({...fallback,state:'fallback',failure_code:'invalid_key_format'});
-  render(<AIBriefingDraft purpose="summary" recordId="p" />);
+  render(<AIBriefingDraft recordId="case-a" />);
   expect(await screen.findByText('The backend API key has invalid formatting. Re-enter it locally and restart the session. No Gemini request was sent.')).toBeTruthy();
   expect(screen.queryByText('Saved AI draft')).toBeNull();
   expect(api.aiDraft).toHaveBeenCalledTimes(1);
+});
+
+// Summaries are produced by the offline batch; the page only reads stored drafts.
+it('shows a stored batch summary as AI-generated with no generation control',async()=>{
+  api.aiDraft.mockResolvedValue(saved);
+  render(<AIBriefingDraft purpose="summary" recordId="p" />);
+  expect(await screen.findByText('AI-generated summary (stored)')).toBeTruthy();
+  expect(screen.getByText('AI draft · review before use')).toBeTruthy();
+  expect(screen.getByText('Recorded evidence for discussion.')).toBeTruthy();
+  expect(screen.queryAllByRole('button')).toHaveLength(0);
+  expect(screen.queryByRole('checkbox')).toBeNull();
+  expect(api.aiDraft).toHaveBeenCalledTimes(1);
+  expect(api.aiDraft.mock.calls[0].slice(0,3)).toEqual(['summary','p',null]);
+});
+
+it('falls back to deterministic summary text when no current stored draft exists',async()=>{
+  for(const state of ['not_generated','evidence_changed']) {
+    api.aiDraft.mockResolvedValue({...fallback,state});
+    const view=render(<AIBriefingDraft purpose="summary" recordId={'p-'+state} />);
+    expect(await screen.findByText('Deterministic summary · no stored AI draft for this assessment')).toBeTruthy();
+    expect(screen.getByText('Recorded evidence for discussion.')).toBeTruthy();
+    expect(screen.queryByText('AI draft · review before use')).toBeNull();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    view.unmount();
+  }
+  expect(api.aiDraft.mock.calls.every(call=>call[0]==='summary' && call[2]===null)).toBe(true);
 });
