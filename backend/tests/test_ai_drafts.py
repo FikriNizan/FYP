@@ -8,6 +8,7 @@ import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+from flask import jsonify
 from churn_backend import create_app, ai_drafts as ai, ai_evidence as evidence
 from churn_backend import repository as repo
 from churn_backend.db import get_db
@@ -32,7 +33,19 @@ class DraftTests(unittest.TestCase):
         return json.dumps(dict(blocks=[dict(kind=kind,text=prefix+' {{'+fact+'}}. The context remains a matter to verify.',evidence_ids=[fact])],questions=[]))
 
     def generate(self):
-        return self.client.post(self.url,json={'expected_evidence_hash':self.client.get(self.url).json['evidence_hash']})
+        """Summary generation is batch-only (no HTTP POST). Call the same backend function the batch
+        uses and convert the result/error with the app's own JSON and error handlers."""
+        evidence_hash=self.client.get(self.url).json['evidence_hash']
+        with self.app.test_request_context():
+            try:
+                return jsonify(ai.generate('summary',self.id,{'expected_evidence_hash':evidence_hash}))
+            except Exception as error:
+                return self.app.make_response(self.app.handle_user_exception(error))
+
+    def prioritise(self):
+        review=dict(decision='prioritise',reason='Synthetic',reviewer='Synthetic',expected_version=0)
+        self.assertEqual(self.client.put('/api/predictions/'+self.id+'/review',json=review).status_code,200)
+        return '/api/cases/'+self.id+'/ai-discussion'
 
     def test_get_never_writes_or_calls_provider_and_post_disabled_is_fallback(self):
         with patch.object(ai.Gemini,'generate',side_effect=ai.ProviderFailure('not_configured')) as mock:
@@ -56,9 +69,15 @@ class DraftTests(unittest.TestCase):
 
     def test_unknown_ids_stale_versions_untrusted_browser_fields_and_origin(self):
         self.assertEqual(self.client.get('/api/predictions/absent/ai-summary').status_code,404)
-        self.assertEqual(self.client.post(self.url,json={'expected_evidence_hash':'stale'}).status_code,409)
-        self.assertEqual(self.client.post(self.url,json={'expected_evidence_hash':'x','risk':0}).status_code,422)
-        self.assertEqual(self.client.post(self.url,json={},headers={'Origin':'https://other.test'}).status_code,403)
+        # Summary generation is batch-only: the HTTP route is read-only.
+        with patch.object(ai.Gemini,'generate') as mock:
+            self.assertEqual(self.client.post(self.url,json={'expected_evidence_hash':'x'}).status_code,405)
+            mock.assert_not_called()
+        # The same HTTP guards on the remaining on-demand route (RM discussion).
+        url=self.prioritise()
+        self.assertEqual(self.client.post(url,json={'expected_evidence_hash':'stale'}).status_code,409)
+        self.assertEqual(self.client.post(url,json={'expected_evidence_hash':'x','risk':0}).status_code,422)
+        self.assertEqual(self.client.post(url,json={},headers={'Origin':'https://other.test'}).status_code,403)
 
     def test_future_outcome_and_later_assessment_do_not_change_historical_summary(self):
         before=self.client.get(self.url).json

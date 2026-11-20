@@ -4,6 +4,7 @@ Rule checks reduce specific unsupported interpretations; they do not prove seman
 """
 import hashlib
 import os
+import random
 import re
 import sqlite3
 import time
@@ -46,6 +47,8 @@ def provider_failure_code(error):
         from google.genai.errors import APIError
     except ImportError:
         APIError=()
+    if isinstance(error,APIError) and error.code==429 and daily_quota_exhausted(error):
+        return 'provider_quota_exhausted'
     if isinstance(error,APIError) and type(error.code) is int:
         return {400:'provider_request_rejected',401:'provider_authentication_failed',
             403:'provider_access_denied',404:'provider_model_unavailable',429:'provider_rate_limited',
@@ -55,6 +58,52 @@ def provider_failure_code(error):
             and type(error).__name__ in {'TimeoutException','ConnectTimeout','ReadTimeout','WriteTimeout','PoolTimeout'}):
         return 'provider_timeout'
     return 'provider_request_failed'
+
+
+def daily_quota_exhausted(error):
+    """Structured QuotaFailure metadata only: a per-day quota ID means stop, not retry."""
+    from .ai_diagnostics import error_nodes
+    for node in error_nodes(getattr(error,'details',None)):
+        violations=node.get('violations')
+        for violation in violations if isinstance(violations,list) else []:
+            if isinstance(violation,dict) and 'PerDay' in str(violation.get('quotaId','')):
+                return True
+    return False
+
+
+# Retry policies. The SDK itself always makes one attempt; this loop is the only retry.
+SINGLE=dict(attempts=1,retry_on=frozenset(),base=0,cap=0,deadline=False)
+ON_DEMAND=dict(attempts=2,retry_on=frozenset({'provider_unavailable'}),base=1.5,cap=3,deadline=True)
+BATCH=dict(attempts=4,retry_on=frozenset({'provider_unavailable','provider_rate_limited','provider_timeout'}),
+    base=2,cap=30,deadline=False)
+MIN_RETRY_BUDGET=10
+sleep=time.sleep  # Module attributes so offline tests never really wait.
+jitter=random.uniform
+
+
+def worst_case_seconds(policy, timeout):
+    if policy['deadline']:
+        return timeout
+    return policy['attempts']*timeout+sum(min(policy['cap'],policy['base']*2**n) for n in range(policy['attempts']-1))
+
+
+def call_with_retry(evidence, config, policy, attempts):
+    """Exponential backoff with equal jitter; on-demand total wait stays within the timeout."""
+    started=time.monotonic()
+    for attempt in range(1,policy['attempts']+1):
+        attempts.append(attempt)
+        request_config=dict(config)
+        if policy['deadline']:
+            request_config['timeout']=max(1,config['timeout']-(time.monotonic()-started))
+        try:
+            return Gemini().generate(evidence,request_config)
+        except ProviderFailure as error:
+            if str(error) not in policy['retry_on'] or attempt==policy['attempts']:
+                raise
+            delay=min(policy['cap'],policy['base']*2**(attempt-1))*jitter(0.5,1.0)
+            if policy['deadline'] and config['timeout']-(time.monotonic()-started)-delay<MIN_RETRY_BUDGET:
+                raise
+            sleep(delay)
 
 
 def record_diagnostic(stage, started, error=None, reason=None):
@@ -179,6 +228,9 @@ def validate(raw, evidence):
             if diagnostic['rule']=='question_count':
                 diagnostic['question_contract']=question_metadata(raw,evidence['identity']['purpose'])
             diagnostic['contract_audit']=audit_output(raw,evidence)
+            if current_app.config.get('TXB_GENAI_KEEP_REJECTED'):
+                # Batch --keep-rejected only: the CLI writes it to an ignored local file, never a log.
+                g.genai_rejected_output=raw
             if current_app.config.get('TXB_GENAI_CAPTURE_ERROR'):
                 g.genai_captured_output=raw
                 g.genai_captured_evidence=evidence
@@ -251,7 +303,7 @@ def _load(purpose, record_id):
         limitations='AI draft · review before use. Automated rules cover specific errors; they do not certify every interpretation. SHAP influence is not causation. Historical fees and waivers are estimates; balances are exposures.'), evidence, key
 
 
-def generate(purpose, record_id, body):
+def generate(purpose, record_id, body, retry=SINGLE):
     require(isinstance(body,dict) and set(body)=={'expected_evidence_hash'}, 'Send expected_evidence_hash only')
     state,evidence,key=load(purpose,record_id)
     config=settings()
@@ -264,12 +316,14 @@ def generate(purpose, record_id, body):
     with db:
         db.execute('DELETE FROM ai_reservations WHERE expires_at<?',(time.time(),))
         try:
-            db.execute('INSERT INTO ai_reservations VALUES (?,?,?)',(key,token,time.time()+config['timeout']+30))
+            db.execute('INSERT INTO ai_reservations VALUES (?,?,?)',
+                (key,token,time.time()+worst_case_seconds(retry,config['timeout'])+30))
         except sqlite3.IntegrityError:
             raise ConflictError('A request for this evidence is already generating. Reload shortly.') from None
     started=time.monotonic()
+    attempts=[]
     try:
-        raw=Gemini().generate(evidence,config)
+        raw=call_with_retry(evidence,config,retry,attempts)
         content=validate(raw,evidence)
         db.execute('BEGIN IMMEDIATE')
         fresh=ai_evidence.build(purpose,record_id)
@@ -285,6 +339,7 @@ def generate(purpose, record_id, body):
         db.commit()
         state,_,_=load(purpose,record_id)
         state['latency_seconds']=round(time.monotonic()-started,3)
+        state['attempts']=len(attempts)
         return state
     except (ProviderFailure,ValidationError) as error:
         db.rollback()
@@ -292,6 +347,7 @@ def generate(purpose, record_id, body):
         state['source_type']='deterministic'
         state['failure_code']=str(error) if isinstance(error,ProviderFailure) else 'output_validation_failed'
         state['latency_seconds']=round(time.monotonic()-started,3)
+        state['attempts']=len(attempts)
         # Retain a previous matching draft in storage; this attempt honestly displays fallback.
         state['draft']=None
         return state

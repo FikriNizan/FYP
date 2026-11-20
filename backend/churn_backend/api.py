@@ -239,17 +239,17 @@ def briefing_download():
     return send_file(BytesIO(pdf), mimetype='application/pdf', as_attachment=True, download_name=name)
 
 
-@api.route('/predictions/<prediction_id>/ai-summary', methods=['GET','POST'])
+@api.route('/predictions/<prediction_id>/ai-summary', methods=['GET'])
 def ai_summary(prediction_id):
+    # Read-only: summaries are generated only by scripts/generate_summaries.py (batch).
     from . import ai_drafts
-    return jsonify(ai_drafts.generate('summary',prediction_id,body()) if request.method=='POST'
-                   else ai_drafts.load('summary',prediction_id)[0])
+    return jsonify(ai_drafts.load('summary',prediction_id)[0])
 
 
 @api.route('/cases/<case_id>/ai-discussion', methods=['GET','POST'])
 def ai_discussion(case_id):
     from . import ai_drafts
-    return jsonify(ai_drafts.generate('discussion',case_id,body()) if request.method=='POST'
+    return jsonify(ai_drafts.generate('discussion',case_id,body(),retry=ai_drafts.ON_DEMAND) if request.method=='POST'
                    else ai_drafts.load('discussion',case_id)[0])
 
 
