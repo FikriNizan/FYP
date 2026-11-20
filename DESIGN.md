@@ -275,3 +275,8 @@ Browser print sizes mirror the PDF: body 8.5pt, title 18pt and section headings 
 * **Don't** add remote fonts.
 
 Recorded from source, not a claim of audited accessibility compliance. No independent dark theme, motion choreography or additional display type system is established.
+
+
+## Milestone 6 compact drafting
+
+Customer Review Summary contains one What stands out section; Operations/Finance remain shared evidence perspectives. Realised outcome cards belong in Monitoring. Gemini generation is explicit, with compact saved/fallback/changed/error states, local Malaysian dates and expandable supporting evidence. The RM briefing retains deterministic content; optional AI inclusion defaults off and requires exact-draft review acknowledgement. Preserve Architect typography/navigation and narrow layouts. Monitoring visual refinement remains deferred. See docs/MILESTONE_6.md for implemented controls and acceptance limits.

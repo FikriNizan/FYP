@@ -110,14 +110,16 @@ Milestone-wide sign-off remains pending representative-user inspection of the co
 
 ## Milestone 6 — Grounded GenAI
 
-* [ ] Define a structured evidence payload with allowed fields and traceable numeric values.
-* [ ] Keep model probabilities, money, dates and SHAP math deterministic; the LLM writes only bounded narrative/questions.
-* [ ] Use non-causal language and require evidence-linked claims.
-* [ ] Validate output schema, unsupported claims and numeric consistency; provide a deterministic fallback.
-* [ ] Require human review before using the briefing with a customer.
-* [ ] Evaluate faithfulness and usefulness with examples; do not claim a mathematical guarantee of hallucination-free narrative.
+* [x] Define a structured evidence payload with allowed fields and traceable numeric values.
+* [x] Keep model probabilities, money, dates and SHAP math deterministic; the LLM writes only bounded narrative/questions.
+* [x] Use non-causal language and require evidence-linked claims.
+* [x] Validate output schema, unsupported claims and numeric consistency; provide a deterministic fallback.
+* [x] Require human review before using the briefing with a customer.
+* [ ] Complete live Gemini and owner evaluation of faithfulness/usefulness; offline synthetic/mock evaluation is implemented; do not claim a mathematical guarantee of hallucination-free narrative.
 
 Acceptance: generated questions help the RM investigate evidence without inventing customer motives or financial facts.
+
+Implementation, finite evaluation and remaining acceptance are recorded in [MILESTONE_6.md](MILESTONE_6.md). External generation defaults off. Monitoring visual redesign remains deferred. No owner sign-off or improved-comprehension claim is recorded.
 
 ## Milestone 7 — OPR demonstration, evaluation and release
 

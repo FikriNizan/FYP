@@ -17,6 +17,7 @@ from copy_database import copy_database, inspect
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKING = ROOT / 'backend' / 'instance' / 'churn.sqlite'
+M6_TEST = ROOT / 'artifacts' / 'm6-review.sqlite'
 TEST = ROOT / 'artifacts' / 'm5-review-20261116-030542.sqlite'
 BACKEND_URL = 'http://127.0.0.1:5000'
 FRONTEND_URL = 'http://127.0.0.1:5173'
@@ -35,16 +36,18 @@ def resolved_existing(path):
 
 
 def selected_database(mode):
-    if mode not in ('working','test'):
+    if mode not in ('working','test','m6-test'):
         raise ValueError('Choose Working or Test explicitly')
-    target, version, months, counts = resolved_existing(WORKING if mode == 'working' else TEST)
+    target, version, months, counts = resolved_existing(WORKING if mode == 'working' else M6_TEST if mode == 'm6-test' else TEST)
     if mode == 'working' and target != WORKING.absolute():
         raise ValueError('Working path resolves outside the confirmed Working database')
     if mode == 'test' and (target != TEST.absolute() or os.path.samefile(target,WORKING)):
         raise ValueError('Test path is not the confirmed reusable sandbox')
     if mode == 'working' and version < 4:
         raise ValueError('Working schema is old. Exercise the migration on a copy first.')
-    if version > 4:
+    if mode == 'm6-test' and (target != M6_TEST.absolute() or os.path.samefile(target,WORKING) or os.path.samefile(target,TEST)):
+        raise ValueError('Milestone 6 Test must be its own confirmed file')
+    if version > 5:
         raise ValueError('Database schema is newer than this app')
     return target, version, months, counts
 
@@ -105,10 +108,17 @@ def stop_owned(children):
                 child.wait(timeout=5)
 
 
-def launch(mode):
+def launch(mode, backend_port=5000, frontend_port=5173):
+    global BACKEND_URL, FRONTEND_URL
+    if backend_port == frontend_port or not all(1024 <= p <= 65535 for p in (backend_port,frontend_port)):
+        raise ValueError('Choose distinct unprivileged backend/frontend ports')
+    BACKEND_URL=f'http://127.0.0.1:{backend_port}'
+    FRONTEND_URL=f'http://127.0.0.1:{frontend_port}'
+    if mode != 'm6-test':
+        raise ValueError('Use milestone-5 code for Working/Milestone 5 Test; milestone-6 requires m6-test')
     database, prior_version, months, counts = selected_database(mode)
-    free_port(5000)
-    free_port(5173)
+    free_port(backend_port)
+    free_port(frontend_port)
     env=child_environment(mode,database)
     python=ROOT/'.venv'/'Scripts'/'python.exe'
     node=Path(os.environ.get('TXB_NODE_EXE') or r'C:\Program Files\nodejs\node.exe')
@@ -120,15 +130,17 @@ def launch(mode):
     expected=expected_identity(mode,database)
     try:
         backend=subprocess.Popen([str(python),'-m','flask','--app','app','run','--host','127.0.0.1',
-                                  '--port','5000','--no-reload'],cwd=ROOT/'backend',env=env)
+                                  '--port',str(backend_port),'--no-reload'],cwd=ROOT/'backend',env=env)
         children.append(backend)
         backend_context=await_context(BACKEND_URL,backend,expected)
-        frontend=subprocess.Popen([str(node),str(vite),'--host','127.0.0.1','--port','5173','--strictPort'],
+        frontend=subprocess.Popen([str(node),str(vite),'--host','127.0.0.1','--port',str(frontend_port),'--strictPort'],
                                   cwd=ROOT/'frontend',env=env)
         children.append(frontend)
         frontend_context=await_context(FRONTEND_URL,frontend,expected)
         if backend_context != frontend_context:
             raise RuntimeError('Frontend proxy and backend runtime contexts differ')
+        if mode == 'm6-test' and backend_context['schema_version'] != 5:
+            raise RuntimeError('Milestone 6 Test requires schema version 5')
         new_backups=sorted(set(database.parent.glob(database.name+'-pre-migration-*'))-before_backups)
         print('\nLOCAL SESSION',flush=True)
         print('Mode:',mode.title(),'| Database:',database,flush=True)
@@ -174,6 +186,9 @@ def main():
     sub=parser.add_subparsers(dest='command',required=True)
     sub.add_parser('working')
     sub.add_parser('test')
+    m6=sub.add_parser('m6-test')
+    m6.add_argument('--backend-port',type=int,default=5000)
+    m6.add_argument('--frontend-port',type=int,default=5173)
     fresh=sub.add_parser('new-test')
     fresh.add_argument('--source',required=True)
     fresh.add_argument('--destination',required=True)
@@ -183,7 +198,7 @@ def main():
         if args.command=='new-test':
             print(json.dumps(new_test(args.source,args.destination,args.purpose),indent=2))
         else:
-            launch(args.command)
+            launch(args.command, getattr(args,'backend_port',5000),getattr(args,'frontend_port',5173))
     except (OSError,ValueError,RuntimeError,sqlite3.Error) as error:
         parser.exit(1,str(error)+'\n')
 

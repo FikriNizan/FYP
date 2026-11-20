@@ -27,6 +27,8 @@ export default function Briefing() {
   const mounted=useRef(false), controller=useRef(null);
   const [state,setState]=useState(null);
   const [operation,setOperation]=useState(null);
+  const [reviewedAi,setReviewedAi]=useState({}), [includeAi,setIncludeAi]=useState(false);
+  const [reviewEpoch,setReviewEpoch]=useState(0);
   const [attempt,setAttempt]=useState(0);
   const validSelection=ids.length>0 && ids.length<=10;
   const current=state?.key===selectionKey ? state : null;
@@ -36,7 +38,7 @@ export default function Briefing() {
   useEffect(()=>{
     let active=true;
     mounted.current=true;
-    setState(null);setOperation(null);
+    setState(null);setOperation(null);setReviewedAi({});setIncludeAi(false);
     if (validSelection) api.briefing(ids).then(payload=>{
       if(active) setState({key:selectionKey,payload});
     }).catch(error=>{
@@ -54,6 +56,8 @@ export default function Briefing() {
     setState(old=>({...old,error:null}));
     const stillCurrent=()=>mounted.current && liveKey.current===key && !abort.signal.aborted;
     try {
+      const aiSelections=includeAi ? ids.map(id=>reviewedAi[id]).filter(Boolean) : [];
+      if(includeAi && !aiSelections.length) throw new Error('Review an AI draft before including it.');
       if(kind==='print') {
         const fresh=await api.briefing(ids);
         if(!stillCurrent()) return;
@@ -61,9 +65,22 @@ export default function Briefing() {
           setState({key,payload:fresh,needsReview:true,error:'Saved evidence changed. Review the refreshed briefing before printing or downloading.'});
           return;
         }
+        if(aiSelections.length) {
+          const checked=await api.validateAiExport(ids,payload.snapshots,aiSelections);
+          if(!stillCurrent()) return;
+          setState(old=>({...old,payload:checked}));
+          await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+          if(!stillCurrent()) return;
+        } else {
+          setState(old=>({...old,payload:{...old.payload,items:old.payload.items.map(({ai_discussion,...item})=>item)}}));
+          await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+        }
+        if(!stillCurrent()) return;
         window.print();
+        // Reviewed AI inclusion is staged only for this checked print operation.
+        setState(old=>old?.payload ? {...old,payload:{...old.payload,items:old.payload.items.map(({ai_discussion,...item})=>item)}} : old);
       } else {
-        const {blob,filename}=await api.downloadBriefing(ids,payload.snapshots,abort.signal);
+        const {blob,filename}=await (aiSelections.length ? api.downloadBriefing(ids,payload.snapshots,abort.signal,aiSelections) : api.downloadBriefing(ids,payload.snapshots,abort.signal));
         if(!stillCurrent()) return;
         const url=URL.createObjectURL(blob);
         const link=document.createElement('a');
@@ -73,6 +90,8 @@ export default function Briefing() {
       }
     } catch(error) {
       if(!stillCurrent()) return;
+      setReviewedAi({});setIncludeAi(false);
+      setReviewEpoch(n=>n+1);
       if(error.code==='briefing_changed' && error.briefing) setState({key,payload:error.briefing,needsReview:true,error:error.message});
       else if([404,422].includes(error.status) && error.code!=='pdf_font_unsupported') setState({key,error:error.message});
       else setState(old=>({...old,error:error.message}));
@@ -84,6 +103,7 @@ export default function Briefing() {
 
   return <>
     <div className="heading no-print"><div><h1>RM Briefing</h1><p className="muted">Structured briefing preview from explicitly selected saved cases. Review before sharing.</p></div><div className="heading-actions"><Link className="button" to={reviewedPath}>Choose cases</Link><button disabled={!ready} onClick={()=>exportBriefing('print')}>Print briefing</button><button className="primary" disabled={!ready} onClick={()=>exportBriefing('pdf')}>{busy && operation.kind==='pdf' ? 'Downloading PDF…' : 'Download PDF'}</button></div></div>
+    <label className="no-print field-label"><input type="checkbox" checked={includeAi} onChange={e=>setIncludeAi(e.target.checked)} /> Include reviewed AI discussion draft</label>
     {current?.error && <div className="no-print"><ErrorNotice message={current.error} />{!current.needsReview && <button onClick={()=>setAttempt(n=>n+1)}>Reload selected evidence</button>}</div>}
     {current?.needsReview && <p className="no-print briefing-refresh"><strong>Review the updated evidence below.</strong> <button onClick={()=>setState(old=>({...old,needsReview:false,error:null}))}>I have reviewed the updated briefing</button></p>}
     {busy && <p className="no-print" role="status">{operation.kind==='pdf' ? 'Preparing the PDF from freshly checked saved evidence…' : 'Checking saved evidence before printing…'}</p>}
@@ -98,8 +118,9 @@ export default function Briefing() {
       <EvidenceSection value={item.decision} className="briefing-section" longRows />
       {item.followups && <EvidenceSection value={item.followups} className="briefing-followup-block" longRows />}
       <section className="briefing-section"><h3>Questions for the customer</h3>{item.questions.length ? <ol className="briefing-questions">{item.questions.map((q,i)=><li key={i}><p>{q.text}</p><small className="muted">Evidence: {q.source} · {q.month}</small></li>)}</ol> : <p>No evidence-linked question is available from the supplied measures. Review the case before preparing questions.</p>}</section>
-      <div className="no-print"><AIBriefingDraft customer={item.ai_context} /></div>
+      <div className="no-print"><AIBriefingDraft key={item.case_id+JSON.stringify(item.snapshot)+reviewEpoch} recordId={item.case_id} onReview={value=>setReviewedAi(old=>({...old,[item.case_id]:value}))} /></div>
       <details className="briefing-sources"><summary>Evidence sources and identifiers</summary><p className="source-id">{item.traceability.map(([label,text])=><React.Fragment key={label}>{label}: {text}<br /></React.Fragment>)}</p></details>
+      {item.ai_discussion && <section className="print-only briefing-section"><h3>AI draft · review before use</h3><p>Saved Gemini draft · {new Date(item.ai_discussion.generated_at).toLocaleString('en-MY',{timeZone:'Asia/Kuala_Lumpur'})}</p>{[...item.ai_discussion.content.blocks,...item.ai_discussion.content.questions].map((b,i)=><p key={i}>{b.text}</p>)}</section>}
       <section className="print-only briefing-section"><h3>Evidence sources and identifiers</h3><dl className="briefing-followups source-id">{item.traceability.map(([label,text])=><React.Fragment key={label}><dt>{label}</dt><dd>{text}</dd></React.Fragment>)}</dl></section>
     </article>)}
   </>;

@@ -157,6 +157,13 @@ def render(payload):
             qrow.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP'), ('LEFTPADDING', (0, 0), (-1, -1), 0),
                                       ('TOPPADDING', (0, 0), (-1, -1), 2), ('BOTTOMPADDING', (0, 0), (-1, -1), 2)]))
             story.append(qrow)
+        if item.get('ai_discussion'):
+            draft=item['ai_discussion']
+            content=draft['content']
+            story += [paragraph('AI draft · review before use', heading), rule(),
+                      paragraph('Saved Gemini draft · '+draft['generated_at'],note)]
+            for entry in content['blocks'] + content['questions']:
+                story.append(paragraph(entry['text']))
         story += [paragraph('Evidence sources and identifiers', heading), rule()]
         story += rows_table(item['traceability'], WIDTH, id_style=True)
 

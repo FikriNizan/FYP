@@ -26,10 +26,14 @@ def initialise():
     existing = db.execute("SELECT 1 FROM sqlite_master WHERE name='predictions'").fetchone()
     versioned = db.execute("SELECT 1 FROM sqlite_master WHERE name='schema_migrations'").fetchone()
     version = db.execute("SELECT COALESCE(MAX(version),0) FROM schema_migrations").fetchone()[0] if versioned else 0
-    if version > 4:
+    if version > 5:
         raise RuntimeError("Database schema is newer than this application")
-    if version == 4:
+    if version == 5:
         return
+    root = Path(__file__).resolve().parents[2]
+    protected = [root / 'backend/instance/churn.sqlite', root / 'artifacts/m5-review-20261116-030542.sqlite']
+    if existing and any(p.exists() and path.samefile(p) for p in protected):
+        raise RuntimeError('Milestone 6 requires an isolated Test copy; original Working/Milestone 5 migration refused')
     # SQLite backup includes committed WAL pages. Never overwrite an earlier backup.
     if existing:
         stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
@@ -44,7 +48,7 @@ def initialise():
         db.execute("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)")
         # A second process may have upgraded while this connection waited for the lock.
         version = db.execute("SELECT COALESCE(MAX(version),0) FROM schema_migrations").fetchone()[0]
-        if version == 4:
+        if version == 5:
             db.commit()
             return
         if version < 1:
@@ -62,10 +66,15 @@ def initialise():
                 if statement.strip():
                     db.execute(statement)
             db.execute("INSERT INTO schema_migrations VALUES (3,?)", (datetime.now(timezone.utc).isoformat(),))
-        for statement in (directory / 'migrations' / '004_observed_outcomes.sql').read_text().split(';'):
+        if version < 4:
+            for statement in (directory / 'migrations' / '004_observed_outcomes.sql').read_text().split(';'):
+                if statement.strip():
+                    db.execute(statement)
+            db.execute("INSERT INTO schema_migrations VALUES (4,?)", (datetime.now(timezone.utc).isoformat(),))
+        for statement in (directory / 'migrations' / '005_ai_drafts.sql').read_text().split(';'):
             if statement.strip():
                 db.execute(statement)
-        db.execute("INSERT INTO schema_migrations VALUES (4,?)", (datetime.now(timezone.utc).isoformat(),))
+        db.execute("INSERT INTO schema_migrations VALUES (5,?)", (datetime.now(timezone.utc).isoformat(),))
         db.commit()
     except Exception:
         db.rollback()

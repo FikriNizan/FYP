@@ -122,3 +122,18 @@ describe('React full-stack foundation', () => {
     expect(preferredBatches([sample,old,batch]).map(b=>b.batch_id)).toEqual(['enriched','old','sample']);
   });
 });
+
+
+describe('Cutoff-safe Customer Review workflow',()=>{
+  it.each([null,{target_churn:true,outcome_month:'2024-05-31'}])('omits retrospective outcome cards with outcome %s while preserving review and evidence',async(outcome)=>{
+    customer.observed_outcome=outcome;
+    start('/customer/944?batch_id=enriched');
+    await screen.findByRole('heading',{name:'Acceptance test company'});
+    expect(screen.queryByRole('heading',{name:/Observed outcome/})).toBeNull();
+    expect(screen.getByRole('heading',{name:'Observed activity'})).toBeTruthy();
+    expect(screen.getByLabelText('Decision')).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'What stands out'})).toBeTruthy();
+    expect(screen.getByRole('tab',{name:'Operations'})).toBeTruthy();
+    expect(screen.getByRole('tab',{name:'Finance'})).toBeTruthy();
+  });
+});

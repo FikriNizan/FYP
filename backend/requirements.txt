@@ -3,3 +3,4 @@ reportlab==5.1.0
 # Tested PDF runtime dependencies; no external rendering service.
 pillow==13.0.0
 charset-normalizer==3.5.2
+google-genai==3.6.1

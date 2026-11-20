@@ -182,7 +182,7 @@ def document(case, sources):
                     evidence_hash=hashlib.sha256(repo.encode(dict(case=case, sources=sources)).encode()).hexdigest())
     return dict(case_id=case['case_id'], snapshot=snapshot, customer_id=original['cus_id'],
                 name=latest.get('customer_name') or original.get('customer_name') or 'Customer '+original['cus_id'],
-                # Only these two fields are used by the unchanged, explicitly unavailable AI preview.
+                # Retained legacy preview fields; AI routes independently resolve server evidence.
                 ai_context={k:latest[k] for k in ['cutoff_month', 'calibrated_risk']},
                 sample_note='Single-case sample evidence is included. This briefing does not represent a complete portfolio.' if sample else None,
                 original=section('At the time of review', ['Rationale: '+(opened.get('reason') or 'No original rationale supplied.')], [

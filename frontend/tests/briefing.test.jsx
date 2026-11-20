@@ -6,7 +6,7 @@ import Briefing from '../src/pages/Briefing.jsx';
 import { api, ApiError } from '../src/api.js';
 import fixture from './fixtures/briefing.json';
 
-vi.mock('../src/api.js',async original=>({...await original(),api:{briefing:vi.fn(),downloadBriefing:vi.fn()}}));
+vi.mock('../src/api.js',async original=>({...await original(),api:{briefing:vi.fn(),downloadBriefing:vi.fn(),aiDraft:vi.fn(),validateAiExport:vi.fn()}}));
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const payload=(name='Selected company',id='case-a')=>{
   const data=structuredClone(fixture);
@@ -25,6 +25,7 @@ let click;
 beforeEach(()=>{
   vi.clearAllMocks();
   api.briefing.mockResolvedValue(payload());
+  api.aiDraft.mockResolvedValue({state:'not_generated',draft:null,evidence_hash:'ai-hash',evidence:[],fallback:{blocks:[],questions:[]}});
   api.downloadBriefing.mockResolvedValue({blob:new Blob(['%PDF-1.7\nexample']),filename:'txb-rm-briefing.pdf'});
   vi.stubGlobal('URL',Object.assign(URL,{createObjectURL:vi.fn(()=>'blob:test-pdf'),revokeObjectURL:vi.fn()}));
   click=vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(()=>{});
@@ -147,4 +148,28 @@ describe('Briefing selection and direct PDF',()=>{
     expect(screen.getByRole('button',{name:'Download PDF'}).disabled).toBe(true);
     expect(api.briefing).not.toHaveBeenCalled();
   });
+});
+
+
+it('includes only an explicitly reviewed exact AI draft in optional PDF requests',async()=>{
+  const content={blocks:[{text:'Saved Gemini discussion evidence.'}],questions:[],checks:[]};
+  api.aiDraft.mockResolvedValue({state:'saved',evidence_hash:'ai-hash',evidence:[],draft:{draft_id:'ai-id',generated_at:'2026-11-19T10:00:00Z',content}});
+  start();await screen.findByText('Saved AI draft');
+  expect(screen.getByLabelText('Include reviewed AI discussion draft').checked).toBe(false);
+  fireEvent.click(screen.getByLabelText('I have reviewed this exact AI draft and its supporting evidence'));
+  fireEvent.click(screen.getByLabelText('Include reviewed AI discussion draft'));
+  fireEvent.click(screen.getByRole('button',{name:'Download PDF'}));
+  await waitFor(()=>expect(api.downloadBriefing).toHaveBeenCalled());
+  expect(api.downloadBriefing.mock.calls[0][3]).toEqual([{case_id:'case-a',draft_id:'ai-id',evidence_hash:'ai-hash',acknowledged:true}]);
+});
+
+it('keeps deterministic exports available when AI inclusion has not been reviewed',async()=>{
+  start();await screen.findByRole('heading',{name:'Selected company'});
+  fireEvent.click(screen.getByLabelText('Include reviewed AI discussion draft'));
+  fireEvent.click(screen.getByRole('button',{name:'Download PDF'}));
+  expect(await screen.findByText('Review an AI draft before including it.')).toBeTruthy();
+  expect(api.downloadBriefing).not.toHaveBeenCalled();
+  expect(screen.getByLabelText('Include reviewed AI discussion draft').checked).toBe(false);
+  fireEvent.click(screen.getByRole('button',{name:'Download PDF'}));
+  await waitFor(()=>expect(api.downloadBriefing).toHaveBeenCalledOnce());
 });

@@ -48,10 +48,11 @@ def runtime_context():
     database = Path(current_app.config['DATABASE']).resolve()
     root = Path(__file__).resolve().parents[2]
     expected = {'working': root / 'backend' / 'instance' / 'churn.sqlite',
-                'test': root / 'artifacts' / 'm5-review-20261116-030542.sqlite'}
+                'test': root / 'artifacts' / 'm5-review-20261116-030542.sqlite',
+                'm6-test': root / 'artifacts' / 'm6-review.sqlite'}
     declared = current_app.config.get('TXB_LOCAL_MODE')
     mode = declared if declared in expected and database == expected[declared].absolute() else 'unknown'
-    if mode == 'test' and expected['working'].exists() and os.path.samefile(database,expected['working']):
+    if mode in ('test','m6-test') and expected['working'].exists() and os.path.samefile(database,expected['working']):
         mode = 'unknown'
     db = get_db()
     version = db.execute('SELECT COALESCE(MAX(version),0) FROM schema_migrations').fetchone()[0]
@@ -218,11 +219,14 @@ def briefing_preview():
 def briefing_download():
     from .briefing_pdf import render, UnsupportedPdfText
     data = body()
-    require(isinstance(data, dict) and set(data) == {'case_ids', 'snapshots'}, 'Send case_ids and preview snapshots only.')
+    require(isinstance(data, dict) and {'case_ids','snapshots'} <= set(data) <= {'case_ids','snapshots','ai_drafts'}, 'Send selected IDs, snapshots and optional reviewed AI draft references only.')
     payload = briefings.load(data['case_ids'])
     require(isinstance(data['snapshots'], list), 'Preview snapshots are required before downloading.')
     if data['snapshots'] != payload['snapshots']:
         return jsonify(error=dict(code='briefing_changed', message='Saved evidence changed. Review the refreshed briefing before downloading.'), briefing=payload), 409
+    if 'ai_drafts' in data:
+        from .ai_drafts import export_drafts
+        export_drafts(payload,data['ai_drafts'])
     # Only server-resolved, freshly validated facts are passed to the renderer.
     try:
         pdf = render(payload)
@@ -233,6 +237,32 @@ def briefing_download():
     import re
     name = re.sub(r'[^A-Za-z0-9_-]', '_', name)[:100]+'.pdf'
     return send_file(BytesIO(pdf), mimetype='application/pdf', as_attachment=True, download_name=name)
+
+
+@api.route('/predictions/<prediction_id>/ai-summary', methods=['GET','POST'])
+def ai_summary(prediction_id):
+    from . import ai_drafts
+    return jsonify(ai_drafts.generate('summary',prediction_id,body()) if request.method=='POST'
+                   else ai_drafts.load('summary',prediction_id)[0])
+
+
+@api.route('/cases/<case_id>/ai-discussion', methods=['GET','POST'])
+def ai_discussion(case_id):
+    from . import ai_drafts
+    return jsonify(ai_drafts.generate('discussion',case_id,body()) if request.method=='POST'
+                   else ai_drafts.load('discussion',case_id)[0])
+
+
+@api.post('/briefings/validate-ai')
+def validate_ai_export():
+    from .ai_drafts import export_drafts
+    data=body()
+    require(isinstance(data,dict) and set(data)=={'case_ids','snapshots','ai_drafts'}, 'Send selected IDs, snapshots and reviewed draft references')
+    payload=briefings.load(data['case_ids'])
+    if data['snapshots']!=payload['snapshots']:
+        from .validation import ConflictError
+        raise ConflictError('Briefing evidence changed. Reload before printing.')
+    return jsonify(export_drafts(payload,data['ai_drafts']))
 
 
 @api.put('/cases/<case_id>')

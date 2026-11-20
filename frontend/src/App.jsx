@@ -125,7 +125,7 @@ export default function App() {
       </select></div>}
     </header>
     {import.meta.env.DEV && <div className="local-db-indicator no-print" role="status" aria-label="Local database mode">
-      {runtime ? `${runtime.mode==='unknown'?'Unknown database':runtime.mode==='working'?'Working database':'Test database'} · ${runtime.database_filename}` : 'Checking local database…'}
+      {runtime ? `${runtime.mode==='unknown'?'Unknown database':runtime.mode==='working'?'Working database':runtime.mode==='m6-test'?'Milestone 6 Test database':'Test database'} · ${runtime.database_filename}` : 'Checking local database…'}
     </div>}
     <main id="workspace" tabIndex={-1}>{content}</main>
     <div id="notification" role="status" aria-live="polite">{notice}</div>

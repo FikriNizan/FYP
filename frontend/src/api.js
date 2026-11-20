@@ -30,6 +30,8 @@ export async function request(path, { params, method = 'GET', body, signal } = {
 }
 
 export const api = {
+  aiDraft: (purpose,id,hash,signal) => request(purpose==='summary' ? '/api/predictions/'+encodeURIComponent(id)+'/ai-summary' : '/api/cases/'+encodeURIComponent(id)+'/ai-discussion', {signal,...(hash ? {method:'POST',body:{expected_evidence_hash:hash}} : {})}),
+  validateAiExport: (ids,snapshots,ai_drafts) => request('/api/briefings/validate-ai',{method:'POST',body:{case_ids:ids,snapshots,ai_drafts}}),
   runtimeContext: () => request('/api/runtime-context'),
   uploadAssessment: async (features, manifest) => {
     const body = new FormData(); body.append('features',features); body.append('manifest',manifest);
@@ -43,11 +45,11 @@ export const api = {
     return result;
   },
   briefing: ids => request('/api/briefings?' + new URLSearchParams(ids.map(id=>['case_id',id]))),
-  downloadBriefing: async (ids, snapshots, signal) => {
+  downloadBriefing: async (ids, snapshots, signal, aiDrafts) => {
     const response=await fetch('/api/briefings/pdf', {
       method:'POST', credentials:'same-origin', signal,
       headers:{Accept:'application/pdf','Content-Type':'application/json'},
-      body:JSON.stringify({case_ids:ids,snapshots}),
+      body:JSON.stringify({case_ids:ids,snapshots,...(aiDrafts?.length ? {ai_drafts:aiDrafts} : {})}),
     });
     if (!response.ok) {
       let result;

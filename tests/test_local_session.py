@@ -28,7 +28,7 @@ class LocalSessionTests(unittest.TestCase):
             db.execute('CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY,applied_at TEXT)')
             db.execute("INSERT INTO schema_migrations VALUES(4,'now')")
             db.commit()
-        self.patchers=[patch.object(local,'WORKING',self.working),patch.object(local,'TEST',self.test)]
+        self.patchers=[patch.object(local,'WORKING',self.working),patch.object(local,'TEST',self.test),patch.object(local,'M6_TEST',self.root/'artifacts'/'m6.sqlite')]
         for item in self.patchers: item.start();self.addCleanup(item.stop)
 
     def test_explicit_selection_missing_path_and_alias_guard(self):
@@ -84,6 +84,7 @@ class LocalSessionTests(unittest.TestCase):
 
     def test_launch_routes_both_children_to_one_test_database_and_stops_them(self):
         local.copy_database(self.working,self.test)
+        local.copy_database(self.test,local.M6_TEST)
         class Child:
             next_id=100
             def __init__(self,cmd,**kwargs):
@@ -95,16 +96,16 @@ class LocalSessionTests(unittest.TestCase):
         children=[]
         def spawn(cmd,**kwargs):
             child=Child(cmd,**kwargs);children.append(child);return child
-        expected=local.expected_identity('test',self.test.resolve())
-        context={**expected,'schema_version':4,'assessment_months':[],'predictions':0}
+        expected=local.expected_identity('m6-test',local.M6_TEST.resolve())
+        context={**expected,'schema_version':5,'assessment_months':[],'predictions':0}
         with patch.object(local,'free_port'),patch.object(local.subprocess,'Popen',side_effect=spawn),\
              patch.object(local,'await_context',return_value=context),\
              patch.object(local.time,'sleep',side_effect=KeyboardInterrupt):
             with patch.object(local,'ROOT',ROOT):
                 # Paths to the project's existing Python/Node/Vite are checked before spawn.
-                local.launch('test')
+                local.launch('m6-test')
         self.assertEqual(len(children),2)
-        self.assertEqual(children[0].kwargs['env']['CHURN_DB_PATH'],str(self.test.resolve()))
+        self.assertEqual(children[0].kwargs['env']['CHURN_DB_PATH'],str(local.M6_TEST.resolve()))
         self.assertEqual(children[1].kwargs['env']['VITE_API_TARGET'],local.BACKEND_URL)
         self.assertIn('5000',children[0].cmd)
         self.assertIn('5173',children[1].cmd)

@@ -1,0 +1,10 @@
+[
+ {"id":"high-operational-friction","raw_probability":0.88,"features":{"login_failure_rate_3m":0.5,"combined_flow_mean_3m_myr":0.87,"combined_flow_mean_12m_myr":100}},
+ {"id":"low-rising-activity","raw_probability":0.1,"features":{"combined_flow_mean_3m_myr":120,"combined_flow_mean_12m_myr":100}},
+ {"id":"deposit-exposure","raw_probability":0.6,"features":{"fd_balance_myr":250000,"fd_maturing_30d_count":2}},
+ {"id":"waivers-exceed-fees","raw_probability":0.4,"features":{"estimated_fee_mean_3m_myr":50,"estimated_waiver_mean_3m_myr":80}},
+ {"id":"partial-data-zero","raw_probability":0.2,"features":{"fd_balance_myr":0,"estimated_fee_mean_3m_myr":null}},
+ {"id":"falling-activity","raw_probability":0.7,"features":{"combined_flow_mean_3m_myr":30,"combined_flow_mean_12m_myr":100}},
+ {"id":"continuing-case","raw_probability":0.15,"features":{"combined_flow_mean_3m_myr":110,"combined_flow_mean_12m_myr":100},"case":true},
+ {"id":"revised-committee-decision","raw_probability":0.8,"features":{"fd_maturing_30d_count":1},"case":true,"revised":true}
+]

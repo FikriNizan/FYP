@@ -276,3 +276,12 @@ details p { font-size:13px; line-height:1.7; }
   main { padding:0; }.briefing-sheet { width:100%; border:0; padding:0; box-shadow:none; max-width:100%; margin:0; break-after:page; }.briefing-sheet:last-child { break-after:auto; }.briefing-context { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
   .briefing-sheet section,.briefing-sheet li { break-inside:avoid; }.briefing-sheet p,.briefing-sheet li,.briefing-sheet dd { font-size:11px; }.connection-state { border:0; padding:0; }.briefing-sources { display:none; }.print-only { display:block; }
 }
+
+/* Bounded narrative evidence stays readable in narrow review columns. */
+.ai-draft { overflow-wrap: anywhere; }
+.ai-draft details { margin-top: 12px; }
+.ai-draft dd { margin: 0 0 12px; }
+.ai-draft dt { font-weight: 600; }
+.ai-draft .field-label { margin-top: 12px; }
+.ai-draft dl { display: block; }
+.ai-draft dd { text-align: left; }

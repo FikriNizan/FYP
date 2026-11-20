@@ -2,6 +2,24 @@
 
 # Backend API contract — v0.3.0
 
+## Milestone 6 decision-support drafts
+
+Output contract `m6-narrative-2` uses shared purpose limits for Gemini instructions, JSON Schema and backend validation: Summary `questions` must be an array of **0–3** objects; RM discussion `questions` must be an array of **0–5**. JSON Schema explicitly sends `minItems`/`maxItems`. Zero is valid when evidence is insufficient; there is no padding, coercion or truncation. Block and hard word limits retain their prior values. Prompt/schema version changes invalidate cache reuse without deleting previous drafts/business records. Development-only question-count diagnostics disclose only purpose, field type, count and permitted bounds. CLI opt-in can retain a rejected response/evidence in memory for offline revalidation; raw content is never printed or persisted by that mechanism.
+
+Local development sessions log sanitised Gemini diagnostics only in the server terminal; no diagnostic object, exception message, stack trace or provider error body is returned to the browser. Safe fallback codes now distinguish `provider_unavailable` (including HTTP 503), `provider_authentication_failed`, `provider_access_denied`, `provider_model_unavailable`, `provider_rate_limited`, `provider_request_rejected` and `provider_timeout`; unclassified errors retain `provider_request_failed`. Fallback responses include total `latency_seconds` and remain deterministic, with no automatic retry or business-record write.
+
+Development diagnostics additionally normalise known structured status/type/code formats and error envelopes; include an allowlisted reason, fixed or vocabulary-redacted description, and an approved schema/config field path when available. Unknown tokens, identifiers, URLs and arbitrary field paths are withheld. These fields remain server/CLI-only. The smoke CLI's optional `--isolate` mode sends one synthetic minimal request, then the application request only after minimal success, with attempts=1 on each. It is not an API endpoint or automatic retry mechanism.
+
+UI generation and minimal smoke now check credential transport formatting locally. An existing key containing ASCII control characters or surrounding whitespace produces `invalid_key_format` and deterministic fallback before any SDK/network call. The key is never silently trimmed, repaired or replaced. This check establishes formatting only, not provider validity or quota. No browser response contains the key or the detailed request-inspection diagnostics.
+
+`GET /api/predictions/<prediction_id>/ai-summary` and `GET /api/cases/<case_id>/ai-discussion` return `state`, `evidence_hash`, typed supporting `evidence`, nullable `draft`, deterministic `fallback`, source/provider/model metadata and limitations. GET never generates or writes. States are `not_generated`, `saved`, `evidence_changed`; POST may additionally return `fallback` with a safe `failure_code`. Client loading/failure states retain underlying evidence. Invalid explanation evidence returns 422; it is never sent to a provider. Invalid records return 404; non-prioritised RM cases return 422.
+
+POST to either route requires exactly `{"expected_evidence_hash":"<hash from GET>"}`. It resolves evidence server-side and requests one bounded Gemini generation. No facts, notes, scores, prompts or model overrides are accepted from the browser. Stale evidence/concurrent reservations return 409. Missing configuration/provider/output validation failures return honest deterministic fallback; they do not write a successful draft. Previous valid versions remain stored. Successful explicit regeneration creates a fresh immutable `draft_id` with `version=1`, `source_type=gemini`, generation time, evidence hash, provider/model, validation version, content and checks. No prediction/review/case/outcome writes result.
+
+`POST /api/briefings/pdf` keeps `{case_ids,snapshots}` backwards compatible. Optional `ai_drafts` is a list of `{case_id,draft_id,evidence_hash,acknowledged:true}` references, without prose. Cases must belong to the selection; matching current cached content and explicit acknowledgement are required. `POST /api/briefings/validate-ai` requires `{case_ids,snapshots,ai_drafts}` and returns the same fresh server-resolved content for checked browser print. Stale identities/drafts return 409, malformed/unreviewed/arbitrary selections 422. Both retain selection/snapshot checks and never invoke Gemini. Acknowledgement is a user assertion, not authentication.
+
+New routes use existing strict duplicate-free JSON, 64 KiB request limits, same-origin write protection and error envelopes. Config defaults to disabled; see [Milestone 6](../docs/MILESTONE_6.md) for exact SDK, bounds, evidence exclusions, cache migration, provider terms and known semantic limits. Local runtime context adds mode `m6-test` for `artifacts/m6-review.sqlite`, schema 5.
+
 Base URL: `http://127.0.0.1:5000`. All `/api` responses are JSON. No endpoint fits or recalibrates a model.
 
 ## Evidence selection
@@ -12,23 +30,23 @@ Evidence endpoints accept `month=YYYY-MM` or a full month-end date, and optional
 
 ## Routes
 
-| Method | Route | Response |
-|---|---|---|
-| GET | `/` | Browser dashboard (HTML) |
-| GET | `/api` | API index and server version |
-| GET | `/api/health` | Server version and number of batches |
-| GET | `/api/metadata` | Decision/action enums, timezone and milestone capabilities |
-| GET | `/api/months` | `items`: imported batches |
-| POST | `/api/assessments` | Validate, freshly score, verify and atomically publish a prepared month; 201 new / 200 repeat |
-| GET | `/api/summary` | Population, flagged counts, review counts, finance totals and coverage |
-| GET | `/api/monitoring` | Outcome coverage, descriptive delivery groups, saved-risk metrics and earlier-batch input movement |
-| GET | `/api/customers` | Filtered/paginated `items`, batch, total, limit, offset |
-| GET | `/api/customers/<cus_id>` | Batch and detailed customer evidence |
-| GET | `/api/customers/<cus_id>/history` | Imported monthly snapshots through the selected month |
-| PUT | `/api/predictions/<prediction_id>/review` | Saved review with new version |
-| GET | `/api/predictions/<prediction_id>/review-history` | All saved review versions |
-| POST | `/api/predictions/<prediction_id>/actions` | New action note, HTTP 201 |
-| GET | `/api/predictions/<prediction_id>/actions` | Dated notes for that prediction |
+| Method | Route                                             | Response                                                                                           |
+| ------ | ------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| GET    | `/`                                               | Browser dashboard (HTML)                                                                           |
+| GET    | `/api`                                            | API index and server version                                                                       |
+| GET    | `/api/health`                                     | Server version and number of batches                                                               |
+| GET    | `/api/metadata`                                   | Decision/action enums, timezone and milestone capabilities                                         |
+| GET    | `/api/months`                                     | `items`: imported batches                                                                          |
+| POST   | `/api/assessments`                                | Validate, freshly score, verify and atomically publish a prepared month; 201 new / 200 repeat      |
+| GET    | `/api/summary`                                    | Population, flagged counts, review counts, finance totals and coverage                             |
+| GET    | `/api/monitoring`                                 | Outcome coverage, descriptive delivery groups, saved-risk metrics and earlier-batch input movement |
+| GET    | `/api/customers`                                  | Filtered/paginated `items`, batch, total, limit, offset                                            |
+| GET    | `/api/customers/<cus_id>`                         | Batch and detailed customer evidence                                                               |
+| GET    | `/api/customers/<cus_id>/history`                 | Imported monthly snapshots through the selected month                                              |
+| PUT    | `/api/predictions/<prediction_id>/review`         | Saved review with new version                                                                      |
+| GET    | `/api/predictions/<prediction_id>/review-history` | All saved review versions                                                                          |
+| POST   | `/api/predictions/<prediction_id>/actions`        | New action note, HTTP 201                                                                          |
+| GET    | `/api/predictions/<prediction_id>/actions`        | Dated notes for that prediction                                                                    |
 
 Customer listing filters: `q` matches ID/name, `flagged=true|false`, `decision=awaiting_review|prioritise|monitor|no_immediate_action` for that exact prediction's review, and `workflow=needs_review` for flagged first reviews or reassessments without an active case. `limit` defaults to 100 and permits 1–1,000; `offset` defaults to 0. Results are sorted by full-precision risk descending, then customer ID. `total` is the filtered count before pagination. Summary totals are for the complete selected batch, not the current filtered page.
 
@@ -44,7 +62,7 @@ Validation returns 422 `validation_failed`; excessive request size 413; cross-or
 
 Fresh batches use `prepared_month_scored` with hashes/versions, champion identity, original manifest/provenance, scorer checks and timings in `source`. The original received CSV is used unchanged for scoring in a temporary directory, not retained as a public file. Required package content has no names or flow-history rows. Trusted optional customer/flow sources may add separately versioned supporting evidence after publication; when unavailable, names remain null and monthly history empty. A source error never changes the published scores. Prior cases keep their original anchored prediction/review while the latest assessment can advance. No outcomes are inferred.
 
-`/api/metadata` adds `prepared_month_scoring=true` and `scoring_configured` (settings present, not a health check); the retained `live_model_scoring=false` refers to absence of live/streaming bank scoring. Optional configuration, trusted fingerprints, Windows setup and measured historical acceptance are in [MILESTONE_4.md](../docs/MILESTONE_4.md). Historical import CLI/read APIs remain supported without scorer configuration.
+`/api/metadata` adds `prepared_month_scoring=true` and `scoring_configured` (settings present, not a health check); the retained `live_model_scoring=false` refers to absence of live/streaming bank scoring. Optional configuration, trusted fingerprints, Windows setup and measured historical acceptance are in [MILESTONE\_4.md](../docs/MILESTONE_4.md). Historical import CLI/read APIs remain supported without scorer configuration.
 
 `review_alert` identifies the frozen model flag. Review decisions are human records and never substitute for that flag. Risk is a 0–1 probability; the frontend may format it as a percentage. It must use the saved flag, not recompute it from a rounded percentage.
 
@@ -56,12 +74,12 @@ The `explanation` is the exact saved v1 dashboard record: base, signed drivers, 
 
 `finance` fields:
 
-| API field | Original predictor |
-|---|---|
-| `estimated_monthly_fee_myr` | `estimated_fee_mean_3m_myr` |
+| API field                      | Original predictor             |
+| ------------------------------ | ------------------------------ |
+| `estimated_monthly_fee_myr`    | `estimated_fee_mean_3m_myr`    |
 | `estimated_monthly_waiver_myr` | `estimated_waiver_mean_3m_myr` |
-| `fd_balance_myr` | `fd_balance_myr` |
-| `non_fd_balance_myr` | `non_fd_balance_myr` |
+| `fd_balance_myr`               | `fd_balance_myr`               |
+| `non_fd_balance_myr`           | `non_fd_balance_myr`           |
 
 Fee/waiver estimates are historical mean monthly amounts over three months. They are not actual monthly invoices, net profitability or proven lost revenue. Balance amounts are exposures. Unknown values remain JSON null. Summary finance totals have `total`, `records_with_value` and `records` for both all customers and flagged customers; label partial coverage where counts differ.
 
@@ -85,7 +103,7 @@ Every performance object from `GET /api/monitoring` also adds `true_positives`, 
 
 ## Review body
 
-```json
+```JSON
 {
   "decision": "prioritise",
   "reason": "Investigate the recorded change in usage.",
@@ -98,13 +116,13 @@ Every performance object from `GET /api/monitoring` also adds `true_positives`, 
 }
 ```
 
-Required: decision, non-empty reason, non-empty reviewer and expected_version. Text notes are limited to 4,000 characters; owner/reviewer to 200. The next-action date is optional (`null` or YYYY-MM-DD). The initial review has version 0 and decision `awaiting_review`. Saved records increment the version. HTTP 409 means another save changed the review; fetch its latest version before deciding again. PUT replaces editable fields; send all notes you want retained.
+Required: decision, non-empty reason, non-empty reviewer and expected\_version. Text notes are limited to 4,000 characters; owner/reviewer to 200. The next-action date is optional (`null` or YYYY-MM-DD). The initial review has version 0 and decision `awaiting_review`. Saved records increment the version. HTTP 409 means another save changed the review; fetch its latest version before deciding again. PUT replaces editable fields; send all notes you want retained.
 
-`reviewer` is user-entered attribution in this local milestone, not an authenticated bank identity. Returned timestamps are UTC ISO 8601; format them in Asia/Kuala_Lumpur in the frontend. Calendar dates are preserved as entered.
+`reviewer` is user-entered attribution in this local milestone, not an authenticated bank identity. Returned timestamps are UTC ISO 8601; format them in Asia/Kuala\_Lumpur in the frontend. Calendar dates are preserved as entered.
 
 ## Action body
 
-```json
+```JSON
 {
   "action_type": "rm_visit",
   "action_status": "planned",
@@ -123,17 +141,18 @@ Errors have `{"error":{"code":"validation_failed","message":"..."}}`. Typical st
 Use a Vite `/api` proxy to `http://127.0.0.1:5000` for a separate frontend dev server. This preserves same-origin requests without widening CORS. With a future same-host frontend, use relative `/api/...` paths. Escape text notes through normal frontend text rendering; do not render notes as raw HTML.
 
 Imports are CLI operations against local trusted exports. Invalid imports do not publish a batch. File integrity checks establish consistency with the supplied export manifest; this app does not rerun the original experiment or independently verify its original raw data. The research modules and their original integrity checks remain untouched.
+
 # Milestone 2 case API addition — 6 November 2026
 
 These endpoints span assessments; no `batch_id` is required. Existing prediction/review/action contracts remain supported.
 
-| Method/path | Behaviour |
-|---|---|
-| `GET /api/cases` | Worklist; optional `q`, `owner`, `status`, `decision`, `offset`, `limit` (1–100; default 50). Decision filters the current linked committee decision. Returns `items`, `total`, `offset`, `limit`. |
-| `GET /api/cases/<case_id>` | Returns `case` with original/latest customer evidence, original review, current case state, follow-ups, case events, committee review history and legacy action notes. |
-| `PUT /api/cases/<case_id>` | Replaces case-editable state: `status` (`open`, `deferred`, `closed`), `owner`, nullable `next_action_date`, required `notes`, required `recorded_by`, required integer `expected_version`. Returns updated `case`. |
-| `POST /api/cases/<case_id>/follow-ups` | Creates a task with its first event; required `action_type`, `action_status`, `action_date`, `notes`, `recorded_by`, integer `expected_version`. Returns updated `case`, HTTP 201. |
-| `POST /api/cases/<case_id>/follow-ups/<follow_up_id>/events` | Appends an event to the same task, with the same fields as creation. Returns updated `case`, HTTP 201. |
+| Method/path                                                  | Behaviour                                                                                                                                                                                                           |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/cases`                                             | Worklist; optional `q`, `owner`, `status`, `decision`, `offset`, `limit` (1–100; default 50). Decision filters the current linked committee decision. Returns `items`, `total`, `offset`, `limit`.                  |
+| `GET /api/cases/<case_id>`                                   | Returns `case` with original/latest customer evidence, original review, current case state, follow-ups, case events, committee review history and legacy action notes.                                              |
+| `PUT /api/cases/<case_id>`                                   | Replaces case-editable state: `status` (`open`, `deferred`, `closed`), `owner`, nullable `next_action_date`, required `notes`, required `recorded_by`, required integer `expected_version`. Returns updated `case`. |
+| `POST /api/cases/<case_id>/follow-ups`                       | Creates a task with its first event; required `action_type`, `action_status`, `action_date`, `notes`, `recorded_by`, integer `expected_version`. Returns updated `case`, HTTP 201.                                  |
+| `POST /api/cases/<case_id>/follow-ups/<follow_up_id>/events` | Appends an event to the same task, with the same fields as creation. Returns updated `case`, HTTP 201.                                                                                                              |
 
 Case IDs equal their original prediction IDs. A case is created atomically on the first review save; migration backfills existing reviews. Later imports do not move or close it. Deliberate reviews for later predictions link to the existing open/deferred case and append a `committee_reassessment` event. `original_review` preserves the opening judgement; `current_review` is the latest deliberate review by **assessment cutoff descending**, then saved-review timestamp descending, then prediction ID. Updating an older month's review cannot replace a newer month's current decision. `original.review` remains the review of its exact original prediction. Owner/date/status are independently managed case fields.
 
@@ -145,14 +164,14 @@ Every successful case/task mutation increments the shared case version and appen
 
 The existing briefing response's `items` gain the fields below. The GET/POST endpoints, `{case_ids, snapshots}` download body, snapshot fields, evidence hash and 409 review-before-retry contract are unchanged. No client HTML or amounts are accepted.
 
-| Item field | Type and meaning |
-|---|---|
-| `glance` | Four ordered objects with `label`, `value` and `note` strings: committee decision/case state, latest risk/original-risk context, activity versus usual, and case due date/owner/planned-contact note. A case due date is distinct from planned or recorded contact. |
-| `risk_definition` | Deterministic explanatory string for the volume-attrition risk; not account-closure risk. |
-| `prepared_on` | Formatted Malaysian calendar date when this representation was prepared; not an assessment cutoff or saved-review date. |
-| `followups` | Nullable standard section object (`title`, `paragraphs`, `rows`, `items`); recorded follow-up label/value rows now live in `followups.rows`. Null when no follow-up rows exist. |
-| `signals.rows` | Ordered `[label, text]` pairs carrying recorded values and model-influence direction; replaces populated `signals.items`. The generic section shape is retained. |
-| `decision.rows` | Current reviewer, review-saved date, case owner, case due date and case status. Follow-up rows have moved to `followups.rows`. |
+| Item field        | Type and meaning                                                                                                                                                                                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `glance`          | Four ordered objects with `label`, `value` and `note` strings: committee decision/case state, latest risk/original-risk context, activity versus usual, and case due date/owner/planned-contact note. A case due date is distinct from planned or recorded contact. |
+| `risk_definition` | Deterministic explanatory string for the volume-attrition risk; not account-closure risk.                                                                                                                                                                           |
+| `prepared_on`     | Formatted Malaysian calendar date when this representation was prepared; not an assessment cutoff or saved-review date.                                                                                                                                             |
+| `followups`       | Nullable standard section object (`title`, `paragraphs`, `rows`, `items`); recorded follow-up label/value rows now live in `followups.rows`. Null when no follow-up rows exist.                                                                                     |
+| `signals.rows`    | Ordered `[label, text]` pairs carrying recorded values and model-influence direction; replaces populated `signals.items`. The generic section shape is retained.                                                                                                    |
+| `decision.rows`   | Current reviewer, review-saved date, case owner, case due date and case status. Follow-up rows have moved to `followups.rows`.                                                                                                                                      |
 
 Other item keys remain `original`, `latest`, `activity`, `operations`, `finance`, `questions`, `traceability`, `ai_context`, `sample_note`, `snapshot`, `case_id`, `customer_id` and `name`. Existing section keys remain intact. `ai_context` still contains only `cutoff_month` and `calibrated_risk`; discussion-question wording and the read-only eligibility/freshness rules are unchanged.
 
@@ -166,4 +185,4 @@ The required scoring contract remains exactly the two upload files. Optional sup
 
 `PUT /api/predictions/<id>/review` still saves against the exact prediction and uses `expected_version` for that review. When it updates an existing case, include `case_id` and `expected_case_version`; a stale case returns 409 without any review write. If exactly one active case exists for the customer it is the default; multiple active cases require an explicit matching `case_id`. There is no automatic merge, replacement or duplicate case. If only closed history exists, a deliberate new review opens a new episode and records previous closed case IDs in its opening event. Reviews on older predictions remain in history and cannot overwrite the current case decision from a later assessment. Briefing preview/PDF eligibility uses `current_review.decision`; a deliberate Monitor/No immediate action reassessment makes the prior Prioritise briefing ineligible. Preview snapshots include the case version and effective evidence, so changed decisions or enrichment require review before PDF download.
 
-Migration 003 adds only `supplemental_evidence`, `supplemental_history` and `review_case_links`. The existing application initializer backs up a version-2 database through SQLite's backup API before upgrading, applies migration 003 in one transaction and refuses a newer unknown version. Use a separate database copy for acceptance; see [MILESTONE_4.md](../docs/MILESTONE_4.md#supporting-evidence-and-case-continuity) for exact PowerShell commands and measured April checks.
+Migration 003 adds only `supplemental_evidence`, `supplemental_history` and `review_case_links`. The existing application initializer backs up a version-2 database through SQLite's backup API before upgrading, applies migration 003 in one transaction and refuses a newer unknown version. Use a separate database copy for acceptance; see [MILESTONE\_4.md](../docs/MILESTONE_4.md#supporting-evidence-and-case-continuity) for exact PowerShell commands and measured April checks.
