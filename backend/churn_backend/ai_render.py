@@ -10,7 +10,7 @@ from datetime import date
 from . import briefings
 from .ai_evidence import DICTIONARY
 
-VERSION = 'render-4'
+VERSION = 'render-5'  # render-5: Finance 'contribution at stake' sentence (RaR/FSL).
 TOKEN = re.compile(r'\{\{([a-zA-Z0-9_.]+)\}\}')
 CARD_SECTIONS = ('bottom_line', 'operations', 'finance', 'weighed')
 AUDIENCE_ORDER = ('operations', 'finance')
@@ -152,9 +152,10 @@ def weights(evidence):
     return {d['feature']: d['contribution_logodds'] for d in saved['higher_risk_drivers'] + saved['lower_risk_drivers']}
 
 
-def line(text, ids, features=(), source='evidence', twelve=False):
-    """twelve=True marks a sentence that uses a 12-month average (drives the single card footnote)."""
-    return dict(text=text, ids=list(ids), features=list(features), source=source, twelve=twelve)
+def line(text, ids, features=(), source='evidence', twelve=False, external=True):
+    """twelve=True marks a sentence that uses a 12-month average (drives the single card footnote).
+    external=False keeps a deterministic card sentence out of the provider payload."""
+    return dict(text=text, ids=list(ids), features=list(features), source=source, twelve=twelve, external=external)
 
 
 def ranked(lines, w):
@@ -240,7 +241,30 @@ def finance(evidence, w):
         lines.append(line(f'Estimated {" and ".join(parts)} ({span((fee or waiver)["period"])}); historical estimates, not profit.',
                           [f['id'] for f in (fee, waiver) if f], ['estimated_fee_mean_3m_myr', 'estimated_waiver_mean_3m_myr']))
     notable, rest = ranked(lines, w)
-    return (trend + notable + rest)[:6]
+    return (trend + stake_line(evidence) + notable + rest)[:6]
+
+
+def stake_line(evidence):
+    """Revenue at Risk next to (never multiplied by) the risk %: 3 months of estimated relationship
+    contribution, plus any fee subsidy leakage flag. Deterministic; not sent to the provider."""
+    metrics = evidence.get('finance_metrics') or {}
+    contribution, rar = metrics.get('contribution_monthly'), metrics.get('rar_3m')
+    if contribution is None:
+        return []
+    if contribution >= 0:
+        text = (f'Contribution at stake over {briefings.forecast(evidence["identity"]["cutoff"])}: {briefings.money(rar)} '
+                '(estimated relationship contribution; not a loss forecast')
+    else:
+        text = f'Estimated relationship contribution is negative: {briefings.money(contribution)} a month ('
+        text += 'an estimate, not a loss forecast'
+    flags = []
+    if (metrics.get('fsl_a') or {}).get('flagged'):
+        flags.append('fee waiver condition not met')
+    fsl_b = metrics.get('fsl_b') or {}
+    if fsl_b.get('flagged') and not fsl_b.get('policy'):
+        flags.append('waiver cost exceeds deposit earnings')
+    text += ''.join('; ' + flag for flag in flags) + ').'
+    return [line(text, [], external=False)]
 
 
 def relative(ratio, possessive):
@@ -404,7 +428,8 @@ def provider_payload(evidence):
     for key in CARD_SECTIONS:
         sections.append(dict(section=key, title=TITLES[key], lines=[dict(sentence=l['text'], facts=[
             dict(id=i, placeholder='{{' + i + '}}', name=name(i, facts), kind=facts[i]['kind'],
-                 direction=facts[i].get('direction'), group=facts[i].get('group')) for i in l['ids']]) for l in card_plan[key]]))
+                 direction=facts[i].get('direction'), group=facts[i].get('group')) for i in l['ids']]) for l in card_plan[key]
+                 if l.get('external', True)]))
     return dict(customer='Customer A', purpose=evidence['identity']['purpose'], cutoff=evidence['identity']['cutoff'], sections=sections,
                 limits='Signals show what the estimate weighed, not causes. Balances are exposures; fees and waivers are '
                        "historical estimates, not profit. Prioritisation is the committee's decision.")

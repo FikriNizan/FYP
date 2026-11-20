@@ -162,7 +162,10 @@ def build(purpose, record_id):
         identity['committee_assessment_cutoff']=review['assessment_month']
     semantic = dict(identity=identity, facts=facts, context=context, explanation=saved)
     fingerprint = hashlib.sha256(repo.encode(semantic).encode()).hexdigest()
-    return dict(**semantic, evidence_hash=fingerprint)
+    # Derived deterministically from the saved features above; rendered on the card only (never sent to
+    # the provider) and outside the hash. Changes to these formulas bump ai_render.VERSION instead.
+    from .finance_metrics import customer_metrics
+    return dict(**semantic, evidence_hash=fingerprint, finance_metrics=customer_metrics(features, cutoff, with_sensitivity=False))
 
 
 def external(evidence):

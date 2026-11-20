@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from .constants import DECISIONS, FINANCE_FIELDS, OPS_FIELDS
 from .db import get_db
+from . import finance_metrics
 from .validation import ConflictError, ValidationError, horizon_end, require
 
 
@@ -162,7 +163,8 @@ def customer_record(row, detail=False):
                       actual_attrition=outcome['target_churn'] if outcome else None,
                       observed_outcome=outcome,
                       finance_note="Fee and waiver figures are historical three-month monthly estimates; "
-                                   "balances are exposures. These are not verified profit or retention savings.")
+                                   "balances are exposures. These are not verified profit or retention savings.",
+                      finance_metrics=finance_metrics.customer_metrics(features, evidence["cutoff_month"]))
     return record
 
 
@@ -227,6 +229,7 @@ def summary(batch):
                 below_threshold=len(customers)-len(flagged),
                 mean_risk=sum(c["calibrated_risk"] for c in customers)/len(customers),
                 review_counts=counts, flagged_review_counts=flag_counts, finance=finance,
+                finance_metrics=finance_metrics.portfolio(batch['batch_id']),
                 risk_definition="Next-three-month average combined flow at most 50% of "
                                 "a positive trailing-twelve-month average",
                 target_horizon_months=3,
