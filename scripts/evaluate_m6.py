@@ -17,9 +17,9 @@ from churn_backend.validation import sigmoid
 SUMMARY_NOTES=repo.encode(dict(link=dict(  # m6-narrative-6: one link note citing two card sections.
     text="{{prediction.risk}} and {{signal.combined_flow_ratio_3m_to_12m}} both belong in this customer's review discussion.",
     evidence_ids=['prediction.risk','signal.combined_flow_ratio_3m_to_12m']),questions=[]))
-DISCUSSION_BLOCKS=repo.encode(dict(blocks=[dict(kind='recorded_observation',
-    text='The saved assessment provides context for a focused discussion. {{prediction.risk}}. Customer experience remains a matter to verify.',
-    evidence_ids=['prediction.risk'])],questions=[]))
+CLIENT_QUESTIONS=repo.encode(dict(questions=[  # m6-narrative-7: on-demand client questions.
+    dict(text='How has business activity been for you lately, and do you expect any changes ahead?',evidence_ids=['prediction.risk']),
+    dict(text='Is our online banking still meeting your team\'s day-to-day needs?',evidence_ids=['prediction.risk'])]))
 
 
 def build_examples(app):
@@ -66,8 +66,8 @@ def run():
             with app.app_context():
                 summary=not example.get('case')
                 evidence=ai_evidence.build('summary' if summary else 'discussion',prediction_id)
-                # Mocked model text: summary notes (m6-narrative-5) or discussion blocks (unchanged until stage 2).
-                accepted=ai_drafts.validate(SUMMARY_NOTES if summary else DISCUSSION_BLOCKS,evidence)
+                # Mocked model text: a summary link note or client questions.
+                accepted=ai_drafts.validate(SUMMARY_NOTES if summary else CLIENT_QUESTIONS,evidence)
                 fallback=ai_drafts.fallback(evidence)
                 words=dict(fallback_card=ai_render.card_words(fallback),mocked_card=ai_render.card_words(accepted)) if summary else None
                 reconstructed=sigmoid(saved['base_logodds']+driver_sum+saved['other_features_contribution_logodds']+saved['probability_clip_adjustment_logodds'])

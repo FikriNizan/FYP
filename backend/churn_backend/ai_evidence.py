@@ -166,24 +166,7 @@ def build(purpose, record_id):
 
 
 def external(evidence):
-    """No customer/batch/case IDs, names, paths, attribution or free-text notes leave the server."""
-    if evidence['identity']['purpose'] in ('summary', 'discussion'):
-        from .ai_render import provider_payload  # The card's own sentences per section, with fact names.
-        return provider_payload(evidence)
-    facts = []
-    for fact in evidence['facts'].values():
-        # Monthly combined totals provide the trajectory; collections/payments ratios above
-        # already supply the channel comparison. Keep redundant monthly channels local.
-        if fact['id'].startswith('flow.') and not fact['id'].endswith('.combined_flow_myr'):
-            continue
-        entry = {k:v for k,v in fact.items() if k not in ('source','clause','value','display')}
-        entry['placeholder'] = '{{'+fact['id']+'}}'
-        if fact['kind'] == 'recorded_committee_context':
-            entry['meaning'] = 'Locally resolved quoted human rationale. You may reference this placeholder, but cannot interpret its unsent contents.'
-        else:
-            entry.update(value=fact['value'], display=fact['display'])
-        facts.append(entry)
-    return dict(customer='Customer A', purpose=evidence['identity']['purpose'], cutoff=evidence['identity']['cutoff'],
-        original_assessment_cutoff=evidence['identity'].get('original_assessment_cutoff'),
-        committee_assessment_cutoff=evidence['identity'].get('committee_assessment_cutoff'),
-        facts=facts, limits='SHAP explains the estimate, not causes or changes over time. Balances are exposures. Unknown motives and future outcomes must remain unknown.')
+    """No customer/batch/case IDs, names, paths, attribution or free-text notes leave the server:
+    both purposes send the card's own fact sentences per section, with plain fact names."""
+    from .ai_render import provider_payload
+    return provider_payload(evidence)

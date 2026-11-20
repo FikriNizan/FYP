@@ -25,7 +25,7 @@ let click;
 beforeEach(()=>{
   vi.clearAllMocks();
   api.briefing.mockResolvedValue(payload());
-  api.aiDraft.mockResolvedValue({state:'not_generated',draft:null,evidence_hash:'ai-hash',evidence:[],fallback:{blocks:[],questions:[]}});
+  api.aiDraft.mockResolvedValue({state:'not_generated',draft:null,evidence_hash:'ai-hash',evidence:[],fallback:{format:'questions-1',questions:[],evidence_ids:[],checks:[]}});
   api.downloadBriefing.mockResolvedValue({blob:new Blob(['%PDF-1.7\nexample']),filename:'txb-rm-briefing.pdf'});
   vi.stubGlobal('URL',Object.assign(URL,{createObjectURL:vi.fn(()=>'blob:test-pdf'),revokeObjectURL:vi.fn()}));
   click=vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(()=>{});
@@ -152,7 +152,7 @@ describe('Briefing selection and direct PDF',()=>{
 
 
 it('includes only an explicitly reviewed exact AI draft in optional PDF requests',async()=>{
-  const content={blocks:[{text:'Saved Gemini discussion evidence.'}],questions:[],checks:[]};
+  const content={format:'questions-1',questions:[{text:'Saved Gemini client question?',source:'ai',basis:'Login failure rate',evidence_ids:[]}],evidence_ids:[],checks:[]};
   api.aiDraft.mockResolvedValue({state:'saved',evidence_hash:'ai-hash',evidence:[],draft:{draft_id:'ai-id',generated_at:'2026-11-19T10:00:00Z',content}});
   start();await screen.findByText('Saved AI draft');
   expect(screen.getByLabelText('Include reviewed AI discussion draft').checked).toBe(false);

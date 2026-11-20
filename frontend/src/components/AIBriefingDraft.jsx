@@ -80,10 +80,7 @@ export default function AIBriefingDraft({ purpose='discussion', recordId, onRevi
       : state.failure_code==='invalid_key_format'
       ? 'The backend API key has invalid formatting. Re-enter it locally and restart the session. No Gemini request was sent.'
       : 'Gemini did not return a usable draft ('+state.failure_code.replaceAll('_',' ')+'). The saved evidence remains available.'}</p>}
-    {content?.format==='sections-1' ? <SummaryCard content={content} /> : content?.format==='questions-1' ? <ClientQuestions content={content} /> : <>
-      {content?.blocks.map((block,i)=><p key={i}>{block.text}</p>)}
-      {!!content?.questions.length && <ul>{content.questions.map((q,i)=><li key={i}>{q.text}</li>)}</ul>}
-    </>}
+    {content?.format==='sections-1' ? <SummaryCard content={content} /> : content?.format==='questions-1' ? <ClientQuestions content={content} /> : null}
     {!summary && <button disabled={!state || busy} onClick={generate}>{busy ? 'Generating…' : draft ? 'Regenerate questions' : 'Suggest client questions'}</button>}
     {error && <button disabled={busy} onClick={()=>setAttempt(n=>n+1)}>Reload saved evidence</button>}
     {draft && purpose==='discussion' && <label className="field-label"><input type="checkbox" checked={reviewed} onChange={e=>{

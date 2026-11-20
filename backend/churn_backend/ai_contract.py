@@ -2,7 +2,6 @@
 from .validation import require, strict_json, ValidationError
 
 CONTRACT_VERSION='m6-narrative-7'
-KINDS=['recorded_observation','model_signal','recorded_committee_context']
 REFERENCE_MIN=1
 REFERENCE_MAX=4
 
@@ -69,22 +68,12 @@ def client_schema(limits):
 def schema_for(purpose):
     """Provider schema describes shape only. Gemini rejects schemas whose constraints have
     'too many states' (long enums, nested array bounds), so known IDs, 1–4 reference counts
-    and uniqueness are enforced by ai_output_audit.inspect_output, not here."""
+    and uniqueness are enforced by ai_output_audit (inspect_notes / inspect_client_questions), not here."""
     limits=limits_for(purpose)
     if purpose=='summary':
         return summary_schema(limits)
-    if purpose=='discussion':
-        return client_schema(limits)
-    def references():
-        return dict(type='array',items=dict(type='string'))
-    block=dict(type='object',additionalProperties=False,required=['kind','text','evidence_ids'],properties={
-        'kind':dict(type='string',enum=list(KINDS)),'text':dict(type='string'),'evidence_ids':references()})
-    question=dict(type='object',additionalProperties=False,required=['text','evidence_ids'],properties={
-        'text':dict(type='string'),'evidence_ids':references()})
-    return dict(type='object',additionalProperties=False,required=['blocks','questions'],properties={
-        'blocks':dict(type='array',minItems=limits['block_min'],maxItems=limits['block_max'],items=block),
-        'questions':dict(type='array',minItems=limits['question_min'],maxItems=limits['question_max'],items=question)})
-
+    require(purpose=='discussion','Unknown AI output purpose')
+    return client_schema(limits)
 
 def purpose_instruction(purpose):
     bounds=limits_for(purpose)
@@ -107,13 +96,7 @@ def purpose_instruction(purpose):
             'The client must never hear internal language: no model, estimate, risk, score, flag, threshold, churn, attrition, '
             'prediction, records or data, and never mention other banks or competitors. Never ask the client for numbers, counts '
             'or amounts, and never quote numbers, dates or the facts themselves. Do not presuppose a problem or its cause.')
-    else:
-        introduction='Purpose: RM discussion draft. Write a short discussion outline; aim for 120–200 narrative words.'
-    return (introduction+' Return '+str(bounds['block_min'])+'–'+str(bounds['block_max'])+' factual blocks. '
-        'The questions field must be a JSON array containing '+str(bounds['question_min'])+'–'+str(bounds['question_max'])+
-        ' verification questions. Zero questions is valid: return [] when evidence is insufficient. '
-        'Never invent or pad questions to meet a minimum. Shorter output is preferable when evidence is limited.')
-
+    require(False,'Unknown AI output purpose')
 
 def reference_instruction(purpose='discussion'):
     if purpose=='discussion':
@@ -125,15 +108,7 @@ def reference_instruction(purpose='discussion'):
             'from sections[].lines[].facts[].id. A non-empty link cites 2–3 facts from at least two different sections; an empty link has '
             'evidence_ids []. A question cites '+str(REFERENCE_MIN)+'–'+str(REFERENCE_MAX)+' facts. An operations question must cite at least '
             'one operations fact, and a finance question at least one finance fact.')
-    return ('Reference transport contract: every evidence_ids field is an array of '+str(REFERENCE_MIN)+'–'+str(REFERENCE_MAX)+
-        ' unique strings copied EXACTLY from facts[].id. Use bare IDs there, never labels, IDs from another purpose, '
-        'or {{placeholder}} strings. In text, use facts[].placeholder exactly, as a complete independent clause. '
-        'Example transport only: {"kind":"recorded_observation","text":"{{prediction.risk}}.",'
-        '"evidence_ids":["prediction.risk"]}. Each factual block may cite only facts with the same kind as that block; '
-        'a model_signal block must use signal IDs, not feature observation IDs. Cite all placeholders used in the block. '
-        'Do not cite extra facts absent from its text. Questions may cite known relevant fact IDs without repeating their values. '
-        'The example shows syntax, not required wording or a required topic.')
-
+    require(False,'Unknown AI output purpose')
 
 def question_metadata(raw,purpose):
     bounds=limits_for(purpose)

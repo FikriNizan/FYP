@@ -5,7 +5,7 @@ import AIBriefingDraft, { ClientQuestions } from '../src/components/AIBriefingDr
 import { api } from '../src/api.js';
 
 vi.mock('../src/api.js',()=>({api:{aiDraft:vi.fn()}}));
-const content={blocks:[{text:'Recorded evidence for discussion.',kind:'recorded_observation',evidence_ids:['fact']}],questions:[],checks:['known_references']};
+const content={format:'questions-1',questions:[{text:'Recorded evidence for discussion.',source:'standard',basis:'fact',evidence_ids:[]}],evidence_ids:[],checks:['known_references']};
 const fallback={state:'not_generated',evidence_hash:'hash',fallback:content,draft:null,evidence:[],provider:'gemini',model:'configured-model',limitations:'Review before use.'};
 const saved={...fallback,state:'saved',draft:{draft_id:'draft-a',generated_at:'2026-11-19T10:00:00Z',validation_version:'m6-narrative-1',content}};
 beforeEach(()=>{vi.clearAllMocks();api.aiDraft.mockResolvedValue(fallback);});

@@ -29,9 +29,6 @@ class DraftTests(unittest.TestCase):
         self.id=self.customer['prediction_id']
         self.url='/api/predictions/'+self.id+'/ai-summary'
 
-    def output(self, fact='prediction.risk',kind='recorded_observation',prefix='Recorded activity offers a starting point for committee discussion.'):
-        return json.dumps(dict(blocks=[dict(kind=kind,text=prefix+' {{'+fact+'}}. The context remains a matter to verify.',evidence_ids=[fact])],questions=[]))
-
     def notes(self, fact='prediction.risk', questions=()):
         """Summary contract (m6-narrative-6): one link note citing two card sections, plus questions."""
         other='feature.login_failure_rate_3m'
@@ -283,9 +280,9 @@ class DraftTests(unittest.TestCase):
             config=dict(enabled=True,provider='gemini',model='gemini-3.5-flash-lite',timeout=12,tokens=2048)
             with patch.dict(os.environ,{'GEMINI_API_KEY':'synthetic-test-key','GOOGLE_API_KEY':'wrong-key'}),patch('google.genai.Client') as factory:
                 client=factory.return_value.__enter__.return_value
-                response=MagicMock();response.candidates=[MagicMock(finish_reason=types.FinishReason.STOP)];response.text=self.output()
+                response=MagicMock();response.candidates=[MagicMock(finish_reason=types.FinishReason.STOP)];response.text=self.client_questions()
                 client.models.generate_content.return_value=response
-                self.assertEqual(ai.Gemini().generate(data,config),self.output())
+                self.assertEqual(ai.Gemini().generate(data,config),self.client_questions())
                 self.assertEqual(factory.call_args.kwargs['api_key'],'synthetic-test-key')
                 options=factory.call_args.kwargs['http_options']
                 self.assertEqual(options.timeout,12000);self.assertEqual(options.retry_options.attempts,1)
@@ -650,7 +647,7 @@ class DraftTests(unittest.TestCase):
                 data=evidence.build('summary',self.id)
                 data['identity']['purpose']=purpose
                 summary=purpose=='summary'
-                payload=json.loads(self.notes() if summary else self.output())
+                payload=json.loads(self.notes() if summary else self.client_questions())
                 question=(dict(audience='operations',text='Could we verify the recorded context?',evidence_ids=['feature.login_failure_rate_3m'])
                     if summary else dict(text='Could we verify the recorded context?',evidence_ids=['prediction.risk']))
                 # Summary (m6-narrative-6): at most one question per audience, so the second one is Finance.
@@ -673,7 +670,7 @@ class DraftTests(unittest.TestCase):
              patch('google.genai.Client') as factory:
             data=evidence.build('summary',self.id)
             client=factory.return_value.__enter__.return_value
-            client.models.generate_content.return_value=MagicMock(candidates=[MagicMock(finish_reason=types.FinishReason.STOP)],text=self.output())
+            client.models.generate_content.return_value=MagicMock(candidates=[MagicMock(finish_reason=types.FinishReason.STOP)],text=self.client_questions())
             config=dict(enabled=True,provider='gemini',model='gemini-3.5-flash-lite',timeout=12,tokens=2048)
             for purpose,maximum in [('summary',2)]:
                 with self.subTest(purpose=purpose):
