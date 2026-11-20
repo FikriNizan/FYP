@@ -184,7 +184,8 @@ def safe_provider_error(error, schema):
                 for index,item in enumerate(value):
                     walk(item,path+'['+str(index)+']')
         for field in ['responseSchema','response_schema','responseJsonSchema','response_json_schema']:
-            walk(schema,prefix+'.'+field)
+            for candidate in (schema if isinstance(schema,list) else [schema]):  # One schema per purpose.
+                walk(candidate,prefix+'.'+field)
     for message in messages:
         fields.extend(re.findall(r'\b(?:generationConfig|generation_config)\.[A-Za-z_][A-Za-z0-9_.\[\]]*',message))
         fields.extend(re.findall(r'''(?:field|parameter|name)\s*[:=]?\s*["']([A-Za-z_][A-Za-z0-9_.\[\]]*)["']''',message,re.I))

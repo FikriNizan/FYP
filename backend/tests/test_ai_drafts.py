@@ -32,6 +32,19 @@ class DraftTests(unittest.TestCase):
     def output(self, fact='prediction.risk',kind='recorded_observation',prefix='Recorded activity offers a starting point for committee discussion.'):
         return json.dumps(dict(blocks=[dict(kind=kind,text=prefix+' {{'+fact+'}}. The context remains a matter to verify.',evidence_ids=[fact])],questions=[]))
 
+    def notes(self, fact='prediction.risk', section='bottom_line', questions=(),
+              text='This card gives the committee a starting point for discussing {{FACT}}.'):
+        """Summary contract (m6-narrative-5): one short note per section plus audience-tagged questions."""
+        notes={key:dict(text='',evidence_ids=[]) for key in ['bottom_line','operations','finance','weighed']}
+        notes[section]=dict(text=text.replace('FACT',fact),evidence_ids=[fact])
+        return json.dumps(dict(notes=notes,questions=list(questions)))
+
+    def block_data(self):
+        """Old block/clause contract still serves the discussion purpose until stage 2."""
+        data=evidence.build('summary',self.id)
+        data['identity']['purpose']='discussion'
+        return data
+
     def generate(self):
         """Summary generation is batch-only (no HTTP POST). Call the same backend function the batch
         uses and convert the result/error with the app's own JSON and error handlers."""
@@ -57,10 +70,12 @@ class DraftTests(unittest.TestCase):
             self.assertEqual(get_db().execute('SELECT count(*) FROM ai_drafts').fetchone()[0],0)
 
     def test_valid_original_prose_saved_reused_after_restart_and_explicit_regeneration(self):
-        with patch.object(ai.Gemini,'generate',return_value=self.output()) as mock:
+        with patch.object(ai.Gemini,'generate',return_value=self.notes()) as mock:
             first=self.generate().json
             self.assertEqual(first['state'],'saved')
-            self.assertNotIn('{{',first['draft']['content']['blocks'][0]['text'])
+            note=next(item for s in first['draft']['content']['sections'] for item in s['items'] if item['source']=='ai')
+            self.assertNotIn('{{',note['text'])
+            self.assertIn('the estimated risk',note['text'])  # Placeholder resolves to the fact name, not its value.
             app=create_app(dict(TESTING=True,DATABASE=self.path))
             self.assertEqual(app.test_client().get(self.url).json['draft']['draft_id'],first['draft']['draft_id'])
             second=self.generate().json
@@ -112,7 +127,7 @@ class DraftTests(unittest.TestCase):
             self.assertEqual(evidence.build('summary',self.id)['evidence_hash'],original['evidence_hash'])
 
     def test_evidence_and_model_versions_invalidate_saved_content(self):
-        with patch.object(ai.Gemini,'generate',return_value=self.output()):first=self.generate().json
+        with patch.object(ai.Gemini,'generate',return_value=self.notes()):first=self.generate().json
         self.app.config['TXB_GENAI_MODEL']='other-admin-configured-model'
         changed=self.client.get(self.url).json
         self.assertEqual(changed['state'],'evidence_changed');self.assertIsNone(changed['draft'])
@@ -146,7 +161,7 @@ class DraftTests(unittest.TestCase):
 
     def test_invalid_paraphrases_and_schema_are_rejected(self):
         with self.app.app_context():
-            data=evidence.build('summary',self.id)
+            data=self.block_data()
             bad=['Risk is 99%.','Fees are five million ringgit.','The customer is unprofitable.',
                 'Service friction caused departure.','Payments deteriorated because of login failures.',
                 'The customer will leave.','The customer switched to a competitor.',
@@ -162,12 +177,12 @@ class DraftTests(unittest.TestCase):
 
     def test_typed_clause_rejects_ratio_reinterpretation_and_kind_mismatch(self):
         with self.app.app_context():
-            data=evidence.build('summary',self.id)
+            data=self.block_data()
             for raw in [self.output(kind='model_signal'), self.output().replace('{{prediction.risk}}','The reduction was {{prediction.risk}}')]:
                 with self.assertRaises(ValidationError):ai.validate(raw,data)
 
     def test_failed_regeneration_preserves_previous_valid_cache(self):
-        with patch.object(ai.Gemini,'generate',return_value=self.output()):first=self.generate().json
+        with patch.object(ai.Gemini,'generate',return_value=self.notes()):first=self.generate().json
         with patch.object(ai.Gemini,'generate',return_value='invalid'):failed=self.generate().json
         self.assertEqual(failed['state'],'fallback')
         self.assertIsNone(failed['draft'])
@@ -177,7 +192,7 @@ class DraftTests(unittest.TestCase):
         with self.app.app_context():
             state,data,key=ai.load('summary',self.id)
             db=get_db();db.execute('INSERT INTO ai_reservations VALUES (?,?,?)',(key,'busy',time.time()+30));db.commit()
-        with patch.object(ai.Gemini,'generate',return_value=self.output()) as mock:
+        with patch.object(ai.Gemini,'generate',return_value=self.notes()) as mock:
             self.assertEqual(self.generate().status_code,409);mock.assert_not_called()
             with self.app.app_context():
                 db=get_db();db.execute('UPDATE ai_reservations SET expires_at=0');db.commit()
@@ -187,7 +202,7 @@ class DraftTests(unittest.TestCase):
         def change(*args):
             db=get_db();row=repo.prediction_row(self.id);features=json.loads(row['features_json']);features['fd_balance_myr']=77
             db.execute('UPDATE predictions SET features_json=? WHERE prediction_id=?',(repo.encode(features),self.id));db.commit()
-            return self.output()
+            return self.notes()
         with patch.object(ai.Gemini,'generate',side_effect=change):self.assertEqual(self.generate().status_code,409)
         with self.app.app_context():self.assertEqual(get_db().execute('SELECT count(*) FROM ai_drafts').fetchone()[0],0)
 
@@ -369,7 +384,7 @@ class DraftTests(unittest.TestCase):
 
     def test_risk_noun_is_allowed_while_invented_trends_remain_rejected(self):
         with self.app.app_context():
-            data=evidence.build('summary',self.id)
+            data=self.block_data()
             accepted=ai.validate(self.output(prefix='The saved risk estimate can guide a discussion.'),data)
             self.assertIn('saved risk estimate',accepted['blocks'][0]['text'])
             for prefix in ['Risk is rising.','Activity rises.','The customer is riskier.','Payments fell.']:
@@ -383,7 +398,7 @@ class DraftTests(unittest.TestCase):
             data=evidence.build('summary',self.id)
             with self.assertLogs(self.app.logger,level='WARNING') as logs:
                 with self.assertRaises(ValidationError):
-                    ai.validate(self.output(fact='PRIVATE_UNKNOWN_REFERENCE'),data)
+                    ai.validate(self.notes(fact='PRIVATE_UNKNOWN_REFERENCE'),data)
             self.assertEqual(g.genai_diagnostic['stage'],'validate_output')
             self.assertEqual(g.genai_diagnostic['rule'],'evidence_references')
             self.assertNotIn('PRIVATE_UNKNOWN_REFERENCE',str(logs.output))
@@ -392,7 +407,7 @@ class DraftTests(unittest.TestCase):
                     ai.validate('{"PRIVATE_SECRET":1,"PRIVATE_SECRET":2}',data)
             self.assertEqual(g.genai_diagnostic['rule'],'malformed_json')
             self.assertNotIn('PRIVATE_SECRET',str(logs.output))
-        with patch.object(ai.Gemini,'generate',return_value=self.output(fact='PRIVATE_UNKNOWN_REFERENCE')):
+        with patch.object(ai.Gemini,'generate',return_value=self.notes(fact='PRIVATE_UNKNOWN_REFERENCE')):
             result=self.generate()
         self.assertEqual(result.json['failure_code'],'output_validation_failed')
         self.assertNotIn('evidence_references',result.get_data(as_text=True))
@@ -455,7 +470,7 @@ class DraftTests(unittest.TestCase):
                  patch.dict(os.environ,{'GEMINI_API_KEY':'synthetic-key','TXB_GENAI_ENABLED':'1'}),\
                  patch.object(smoke,'selected_database',return_value=(Path(self.path),5,[],{})),\
                  patch('churn_backend.create_app',return_value=self.app),patch('google.genai.Client') as factory,\
-                 patch.object(ai.Gemini,'generate',return_value=self.output()) as application,redirect_stdout(io.StringIO()) as stdout:
+                 patch.object(ai.Gemini,'generate',return_value=self.notes()) as application,redirect_stdout(io.StringIO()) as stdout:
                 client=factory.return_value.__enter__.return_value
                 if succeed:
                     client.models.generate_content.return_value=MagicMock(candidates=[MagicMock(finish_reason=types.FinishReason.STOP)],text='OK')
@@ -576,7 +591,7 @@ class DraftTests(unittest.TestCase):
     def test_question_contract_diagnostics_retain_only_opt_in_memory_and_no_question_text(self):
         from churn_backend.ai_contract import question_metadata
         from flask import g
-        payload=json.loads(self.output())
+        payload=json.loads(self.notes())
         payload['questions']=[dict(text='PRIVATE_QUESTION',evidence_ids=['PRIVATE_REFERENCE']) for _ in range(4)]
         raw=json.dumps(payload)
         expected=dict(purpose='summary',questions_field_type='array',actual_count=4,permitted_minimum=0,permitted_maximum=3)
@@ -617,13 +632,16 @@ class DraftTests(unittest.TestCase):
             with self.app.app_context():
                 data=evidence.build('summary',self.id)
                 data['identity']['purpose']=purpose
-                payload=json.loads(self.output())
-                question=dict(text='Could we verify the recorded context?',evidence_ids=['prediction.risk'])
+                summary=purpose=='summary'
+                payload=json.loads(self.notes() if summary else self.output())
+                question=(dict(audience='operations',text='Could we verify the recorded context?',evidence_ids=['feature.login_failure_rate_3m'])
+                    if summary else dict(text='Could we verify the recorded context?',evidence_ids=['prediction.risk']))
                 for count in [0,1,maximum]:
                     with self.subTest(purpose=purpose,count=count):
                         payload['questions']=[copy.deepcopy(question) for _ in range(count)]
                         accepted=ai.validate(json.dumps(payload),data)
-                        self.assertEqual(len(accepted['questions']),count)
+                        # Summary cards may add template questions for a missing audience; count the model's own.
+                        self.assertEqual(len([q for q in accepted['questions'] if q.get('source','ai')=='ai']),count)
                 for wrong in [[copy.deepcopy(question) for _ in range(maximum+1)],None,{},'PRIVATE_QUESTION',False,3]:
                     with self.subTest(purpose=purpose,wrong_type=type(wrong).__name__),self.assertRaisesRegex(ValidationError,'Invalid question count'):
                         payload['questions']=wrong
@@ -658,7 +676,7 @@ class DraftTests(unittest.TestCase):
 
     def test_complete_audit_collects_all_applicable_failures_without_exposing_unknown_text(self):
         with self.app.app_context():
-            data=evidence.build('summary',self.id)
+            data=self.block_data()
             raw=json.dumps(dict(blocks=[
                 dict(kind='recorded_observation',text='Synthetic context. {{prediction.risk}}. Activity fell.',evidence_ids=['PRIVATE_UNKNOWN_REFERENCE']),
                 dict(kind='model_signal',text='{{feature.login_failure_rate_3m}}. The customer will leave.',evidence_ids=['feature.login_failure_rate_3m'])],
@@ -676,7 +694,7 @@ class DraftTests(unittest.TestCase):
     def test_synthetic_replay_fixture_has_no_provider_prose_or_bank_values(self):
         from churn_backend.ai_output_audit import synthetic_fixture
         with self.app.app_context(),patch.object(ai.Gemini,'generate') as provider:
-            data=evidence.build('summary',self.id)
+            data=self.block_data()
             payload=json.loads(self.output(prefix='PRIVATE_PROVIDER_PROSE.'))
             payload['blocks'][0]['evidence_ids']=['PRIVATE_REFERENCE']
             raw=json.dumps(payload)
@@ -718,17 +736,25 @@ class DraftTests(unittest.TestCase):
                         for index,value in enumerate(node):
                             walk(value,path+'['+str(index)+']')
                 walk(schema,'$')
+                plain={'type':'array','items':{'type':'string'}}
+                if purpose=='summary':  # m6-narrative-5: notes object + audience-tagged questions.
+                    self.assertEqual(found['enum'],['$.properties.questions.items.properties.audience'])
+                    self.assertEqual(found['minItems'],['$.properties.questions'])
+                    self.assertEqual(found['maxItems'],['$.properties.questions'])
+                    self.assertEqual(schema['properties']['questions']['items']['properties']['evidence_ids'],plain)
+                    for note in ['bottom_line','operations','finance','weighed']:
+                        self.assertEqual(schema['properties']['notes']['properties'][note]['properties']['evidence_ids'],plain)
+                    continue
                 self.assertEqual(found['enum'],['$.properties.blocks.items.properties.kind'])
                 self.assertEqual(sorted(found['minItems']),['$.properties.blocks','$.properties.questions'])
                 self.assertEqual(sorted(found['maxItems']),['$.properties.blocks','$.properties.questions'])
                 for section in ['blocks','questions']:
-                    self.assertEqual(schema['properties'][section]['items']['properties']['evidence_ids'],
-                                     {'type':'array','items':{'type':'string'}})
+                    self.assertEqual(schema['properties'][section]['items']['properties']['evidence_ids'],plain)
 
     def test_validator_enforces_reference_count_uniqueness_and_known_ids(self):
         from churn_backend.ai_contract import reference_registry
         with self.app.app_context():
-            data=evidence.build('summary',self.id)
+            data=self.block_data()
             ids=[k for k,f in reference_registry(data).items() if f['kind']=='recorded_observation']
             self.assertGreaterEqual(len(ids),5)
             def block(refs):
@@ -759,7 +785,7 @@ class DraftTests(unittest.TestCase):
         with self.app.app_context():
             data=evidence.build('summary',self.id)
             one=json.loads(self.output())['blocks'][0]
-            for purpose,maximum in [('summary',4),('discussion',6)]:
+            for purpose,maximum in [('discussion',6)]:  # Summary has no blocks under m6-narrative-5 (note keys tested separately).
                 data['identity']['purpose']=purpose
                 payload=dict(blocks=[copy.deepcopy(one) for _ in range(maximum)],questions=[])
                 with self.subTest(purpose=purpose,count=maximum):
@@ -772,3 +798,76 @@ class DraftTests(unittest.TestCase):
                             ai.validate(raw,data)
                         self.assertIn('block_count',{f['rule'] for f in ai.audit_output(raw,data)['failures']})
 
+
+    def summary_raw(self, notes=None, questions=()):
+        base={key:dict(text='',evidence_ids=[]) for key in ['bottom_line','operations','finance','weighed']}
+        base.update(notes or {})
+        return json.dumps(dict(notes=base,questions=list(questions)))
+
+    def assert_rejected(self, raw, data, rule):
+        with self.assertRaises(ValidationError):
+            ai.validate(raw,data)
+        self.assertIn(rule,{f['rule'] for f in ai.audit_output(raw,data)['failures']})
+
+    def test_summary_notes_reject_unsupported_text_and_bad_references(self):
+        with self.app.app_context():
+            data=evidence.build('summary',self.id)
+            risk=['prediction.risk']
+            long_note=' '.join(['word']*26)+' {{prediction.risk}}.'
+            cases=[
+                ('prohibited','bottom_line','The customer will leave because of {{prediction.risk}}.',risk,'prohibited_claim'),
+                ('comparison','finance','Activity fell for {{feature.combined_flow_ratio_3m_to_12m}}.',['feature.combined_flow_ratio_3m_to_12m'],'unprotected_comparison'),
+                ('quantity','bottom_line','Ninety percent is {{prediction.risk}}.',risk,'protected_content'),
+                ('markup','bottom_line','<b>{{prediction.risk}}</b>',risk,'protected_content'),
+                ('unknown','bottom_line','See {{unknown.fact}}.',['unknown.fact'],'evidence_references'),
+                ('duplicate','bottom_line','See {{prediction.risk}}.',risk*2,'evidence_references'),
+                ('zero refs','bottom_line','The committee can discuss this card.',[],'evidence_references'),
+                ('five refs','bottom_line','See {{prediction.risk}}.',['prediction.risk','prediction.flag','prediction.threshold',
+                    'feature.login_failure_rate_3m','feature.outbound_failure_rate_3m'],'evidence_references'),
+                ('uncited','bottom_line','{{prediction.risk}} and {{prediction.flag}} matter here.',risk,'placeholder_reference'),
+                ('other section','operations','Look again at {{prediction.risk}}.',risk,'section_reference'),
+                ('too long','bottom_line',long_note,risk,'note_length'),
+            ]
+            for name,key,text,ids,rule in cases:
+                with self.subTest(case=name):
+                    self.assert_rejected(self.summary_raw({key:dict(text=text,evidence_ids=ids)}),data,rule)
+            with self.subTest(case='empty note with references'):
+                self.assert_rejected(self.summary_raw({'bottom_line':dict(text='',evidence_ids=risk)}),data,'evidence_references')
+            with self.subTest(case='missing note key'):
+                raw=json.loads(self.summary_raw());raw['notes'].pop('weighed')
+                self.assert_rejected(json.dumps(raw),data,'note_fields')
+
+    def test_summary_questions_need_matching_audience_form_and_length(self):
+        with self.app.app_context():
+            data=evidence.build('summary',self.id)
+            login=['feature.login_failure_rate_3m']
+            cases=[
+                ('audience mismatch',dict(audience='finance',text='Could Finance verify the recorded context?',evidence_ids=login),'question_audience'),
+                ('not a question',dict(audience='operations',text='Check the recorded context.',evidence_ids=login),'verification_question'),
+                ('too long',dict(audience='operations',text='Could '+' '.join(['word']*25)+'?',evidence_ids=login),'question_length'),
+                ('topic without evidence',dict(audience='operations',text='Could Operations verify the recorded deposit position?',
+                    evidence_ids=login),'question_relevance'),
+                ('missing audience',dict(text='Could Operations verify the recorded context?',evidence_ids=login),'question_fields'),
+            ]
+            for name,question,rule in cases:
+                with self.subTest(case=name):
+                    self.assert_rejected(self.summary_raw(questions=[question]),data,rule)
+
+    def test_summary_model_word_budget_and_valid_full_output(self):
+        with self.app.app_context():
+            data=evidence.build('summary',self.id)
+            notes={'bottom_line':dict(text='The committee can read {{prediction.risk}} alongside the review flag.',evidence_ids=['prediction.risk']),
+                'operations':dict(text='Operations can verify {{feature.login_failure_rate_3m}} with the service team.',evidence_ids=['feature.login_failure_rate_3m']),
+                'finance':dict(text='Finance can review {{feature.non_fd_balance_myr}} in context.',evidence_ids=['feature.non_fd_balance_myr']),
+                'weighed':dict(text='These signals describe what the estimate weighed.',evidence_ids=['signal.combined_flow_ratio_3m_to_12m'])}
+            questions=[dict(audience='operations',text='Could Operations verify the recorded login difficulties?',evidence_ids=['feature.login_failure_rate_3m']),
+                dict(audience='finance',text='Could Finance verify the recorded balance position?',evidence_ids=['feature.non_fd_balance_myr'])]
+            card=ai.validate(self.summary_raw(notes,questions),data)
+            self.assertEqual(sum(item['source']=='ai' for s in card['sections'] for item in s['items']),4)
+            self.assertEqual([q['source'] for q in card['questions']],['ai','ai'])
+            # Each note exactly at its 25-word limit; only the 100-word total (notes + questions) is exceeded.
+            wordy={key:dict(text=' '.join(['steady']*(25-len(note['text'].split())))+' '+note['text'],evidence_ids=note['evidence_ids'])
+                   for key,note in notes.items()}
+            raw=self.summary_raw(wordy,questions)
+            self.assert_rejected(raw,data,'model_word_limit')
+            self.assertNotIn('note_length',{f['rule'] for f in ai.audit_output(raw,data)['failures']})

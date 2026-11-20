@@ -6,7 +6,7 @@ from . import repository as repo, cases, briefings
 from .validation import validate_record, require
 from .db import get_db
 
-VERSION = 'm6-evidence-1'
+VERSION = 'm6-evidence-2'
 # Definitions intentionally cover only verified existing UI/export concepts.
 # Unknown predictors are excluded, even if the export provides a plausible label.
 DICTIONARY = {
@@ -25,7 +25,17 @@ DICTIONARY = {
  'non_fd_balance_myr': ('Operating account balances', 'Finance', 'MYR', 0, 'Recorded exposure at cutoff; not profit'),
  'estimated_fee_mean_3m_myr': ('Estimated monthly fees', 'Finance', 'MYR/month estimate', 3, 'Historical monthly estimate; not verified profit or guaranteed savings'),
  'estimated_waiver_mean_3m_myr': ('Estimated monthly waivers', 'Finance', 'MYR/month estimate', 3, 'Separate historical monthly estimate; not intervention costs or proof of unprofitability'),
+ # m6-evidence-2: recency/frequency definitions copied from the research project's
+ # data/features_v1/feature_dictionary.csv (read-only source). Null = no event yet or an
+ # incomplete window, and is omitted; there are no sentinel values.
+ 'outbound_count_mean_3m': ('Successful outgoing payments per month', 'Operations', 'transactions/month', 3, 'Mean monthly count of successful outgoing payments over trailing 3 months'),
+ 'outbound_count_mean_12m': ('Usual successful outgoing payments per month', 'Operations', 'transactions/month', 12, 'Mean monthly count of successful outgoing payments over trailing 12 months'),
+ 'outbound_success_recency_days': ('Days since last successful outgoing payment', 'Operations', 'days', 0, 'Calendar days from last known successful payment date to cutoff'),
+ 'login_success_count_mean_3m': ('Successful logins per month', 'Operations', 'events/month', 3, 'Mean monthly login success count over trailing 3 months'),
+ 'login_success_count_mean_12m': ('Usual successful logins per month', 'Operations', 'events/month', 12, 'Mean monthly login success count over trailing 12 months'),
+ 'login_success_recency_days': ('Days since last successful login', 'Operations', 'days', 0, 'Calendar days since last successful login available by cutoff'),
 }
+EVENT_UNITS = ('days', 'transactions/month', 'events/month')
 
 
 def period(cutoff, months):
@@ -58,11 +68,11 @@ def build(purpose, record_id):
     def add(key, label, value, units, observation, meaning, kind='recorded_observation', direction=None, group=None):
         if value is None:
             return
-        if units.startswith('MYR') or units in ('rate','probability','baseline ratio','count'):
+        if units.startswith('MYR') or units in ('rate','probability','baseline ratio','count')+EVENT_UNITS:
             require(briefings.number(value), 'Non-numeric saved business fact')
         if units in ('rate','probability'):
             require(0 <= value <= 1, 'Saved rate/probability outside its units')
-        if units in ('baseline ratio','count'):
+        if units in ('baseline ratio','count')+EVENT_UNITS:
             require(value >= 0, 'Negative saved count/ratio')
         if units.startswith('MYR'):
             display = briefings.money(value) + (' per month (historical estimate)' if 'estimate' in units else ' per month' if '/month' in units else '')
@@ -70,6 +80,10 @@ def build(purpose, record_id):
             display = briefings.percent(value, 2) + ' of the trailing twelve-month average'
         elif units in ('rate', 'probability'):
             display = briefings.percent(value, 2)
+        elif units == 'days':
+            display = f'{value:,.0f} days'
+        elif units in EVENT_UNITS:
+            display = f'{value:,.1f} per month'
         else:
             display = str(value)
         # A full typed clause protects meaning as well as the number during substitution.
@@ -172,6 +186,9 @@ def build(purpose, record_id):
 
 def external(evidence):
     """No customer/batch/case IDs, names, paths, attribution or free-text notes leave the server."""
+    if evidence['identity']['purpose'] == 'summary':
+        from .ai_render import provider_payload  # Summary card: the server's own sentences per section.
+        return provider_payload(evidence)
     facts = []
     for fact in evidence['facts'].values():
         # Monthly combined totals provide the trajectory; incoming/outgoing ratios above

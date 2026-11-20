@@ -14,6 +14,11 @@ MESSAGES={
  'unprotected_comparison':'Unprotected comparison','placeholder_boundary':'Fact placeholder must be an independent clause',
  'verification_question':'Question must invite verification','question_relevance':'Question topic lacks relevant evidence',
  'unresolved_placeholder':'Unresolved placeholder','resolved_word_limit':'Draft exceeds bounded length',
+ # Summary notes contract (m6-narrative-5).
+ 'note_fields':'Invalid note fields','note_length':'AI note exceeds bounded length',
+ 'section_reference':'Note cites evidence from another section','question_fields':'Invalid question fields',
+ 'question_audience':'Question audience lacks matching evidence','question_length':'Question exceeds bounded length',
+ 'model_word_limit':'AI text exceeds bounded length','card_word_limit':'Rendered card exceeds bounded length',
 }
 
 
@@ -149,6 +154,110 @@ def inspect_output(raw,evidence,token,quantity,prohibited,comparison):
     return report,dict(**resolved,evidence_ids=sorted(checked),checks=[
         'saved_prediction_identity','shap_reconstruction_2e-10','raw_calibration_2e-10',
         'schema_length','known_references','statement_kind','protected_fact_clauses','numeric_date_rules','interpretation_rules'])
+
+
+def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
+    """Summary contract: model text is short section notes + audience-tagged questions only.
+    The server renders every fact sentence, so clause/kind/block/boundary rules do not apply here;
+    content, reference, question and length rules apply to everything the model wrote."""
+    from .ai_render import plan, section_ids, NOTE_SECTIONS
+    from .ai_contract import AUDIENCES
+    bounds=limits_for('summary')
+    sections=section_ids(plan(evidence))
+    known=set().union(*sections.values())
+    safe_id=reference_labeler(evidence,token)
+    errors=[]
+    def issue(rule,path,**details):
+        errors.append(dict(rule=rule,path=path,**details))
+    report=dict(purpose='summary',expected_reference_structure='array of '+str(REFERENCE_MIN)+'–'+str(REFERENCE_MAX)+
+        ' unique bare fact IDs from the same card section; [] for an empty note',supplied_fact_count=len(known),failures=errors)
+    if not isinstance(raw,str) or len(raw.encode())>16000:
+        issue('output_size','$',received_type=json_type(raw))
+        return report,None
+    try:
+        parsed=strict_json(raw)
+    except ValidationError:
+        issue('malformed_json','$')
+        return report,None
+    if not isinstance(parsed,dict):
+        issue('schema','$',received_type=json_type(parsed))
+        return report,None
+    if set(parsed)!={'notes','questions'}:
+        issue('schema','$')
+    words=0
+    def check_text(text,refs,path,allowed,max_words,length_rule):
+        nonlocal words
+        tokens=token.findall(text)
+        valid_refs=isinstance(refs,list) and all(isinstance(r,str) for r in refs)
+        unknown=[safe_id(r) for r in refs if not isinstance(r,str) or r not in known] if isinstance(refs,list) else []
+        if not (valid_refs and REFERENCE_MIN<=len(refs)<=REFERENCE_MAX and not unknown and len(set(refs))==len(refs)):
+            issue('evidence_references',path+'.evidence_ids',received_type=json_type(refs),
+                actual_count=len(refs) if isinstance(refs,list) else None,unknown_fact_ids=unknown,
+                duplicate_references=valid_refs and len(set(refs))!=len(refs))
+        elif allowed is not None and not set(refs)<=allowed:
+            issue('section_reference',path+'.evidence_ids')
+        if any(t not in known for t in tokens):
+            issue('unresolved_placeholder',path+'.text',unknown_fact_ids=[safe_id(t) for t in tokens if t not in known])
+        if not valid_refs or any(t not in refs for t in tokens):
+            issue('placeholder_reference',path+'.text',missing_references=[safe_id(t) for t in dict.fromkeys(tokens)
+                if not valid_refs or t not in refs])
+        plain=token.sub('',text)
+        if any(c in plain for c in '{}<>`\\') or quantity.search(plain):
+            issue('protected_content',path+'.text')
+        if prohibited.search(plain):
+            issue('prohibited_claim',path+'.text')
+        if comparison.search(plain):
+            issue('unprotected_comparison',path+'.text')
+        count=len(text.split())
+        words+=count
+        if count>max_words or len(text)>bounds['note_chars']:
+            issue(length_rule,path+'.text',maximum=max_words)
+        return tokens,valid_refs
+    notes=parsed.get('notes')
+    if not isinstance(notes,dict) or set(notes)!=set(NOTE_SECTIONS):
+        issue('note_fields','notes',received_type=json_type(notes))
+    for key in NOTE_SECTIONS:
+        note=notes.get(key) if isinstance(notes,dict) else None
+        path='notes.'+key
+        if not isinstance(note,dict) or set(note)!={'text','evidence_ids'} or not isinstance(note.get('text'),str):
+            if isinstance(notes,dict) and key in notes:
+                issue('note_fields',path,received_type=json_type(note))
+            continue
+        if not note['text'].strip():
+            if note['evidence_ids']!=[]:
+                issue('evidence_references',path+'.evidence_ids',actual_count=len(note['evidence_ids'])
+                    if isinstance(note['evidence_ids'],list) else None)
+            continue
+        check_text(note['text'],note['evidence_ids'],path,sections[key],bounds['note_words'],'note_length')
+    questions=parsed.get('questions')
+    if not isinstance(questions,list) or not bounds['question_min']<=len(questions)<=bounds['question_max']:
+        issue('question_count','questions',received_type=json_type(questions) if 'questions' in parsed else 'missing',
+            actual_count=len(questions) if isinstance(questions,list) else None,
+            minimum=bounds['question_min'],maximum=bounds['question_max'])
+    for index,question in enumerate(questions if isinstance(questions,list) else []):
+        path=f'questions[{index}]'
+        if not isinstance(question,dict) or set(question)!={'audience','text','evidence_ids'} or not isinstance(question.get('text'),str):
+            issue('question_fields',path,received_type=json_type(question))
+            continue
+        text,refs,audience=question['text'],question['evidence_ids'],question['audience']
+        _,valid_refs=check_text(text,refs,path,None,bounds['question_words'],'question_length')
+        plain=token.sub('',text)
+        if not text.endswith('?') or not re.match(r'^(?:Could|Can|Would|Has|Have|Is|Are|What|How|Do|Does)\b',text):
+            issue('verification_question',path+'.text')
+        if audience not in AUDIENCES or not valid_refs or not set(refs)&sections.get(audience,set()):
+            issue('question_audience',path+'.audience')
+        if valid_refs:
+            for topic,identifiers in [('login|signing in',('login',)),('payment',('flow','failure','outbound')),
+                    ('deposit|maturity',('fd_',)),('fees?|waivers?',('fee','waiver')),('balance',('balance',))]:
+                if re.search(r'\b(?:'+topic+r')\w*\b',plain,re.I) and not any(any(i in r for i in identifiers) for r in refs):
+                    issue('question_relevance',path+'.evidence_ids')
+    if words>bounds['model_words']:
+        issue('model_word_limit','$',maximum=bounds['model_words'])
+    report['model_word_count']=words
+    report['failure_count']=len(errors)
+    if errors:
+        return report,None
+    return report,dict(notes=notes,questions=questions)
 
 
 def synthetic_fixture(raw,evidence,token,report):
