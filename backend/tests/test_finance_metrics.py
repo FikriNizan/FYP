@@ -67,6 +67,20 @@ class FormulaTests(unittest.TestCase):
         self.assertAlmostEqual(base['contribution_monthly'], m['contribution_monthly'])
         self.assertAlmostEqual(m['sensitivity'][2]['contribution_monthly'] - m['sensitivity'][0]['contribution_monthly'], 1000.0)
 
+    def test_cost_ratio_sensitivity_scales_transaction_cost_only(self):
+        m = fm.customer_metrics(WORKED, APRIL)
+        self.assertEqual([s['cost_ratio'] for s in m['cost_sensitivity']], [1.0, 0.75, 0.5])
+        base_cost = (0.2877666667 + 25.6355666667) / 1.40
+        for variant in m['cost_sensitivity']:
+            with self.subTest(ratio=variant['cost_ratio']):
+                self.assertAlmostEqual(variant['transaction_cost'], base_cost * variant['cost_ratio'])
+                self.assertAlmostEqual(variant['contribution_monthly'], m['contribution_monthly'] + base_cost * (1 - variant['cost_ratio']))
+                self.assertAlmostEqual(variant['rar_3m'], 3 * variant['contribution_monthly'])
+        # Worked example: contribution 26.64 / 31.27 / 35.90; FSL B 18.23 / 13.60 / 8.97 a month.
+        self.assertEqual([round(v['contribution_monthly'], 2) for v in m['cost_sensitivity']], [26.64, 31.27, 35.90])
+        self.assertEqual([round(v['fsl_b_monthly'], 2) for v in m['cost_sensitivity']], [18.23, 13.6, 8.97])
+        self.assertEqual(m['cost_ratio'], 1.0)  # Base case stays the conservative full price-cap cost.
+
     def test_check_a_uses_strictly_below_threshold_and_needs_an_active_waiver(self):
         below = fm.customer_metrics(features(fd_balance_myr=99999.99, fd_balance_weighted_offer_rate=0.03), APRIL)
         equal = fm.customer_metrics(features(fd_balance_myr=100000.0, fd_balance_weighted_offer_rate=0.03), APRIL)
@@ -145,6 +159,15 @@ class PortfolioAndCardTests(unittest.TestCase):
         self.assertEqual(set(report['by_tier']), {'SME_S', 'CORP_XL', 'unknown'})
         self.assertEqual({k: v['customers'] for k, v in report['by_flag'].items()}, {'flagged': 2, 'not_flagged': 2})
         self.assertIn('must not be added', report['note'])
+        # Cost-ratio and liquidity-premium sensitivities; the base case equals the headline totals.
+        self.assertEqual(report['cost_ratios'], [1.0, 0.75, 0.5])
+        self.assertAlmostEqual(totals['cost_sensitivity']['1.0']['rar_3m'], totals['rar_3m'])
+        self.assertAlmostEqual(totals['premium_sensitivity']['0.005']['rar_3m'], totals['rar_3m'])
+        self.assertAlmostEqual(totals['cost_sensitivity']['0.5']['rar_3m'],
+                               sum(fm.customer_metrics(f, cutoff, cost_ratio=0.5)['rar_3m'] for f in all_features
+                                   if fm.customer_metrics(f, cutoff)['rar_3m'] is not None))
+        self.assertEqual(set(report['by_basis']), {'FD_THRESHOLD', 'POLICY_EXEMPT', 'unknown'})
+        self.assertEqual(report['by_basis']['POLICY_EXEMPT']['customers'], 1)
         summary = self.app.test_client().get('/api/summary').json
         self.assertEqual(summary['finance_metrics']['totals']['customers'], 4)
         detail = self.app.test_client().get('/api/customers/944').json['customer']['finance_metrics']

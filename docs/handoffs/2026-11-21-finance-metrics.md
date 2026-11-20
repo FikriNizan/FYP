@@ -100,3 +100,37 @@ The build passed, `pip check` was clean and `git diff --check` was clean. **No e
 - **Card length:** cards are at most 239 words, leaving almost no margin under 240.
 - **Owner-cited references:** these still need primary sources (see `FINANCE_METRICS.md`).
 - **Stage 2 next:** the Finance tab breakdown with sensitivity, and the Overview table. The full summary batch stays on hold.
+
+---
+
+## Stage 1 addition: cost-proxy sensitivity and verified citations (21 November 2026)
+
+You verified stage 1 independently (April totals, flags and the worked example all match).
+
+### Changes (one commit, pushed)
+| File | Change |
+|---|---|
+| `backend/churn_backend/finance_metrics.py` | `COST_RATIOS = (1.0, 0.75, 0.5)`, base 1.0. Transaction cost × cost ratio. Each customer result gains `cost_sensitivity` (transaction cost, contribution, RaR, FSL B flag and amount at each ratio). The portfolio gains `by_basis` (FD_THRESHOLD / POLICY_EXEMPT), and each group gains `cost_sensitivity` (RaR, negative-RaR customers, non-policy FSL B) and `premium_sensitivity` (RaR) |
+| `backend/tests/test_finance_metrics.py` | New `test_cost_ratio_sensitivity_scales_transaction_cost_only` (worked example 26.64 / 31.27 / 35.90 a month; FSL B 18.23 / 13.60 / 8.97). The portfolio test also checks that the base case equals the headline, the 0.5 ratio total, and the `by_basis` groups |
+| `docs/FINANCE_METRICS.md` | Cost-ratio parameter, a rewritten sensitivity section with both ranges, and the verified citations |
+
+### Your April figures, reproduced exactly (M6 Test, read-only)
+| Group | RaR at cost ratio 1.0 / 0.75 / 0.5 |
+|---|---|
+| FD-threshold tiers | **+0.88m / +2.84m / +4.79m** ✓ |
+| Policy-exempt tiers | **−6.84m / −2.42m / +2.00m** ✓ |
+| Negative-RaR customers | **242 / 160 / 65** ✓ |
+
+### Deviation from your wording: the liquidity premium is not minor here
+Across 0% / 0.5% / 1.0%, total RaR is **−9.51m / −5.96m / −2.42m** (about RM7.1m of range, against about RM12.8m for the cost ratio). For the FD-threshold tiers it is −0.92m / +0.88m / +2.68m, which **flips the sign**. `FINANCE_METRICS.md` therefore says the cost proxy dominates the headline, and that the premium is a substantial secondary sensitivity, with both ranges shown. It does not say the premium has a minor effect. If you want the document to say otherwise, the numbers above are the reason I didn't.
+
+### Citations (fetched)
+| Source | Result |
+|---|---|
+| AFP account analysis | ✅ "EC = CB x (1 – RR) x ECR (D/365)"; 365-day basis only |
+| FCA cash savings profitability | ✅ FTP comparison and an explicit liquidity premium for fixed-term deposits |
+| BNM 2013 pricing reform | ✅ "Effective 2 May 2013 … IBG … online … will be at 10 sen" |
+| PayNet business IBG charges | ❌ **HTTP 403**, so it stays **not verified** |
+
+### Tests
+**`scripts/check.py`** (exit 0): backend **172** (+1), utility 14, Node 10, React 90; the build passed. `pip check` and `git diff --check` were clean.

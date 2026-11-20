@@ -11,7 +11,7 @@ The "gentleman's agreement": the bank waives a corporate customer's transaction 
 | Measure | Formula | Notes |
 |---|---|---|
 | Fee income | `estimated_fee_mean_3m_myr` | What the customer pays **after** waivers (verified, below) |
-| Transaction cost | `(estimated_fee + estimated_waiver) / (1 + tier standard_markup_pct)` | Equals Σ `bnm_base_fee × count` exactly (verified, below); `bnm_base_fee` is the cost proxy |
+| Transaction cost | `(estimated_fee + estimated_waiver) / (1 + tier standard_markup_pct) × cost_ratio` | At cost_ratio 1.0, equals Σ `bnm_base_fee × count` exactly (verified, below). `bnm_base_fee` is the cost proxy |
 | FD earnings | `fd_balance_myr × (OPR + liquidity_premium − fd_balance_weighted_offer_rate) / 12` | **Signed**: negative when the rate paid exceeds OPR + premium (never clipped). A genuine zero balance earns zero |
 | Operating-balance earnings | `non_fd_balance_myr × (1 − SRR) × OPR / 12` | No liquidity premium |
 | Relationship contribution | fee income − transaction cost + FD earnings + operating-balance earnings | |
@@ -32,7 +32,8 @@ The "gentleman's agreement": the bank waives a corporate customer's transaction 
 | Waiver basis by tier | FD_THRESHOLD for SME_S, SME_M, CORP_L; POLICY_EXEMPT for CORP_XL, GOV | Observed in `fee_matrix_clean.csv`, sha256 `2df2b489b18cc6ada3a60df99c7a1564fd6b9a0c8b1427142ffac96ab8b7041f`: uniform per customer, determined by tier for 1000/1000 customers |
 | OPR | **3.00%** from 2023-05-03; table verified through 2024-07-10 | BNM Monetary Policy Statement, 3 May 2023 (https://www.bnm.gov.my/-/monetary-policy-statement-03052023). Held at the 24 Jan 2024, 7 Mar 2024 and 9 May 2024 meetings (…-24012024, …-07032024, …-09052024); OPR decisions index https://www.bnm.gov.my/monetary-stability/opr-decisions |
 | SRR | **2.00%** from 20 Mar 2020 to 15 May 2025; 1.00% from 16 May 2025 | BNM, 19 Mar 2020: "lowered … from 3.00% to 2.00% effective 20 March 2020" (https://www.bnm.gov.my/-/additional-measures-to-further-support-smes-and-individuals-affected-by-the-covid-19-outbre-1); BNM, 8 May 2025 (https://www.bnm.gov.my/-/srr-0525) |
-| Liquidity premium | **0.5%** base; sensitivity **0%** and **1.0%** | Design choice, described below |
+| Liquidity premium | **0.5%** base; sensitivity **0%** and **1.0%** | Term-funding benefit of deposits; the FCA analysis below describes the liquidity premium |
+| Cost ratio | **1.0** base (conservative); sensitivity **0.75** and **0.5** | Share of `bnm_base_fee` assumed as the bank's real per-transaction cost. `bnm_base_fee` is a customer price cap, so the real cost is likely lower |
 
 All three assessment cutoffs (29 Feb, 31 Mar and 30 Apr 2024) use OPR 3.00% and SRR 2.00%.
 
@@ -76,24 +77,39 @@ So fee income is after waivers, and fee + waiver = standard fee × count.
 
 ## Sensitivity design
 
-The liquidity premium represents the extra value of term funding over overnight money. It is uncertain, so the customer view shows FD earnings, contribution, RaR and the B flag at **0%, 0.5% (base) and 1.0%**. Only FD earnings depend on it. A customer with no FD is unaffected.
+Two assumptions are uncertain, so both are shown, as customer-level variants and as portfolio totals.
+
+- **Cost ratio (1.0 / 0.75 / 0.5).** This scales only the transaction cost. **It dominates the headline result** and decides its sign.
+- **Liquidity premium (0% / 0.5% / 1.0%).** This scales only FD earnings. Customers with no FD are unaffected. In this data its effect is **substantial, not minor**: it moves the April total by about RM7.1m, and it flips the FD-threshold total from negative to positive.
+
+**April 2024, Revenue at Risk over 3 months (M6 Test, 1,000 customers, read-only).** Each row varies one assumption, with the other at base.
+
+| Group | Cost ratio 1.0 / 0.75 / 0.5 (premium 0.5%) | Premium 0% / 0.5% / 1.0% (cost ratio 1.0) |
+|---|---|---|
+| FD-threshold tiers (SME_S, SME_M, CORP_L) | **+RM0.88m / +RM2.84m / +RM4.79m** | −RM0.92m / +RM0.88m / +RM2.68m |
+| Policy-exempt tiers (CORP_XL, GOV) | **−RM6.84m / −RM2.42m / +RM2.00m** | −RM8.59m / −RM6.84m / −RM5.10m |
+| All customers | −RM5.96m / +RM0.42m / +RM6.80m | −RM9.51m / −RM5.96m / −RM2.42m |
+| Customers with negative RaR | **242 / 160 / 65** | — |
+| Customers flagged by FSL check B (non-policy) | 314 / 275 / 196 | — |
+
+**How to read it:**
+- **Total RaR:** the cost-ratio range spans about RM12.8m and the premium range about RM7.1m. The headline sign therefore depends on assumptions the data cannot settle. The UI shows both sensitivities, and a negative figure must never be read as a "loss".
+- **Worked example** (customer 604, no FD): contribution is +RM26.64 / +RM31.27 / +RM35.90 a month at cost ratio 1.0 / 0.75 / 0.5, and FSL B is RM18.23 / RM13.60 / RM8.97. The premium has no effect, because there is no FD.
 
 ## Sources and citation status
 
-| Topic | Status |
+| Topic | Status and support |
 |---|---|
-| BNM OPR and SRR | **Verified** by fetching the BNM pages above |
-| Payment fees: Bank Islam Malaysia Berhad business IBG **RM0.10**, RENTAS **RM2.00** | **Verified** from BNM's *Comparative Tables — Businesses* (https://www.bnm.gov.my/documents/20124/57659/Comparative_Tables_Businesses_v7.xlsx, linked from https://www.bnm.gov.my/e-payment-services-and-fees). The table is a current comparison, not dated to 2024 |
-| AFP account-analysis earnings credit formula EC = CB × (1 − RR) × ECR × (D/365) | Cited by the project owner; **not independently verified in this work** (AFP material is subscription-only) |
-| Funds transfer pricing (deposit value = term funding credit minus rate paid; liquidity premium for term deposits) | Cited by the project owner; **not independently verified in this work** |
-| FCA cash savings profitability analysis | Cited by the project owner; **not independently verified in this work** |
-| BNM 2013 payment pricing reform (online IBG at 10 sen) | Cited by the project owner; **not independently verified in this work**. The current BNM table above shows IBG RM0.10 |
-
-Before submission, the unverified items need a primary source with a URL or reference.
+| BNM OPR and SRR | **Verified** (BNM pages listed under Parameters) |
+| Account analysis / earnings credit (AFP) | **Verified**: https://www.financialprofessionals.org/training-resources/resources/articles/Details/an-introduction-to-account-analysis-statements. Balances are used "to offset banking fees through earnings credits"; formula "EC = CB x (1 – RR) x ECR (D/365)". The page states a 365-day basis only |
+| Funds transfer pricing and liquidity premium (FCA) | **Verified**: FCA, *Cash savings profitability analysis* (published 18/09/2024), https://www.fca.org.uk/data/cash-savings-profitability-analysis/printable/print. It compares "the interest expense paid to customers with the income generated through FTP", and describes "the Liquidity Premium, which reflects the benefit earned by deposits which remove liquidity risk (such as deposits with a fixed contractual term)" |
+| BNM 2013 pricing reform | **Verified**: BNM, *A New Pricing Strategy to Promote Greater Efficiency* (20 March 2013), https://www.bnm.gov.my/-/a-new-pricing-strategy-to-promote-greater-efficiency. "Effective 2 May 2013, the fee for Interbank GIRO or IBG transactions that is performed online via internet banking and mobile banking, will be at 10 sen." |
+| Bank Islam business IBG RM0.10, RENTAS RM2.00 | **Verified** from BNM's *Comparative Tables — Businesses* (https://www.bnm.gov.my/documents/20124/57659/Comparative_Tables_Businesses_v7.xlsx, linked from https://www.bnm.gov.my/e-payment-services-and-fees). A current comparison, not dated to 2024 |
+| PayNet business IBG charges | **Not verified**: https://paynet.my/business-interbank-GIRO/charges-transaction.html returned HTTP 403 to the fetch tool |
 
 ## Limitations
 
-- **Cost proxy:** `bnm_base_fee` stands in for the bank's per-transaction cost. Actual PayNet charges to banks are not public, and the real-world BNM figure is a **customer price cap**, so cost is likely **overstated** and leakage conservative (more likely flagged than missed).
+- **Cost proxy:** `bnm_base_fee` stands in for the bank's per-transaction cost. Actual PayNet charges to banks are not public, and the real-world BNM figure is a **customer price cap**, so cost is likely **overstated** and leakage conservative (more likely flagged than missed). The cost-ratio sensitivity (1.0 / 0.75 / 0.5) shows how strongly the headline depends on this.
 - **Synthetic standard fees:** the synthetic standard fee (base × 1.05 to 1.40) can exceed real price caps, e.g. online IBG RM0.10. This is a known simplification of the synthetic data.
 - **Failed payments:** these carry no cost in the source counts (only inbound plus successful outbound are counted).
 - **OPR as a funding proxy:** OPR is an **overnight** rate, used as a simplified proxy for term funding value. The liquidity premium sensitivity partly addresses this.

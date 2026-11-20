@@ -36,6 +36,10 @@ SRR_TABLE = [
 ]
 BASE_PREMIUM = 0.005
 LIQUIDITY_PREMIUMS = (0.0, 0.005, 0.01)
+# Share of bnm_base_fee assumed as the bank's per-transaction cost. bnm_base_fee is a customer price cap,
+# so real cost is likely lower; 1.0 is the conservative base case. This assumption decides the headline sign.
+BASE_COST_RATIO = 1.0
+COST_RATIOS = (1.0, 0.75, 0.5)
 WINDOW_MONTHS = 3
 
 
@@ -65,7 +69,7 @@ def fd_earnings(fd_balance, offer_rate, opr, premium):
     return fd_balance * (opr + premium - offer_rate) / 12, None
 
 
-def customer_metrics(features, cutoff, premium=BASE_PREMIUM, with_sensitivity=True):
+def customer_metrics(features, cutoff, premium=BASE_PREMIUM, with_sensitivity=True, cost_ratio=BASE_COST_RATIO):
     features = features or {}
     reasons = []
     tier_id = features.get('tier_id')
@@ -84,7 +88,7 @@ def customer_metrics(features, cutoff, premium=BASE_PREMIUM, with_sensitivity=Tr
     fee_income = fee if number(fee) else None
     if fee_income is None:
         reasons.append('estimated fees missing')
-    cost = (fee + waiver) / (1 + tier['markup']) if tier and number(fee) and number(waiver) else None
+    cost = (fee + waiver) / (1 + tier['markup']) * cost_ratio if tier and number(fee) and number(waiver) else None
     if cost is None and tier and not number(waiver):
         reasons.append('estimated waivers missing')
     fd_value, fd_reason = fd_earnings(fd, features.get('fd_balance_weighted_offer_rate'), opr, premium)
@@ -124,7 +128,7 @@ def customer_metrics(features, cutoff, premium=BASE_PREMIUM, with_sensitivity=Tr
                      monthly=shortfall - fd_value if flagged else None, shortfall=shortfall, policy=policy)
 
     result = dict(cutoff=str(cutoff)[:10], tier_id=tier_id, waiver_basis=basis, active_waiver=active,
-                  opr=opr, srr=srr, liquidity_premium=premium, window_months=WINDOW_MONTHS,
+                  opr=opr, srr=srr, liquidity_premium=premium, cost_ratio=cost_ratio, window_months=WINDOW_MONTHS,
                   components=dict(fee_income=fee_income, transaction_cost=cost, fd_earnings=fd_value,
                                   operating_earnings=operating_value),
                   contribution_monthly=contribution,
@@ -134,17 +138,26 @@ def customer_metrics(features, cutoff, premium=BASE_PREMIUM, with_sensitivity=Tr
     if with_sensitivity:
         result['sensitivity'] = []
         for value in LIQUIDITY_PREMIUMS:
-            variant = customer_metrics(features, cutoff, value, with_sensitivity=False)
+            variant = customer_metrics(features, cutoff, value, with_sensitivity=False, cost_ratio=cost_ratio)
             result['sensitivity'].append(dict(liquidity_premium=value, fd_earnings=variant['components']['fd_earnings'],
                                               contribution_monthly=variant['contribution_monthly'], rar_3m=variant['rar_3m'],
                                               fsl_b_flagged=variant['fsl_b']['flagged']))
+        result['cost_sensitivity'] = []
+        for ratio in COST_RATIOS:
+            variant = customer_metrics(features, cutoff, premium, with_sensitivity=False, cost_ratio=ratio)
+            result['cost_sensitivity'].append(dict(cost_ratio=ratio, transaction_cost=variant['components']['transaction_cost'],
+                                                   contribution_monthly=variant['contribution_monthly'], rar_3m=variant['rar_3m'],
+                                                   fsl_b_flagged=variant['fsl_b']['flagged'], fsl_b_monthly=variant['fsl_b']['monthly']))
     return result
 
 
 def _group():
     return dict(customers=0, available=0, rar_3m=0.0, fsl_a_customers=0, fsl_a_monthly=0.0, fsl_b_customers=0,
                 fsl_b_monthly=0.0, both_customers=0, policy_fsl_b_customers=0, policy_fsl_b_monthly=0.0,
-                negative_fd_earnings=0)
+                negative_fd_earnings=0, negative_rar_customers=0,
+                cost_sensitivity={str(r): dict(rar_3m=0.0, negative_rar_customers=0, fsl_b_customers=0, fsl_b_monthly=0.0)
+                                  for r in COST_RATIOS},
+                premium_sensitivity={str(p): dict(rar_3m=0.0) for p in LIQUIDITY_PREMIUMS})
 
 
 def _add(group, metrics):
@@ -167,20 +180,36 @@ def _add(group, metrics):
     fd_value = metrics['components']['fd_earnings']
     if fd_value is not None and fd_value < 0:
         group['negative_fd_earnings'] += 1
+    if metrics['rar_3m'] is not None and metrics['rar_3m'] < 0:
+        group['negative_rar_customers'] += 1
+    for variant in metrics['cost_sensitivity']:
+        if variant['rar_3m'] is None:
+            continue
+        bucket = group['cost_sensitivity'][str(variant['cost_ratio'])]
+        bucket['rar_3m'] += variant['rar_3m']
+        bucket['negative_rar_customers'] += variant['rar_3m'] < 0
+        if variant['fsl_b_flagged'] and not b['policy']:
+            bucket['fsl_b_customers'] += 1
+            bucket['fsl_b_monthly'] += variant['fsl_b_monthly']
+    for variant in metrics['sensitivity']:
+        if variant['rar_3m'] is not None:
+            group['premium_sensitivity'][str(variant['liquidity_premium'])]['rar_3m'] += variant['rar_3m']
 
 
 def portfolio(batch_id):
     """Totals by tier and by flagged / not flagged, with coverage. A and B overlap: never add them."""
     rows = get_db().execute('SELECT p.review_alert, p.features_json, b.cutoff_month FROM predictions p '
                             'JOIN batches b ON b.batch_id=p.batch_id WHERE p.batch_id=?', (batch_id,)).fetchall()
-    total, tiers, flags = _group(), defaultdict(_group), defaultdict(_group)
+    total, tiers, flags, bases = _group(), defaultdict(_group), defaultdict(_group), defaultdict(_group)
     cutoff = None
     for row in rows:
         cutoff = row['cutoff_month']
-        metrics = customer_metrics(json.loads(row['features_json']), cutoff, with_sensitivity=False)
-        for group in (total, tiers[metrics['tier_id'] or 'unknown'], flags['flagged' if row['review_alert'] else 'not_flagged']):
+        metrics = customer_metrics(json.loads(row['features_json']), cutoff)
+        for group in (total, tiers[metrics['tier_id'] or 'unknown'], flags['flagged' if row['review_alert'] else 'not_flagged'],
+                      bases[metrics['waiver_basis'] or 'unknown']):
             _add(group, metrics)
-    return dict(cutoff=cutoff, liquidity_premium=BASE_PREMIUM, window_months=WINDOW_MONTHS, totals=total,
-                by_tier=dict(sorted(tiers.items())), by_flag=dict(sorted(flags.items())),
+    return dict(cutoff=cutoff, liquidity_premium=BASE_PREMIUM, cost_ratio=BASE_COST_RATIO, cost_ratios=list(COST_RATIOS),
+                liquidity_premiums=list(LIQUIDITY_PREMIUMS), window_months=WINDOW_MONTHS, totals=total,
+                by_basis=dict(sorted(bases.items())), by_tier=dict(sorted(tiers.items())), by_flag=dict(sorted(flags.items())),
                 note='Contribution at stake is an estimate, not expected loss or audited profit. '
                      'Fee subsidy leakage checks A and B overlap; their totals must not be added.')
