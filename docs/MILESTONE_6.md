@@ -298,7 +298,7 @@ The server sentences were shortened instead:
 - the flag, signal-family, deposit, fee and frequency lines and the template questions are more compact;
 - "12-month averages include the latest 3 months." appears **once**, as a footnote just before Decision, whenever any recorded sentence uses a 12-month average (Finance ratios, the Operations frequency sentences, or the usual monthly value).
 
-The risk sentence's own 12-month baseline is the forecast target definition, so it does not trigger that footnote.
+**Correction (owner review):** the risk sentence's target baseline is also the 12 months ending at the cutoff (`outcomes.py`, `range(-11, 1)`), so it includes the latest 3 months like the features. The footnote therefore appears on **every** card.
 
 Card length is now a **test on server output**: every fixture fallback card must be at most 240 words.
 
@@ -307,3 +307,16 @@ Card length is now a **test on server output**: every fixture fallback card must
 - After shortening: fixture fallback cards 175–190 words; the demo customer with full synthetic features 225; **the 206 flagged April 2024 cards in M6 Test (read-only): 212–240 words, median 222.**
 
 Stage 2 (separate approval) moves the discussion purpose, the Briefing screen and print/PDF to the same contract. Comprehension improvement has not been measured.
+
+**Plain driver labels and terminology (21 November).** "What the model weighed" previously showed raw export labels for drivers outside the evidence dictionary, for example "Session duration mean 3m sec".
+
+`ai_render.DRIVER_LABELS` now gives every one of the 78 predictors a plain 2–5-word label:
+- **Source:** the research project's `data/features_v1/feature_dictionary.csv` (read-only).
+- **Generic definitions:** where the dictionary shares template text across several features, the label was checked against the actual computation in `feature_engineering_v1.py`. Corrections made that way:
+  - `closed_fd_count` = fixed deposits whose status is not active → "Inactive fixed deposits";
+  - `fd_average_balance_myr` = the sum of each active deposit's reported average balance → "Fixed deposit average-balance total";
+  - `session_forced_drop_rate_3m` = sessions with termination type FORCED_DROP → "Sessions ended by forced drop";
+  - `outbound_processing_rate_3m` → "Share of payments in processing".
+- **Where they are used:** the weighed section, placeholder names in AI notes and questions, and the provider payload. Gemini therefore sees the same vocabulary as the reader.
+
+Card sentences and labels use **collections** for inbound flows and **payments** for outbound flows; combined flow stays "transaction value". The evidence panel's fact labels and the discussion purpose are unchanged. The renderer version is `render-2`, which is part of cache identity; the evidence hash is unchanged. After this change, April 2024 flagged cards measure 208–234 words (median 221).
