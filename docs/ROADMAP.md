@@ -115,11 +115,13 @@ Milestone-wide sign-off remains pending representative-user inspection of the co
 * [x] Use non-causal language and require evidence-linked claims.
 * [x] Validate output schema, unsupported claims and numeric consistency; provide a deterministic fallback.
 * [x] Require human review before using the briefing with a customer.
-* [ ] Complete live Gemini and owner evaluation of faithfulness/usefulness; offline synthetic/mock evaluation is implemented; do not claim a mathematical guarantee of hallucination-free narrative.
+* [x] Live Gemini run and owner evaluation completed. Summary under m6-narrative-6: 5/5 accepted. Operations questions were useful; Finance questions and link notes were weak; the deterministic card is the comprehension layer. No mathematical guarantee of hallucination-free narrative is claimed.
+* [ ] Full summary batch (206 flagged April customers) on hold until Revenue at Risk / Fee Subsidy Leakage revise the Finance section.
+* [ ] Client-safe RM question bank and optional AI-suggested client questions (closing work; see MILESTONE_6.md, "Client questions").
 
 Acceptance: generated questions help the RM investigate evidence without inventing customer motives or financial facts.
 
-Implementation, finite evaluation and remaining acceptance are recorded in [MILESTONE_6.md](MILESTONE_6.md). External generation defaults off. Monitoring visual redesign remains deferred. No owner sign-off or improved-comprehension claim is recorded.
+Implementation, the live evaluations and remaining work are recorded in [MILESTONE_6.md](MILESTONE_6.md). External generation defaults off. Monitoring visual redesign remains deferred. No improved-comprehension claim is made: the evaluation is a single-reviewer qualitative judgement.
 
 ## Milestone 7 — OPR demonstration, evaluation and release
 

@@ -356,3 +356,17 @@ All existing safety rules are unchanged: prohibited/causal, comparison, quantity
 The prompt now carries two good and two bad examples for the link note and for each question audience. One of the owner's good link examples ("…alongside the fall in payments") had to use "…the change in payments", because the comparison rule rejects model-written directions; the card states the direction from the exact saved ratio. The Finance example "Is the customer moving part of its payments to another bank?" is kept by owner decision. It is the core silent-churn hypothesis, framed as an internal verification question, and asserting switching remains forbidden. If later runs show it repeated on most cards, it will be revisited.
 
 The deterministic card is unchanged: April 2024 flagged cards are 207–236 words. The next live run will show whether the narrowed role adds useful links and questions.
+
+### Final evaluation: live summary run (m6-narrative-6), 21 November 2026
+
+**Run:** the owner ran the batch on 5 flagged April 2024 customers (synthetic M6 Test data) under `m6-narrative-6`. **5 of 5 outputs were accepted, 0 rejected**, and the retry/backoff path was not needed.
+
+**Owner quality judgement (reading as the target user):**
+- **Operations questions: good.** They were natural, relevant verification questions, better than the template.
+- **Finance questions: weak and repetitive.** Three were near-identical "Is the customer maintaining its operating account balances…" variants that did not engage the card's Finance facts. The template is arguably better.
+- **Link notes: mostly filler.** They followed an "X and Y both relate to Z" pattern copied from the prompt example. Nothing was false, but there was little insight.
+- **The switching example** ("moving part of its payments to another bank") was not over-used; in fact it was not used at all.
+
+**Finding.** Strict grounding made the LLM safe: across the evaluated runs, no accepted output contained an unsupported value, date, cause or recommendation. The **deterministic server card is the main comprehension layer**. The LLM's measurable added value is narrow: **tailored Operations questions**. This is a small, single-reviewer qualitative judgement, not a measured comprehension result.
+
+**Decision.** The full 206-customer summary batch is **deliberately on hold** until the planned Revenue at Risk and Fee Subsidy Leakage work changes the Finance section. Generating summaries now would bake in a Finance section that is about to change. The closing work instead focuses the LLM where it helped, on questions (see "Client questions" below).
