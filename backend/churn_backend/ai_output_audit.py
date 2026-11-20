@@ -20,6 +20,7 @@ MESSAGES={
  'model_word_limit':'AI text exceeds bounded length',
  # Client questions (m6-narrative-7).
  'client_language':'Client question uses internal or competitor language','client_data_request':'Client question requests internal data',
+ 'client_offer':'Client question offers bank pricing or terms actions',
 }
 
 
@@ -161,6 +162,11 @@ CLIENT_BANNED = re.compile(r"\b(?:model\w*|estimat\w*|risk\w*|scor\w*|flag\w*|th
 # Requests for internal figures: "how many/much ...", or "what is/are ... rate/number/count/amount/balance/total/level/percentage".
 CLIENT_DATA_REQUEST = re.compile(r"\bhow (?:many|much)\b|^what (?:is|are|was|were) (?:the|your)\b[^?]*"
     r"\b(?:rates?|numbers?|counts?|amounts?|balances?|totals?|levels?|percentages?)\b", re.I)
+# Offers of bank actions on pricing or terms commit the bank to a conversation the committee decides:
+# "Would you like (us) to review/reduce/waive/...", "Can we lower ...", or discount/rebate/waive wording.
+CLIENT_OFFER = re.compile(r"\b(?:would you like|do you want|shall we|can we|could we|may we|should we)\b(?:\s+[\w']+){0,4}?\s+"
+    r"(?:review|reduce|waive|discount|lower|change|adjust|revise|renegotiate|reprice|match)\b"
+    r"|\b(?:discount\w*|rebate\w*|waive|waived|waiving|reduce your fees?|lower your fees?|fee reductions?)\b", re.I)
 CLIENT_OPENING = re.compile(r'^(?:Has|Have|Is|Are|Could|Can|Would|Did|Does|Do|What|How)\b')
 
 
@@ -220,6 +226,8 @@ def inspect_client_questions(raw,evidence,token,quantity,prohibited,comparison):
             issue('client_language',path+'.text')
         if CLIENT_DATA_REQUEST.search(plain):
             issue('client_data_request',path+'.text')
+        if CLIENT_OFFER.search(plain):
+            issue('client_offer',path+'.text')
         if not text.endswith('?') or not CLIENT_OPENING.match(text):
             issue('verification_question',path+'.text')
         if len(text.split())>bounds['question_words'] or len(text)>bounds['question_chars']:

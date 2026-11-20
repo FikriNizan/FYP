@@ -898,7 +898,7 @@ class DraftTests(unittest.TestCase):
 
     def test_client_question_contract_schema_and_prompt(self):
         from churn_backend.ai_contract import limits_for,schema_for,purpose_instruction,CONTRACT_VERSION
-        self.assertEqual(CONTRACT_VERSION,'m6-narrative-7')
+        self.assertEqual(CONTRACT_VERSION,'m6-narrative-8')
         schema=schema_for('discussion')
         self.assertEqual((schema['properties']['questions']['minItems'],schema['properties']['questions']['maxItems']),(2,3))
         instruction=purpose_instruction('discussion')
@@ -934,3 +934,30 @@ class DraftTests(unittest.TestCase):
             failed=self.client.post(url,json={'expected_evidence_hash':state['evidence_hash']}).json
         self.assertEqual((failed['state'],failed['failure_code']),('fallback','output_validation_failed'))
         self.assertEqual(failed['fallback'],fallback)
+
+    def test_client_questions_reject_offers_of_bank_pricing_or_terms_actions(self):
+        from churn_backend import briefings
+        from churn_backend.ai_contract import purpose_instruction
+        self.assertIn('never offer reviews, discounts, waivers or changes to fees or terms',purpose_instruction('discussion'))
+        with self.app.app_context():
+            data=self.client_data()
+            login='feature.login_failure_rate_3m'
+            def raw(text,refs=(login,)):
+                return self.client_questions([dict(text='Is our online banking still meeting your team\'s day-to-day needs?',evidence_ids=[login]),
+                                              dict(text=text,evidence_ids=list(refs))])
+            # Live output (case 08a3f19a, m6-narrative-7): an offer, not a question about the client's situation.
+            live_q3='Would you like to review the account fees and any applicable waivers on your profile?'
+            for text in [live_q3,'Would you like us to reduce the charges on your accounts?','Can we lower the charges on your accounts?',
+                         'Is a rebate on charges something you would value?','Could a discount on charges help your team?',
+                         'Shall we waive the monthly charge for you?','Are you interested in a fee reduction?']:
+                with self.subTest(text=text):
+                    self.assert_rejected(raw(text),data,'client_offer')
+            # Live Q1 and Q2 (accepted by the owner) and every standard C1 question still pass all client rules.
+            accepted=['How have you been managing your incoming collections and outgoing payments recently?',
+                      'Have you experienced any technical difficulties when signing in to use online banking lately?']
+            standard=list(briefings.CLIENT_QUESTIONS.values())+[briefings.FD_PLANS_QUESTION,briefings.FD_SURPLUS_QUESTION,briefings.FALLBACK_QUESTION]
+            self.assertIn('Are the fees and charges on your accounts clear and in line with what you expected?',standard)
+            for text in accepted+standard:
+                with self.subTest(text=text):
+                    card=ai.validate(raw(text,('feature.inbound_flow_ratio_3m_to_12m',login)),data)
+                    self.assertEqual(card['questions'][1]['text'],text)

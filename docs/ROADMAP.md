@@ -108,7 +108,9 @@ Acceptance: the report can explain why a delivered intervention and a non-attrit
 
 Milestone-wide sign-off remains pending representative-user inspection of the connected Monitoring view and the manual Milestone 4 items listed above. The historical synthetic replay is not live-bank validation.
 
-## Milestone 6 — Grounded GenAI
+## Milestone 6 — Grounded GenAI (closed 21 November 2026)
+
+**Status: closed.** The full summary batch remains on hold until Revenue at Risk / Fee Subsidy Leakage revise the Finance section (open item below, carried forward).
 
 * [x] Define a structured evidence payload with allowed fields and traceable numeric values.
 * [x] Keep model probabilities, money, dates and SHAP math deterministic; the LLM writes only bounded narrative/questions.
@@ -117,7 +119,7 @@ Milestone-wide sign-off remains pending representative-user inspection of the co
 * [x] Require human review before using the briefing with a customer.
 * [x] Live Gemini run and owner evaluation completed. Summary under m6-narrative-6: 5/5 accepted. Operations questions were useful; Finance questions and link notes were weak; the deterministic card is the comprehension layer. No mathematical guarantee of hallucination-free narrative is claimed.
 * [ ] Full summary batch (206 flagged April customers) on hold until Revenue at Risk / Fee Subsidy Leakage revise the Finance section.
-* [x] Client-safe RM question bank (C1) and optional on-demand AI-suggested client questions (C2) implemented and tested offline; live client-question run and RM review pending (see MILESTONE_6.md, "Client questions").
+* [x] Client-safe RM question bank (C1) and optional on-demand AI-suggested client questions (C2). Live client-question run: 3/3 accepted; two judged good, one rejected by the owner as a pricing offer, now blocked by the `client_offer` rule (m6-narrative-8). See MILESTONE_6.md.
 
 Acceptance: generated questions help the RM investigate evidence without inventing customer motives or financial facts.
 

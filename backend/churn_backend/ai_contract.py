@@ -1,7 +1,7 @@
 """Purpose-specific output bounds shared by SDK schema, instructions and validation."""
 from .validation import require, strict_json, ValidationError
 
-CONTRACT_VERSION='m6-narrative-7'
+CONTRACT_VERSION='m6-narrative-8'
 REFERENCE_MIN=1
 REFERENCE_MAX=4
 
@@ -95,7 +95,8 @@ def purpose_instruction(purpose):
             'Each question is at most '+str(bounds['question_words'])+' words and uses a different topic. '
             'The client must never hear internal language: no model, estimate, risk, score, flag, threshold, churn, attrition, '
             'prediction, records or data, and never mention other banks or competitors. Never ask the client for numbers, counts '
-            'or amounts, and never quote numbers, dates or the facts themselves. Do not presuppose a problem or its cause.')
+            'or amounts, and never quote numbers, dates or the facts themselves. Do not presuppose a problem or its cause. '
+            "Ask about the client's situation and experience; never offer reviews, discounts, waivers or changes to fees or terms.")
     require(False,'Unknown AI output purpose')
 
 def reference_instruction(purpose='discussion'):

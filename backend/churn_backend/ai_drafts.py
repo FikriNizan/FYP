@@ -27,7 +27,8 @@ Examples (style only; cite real fact IDs from the payload):
 Good: "Have any of your payments been delayed or not gone through as expected?"
 Good: "What are your plans for your fixed deposits, including any coming up for renewal?"
 Bad (internal language and switching): "Our model shows a higher risk score for you; are you moving to another bank?"
-Bad (asks the client for internal data): "How many failed logins did you have last quarter?"'''
+Bad (asks the client for internal data): "How many failed logins did you have last quarter?"
+Bad (offers a pricing action, which is the committee's decision): "Would you like to review the account fees and any applicable waivers on your profile?"'''
 SUMMARY_INSTRUCTION = '''Write for a non-technical meeting reader. Use only the supplied card sentences; add connection, not repetition.
 Never write numbers, number words, percentages, money, dates, months or comparison words such as higher, lower, more, less, increase, decrease, rose or fell: the card already shows every value and direction.
 Model signals describe what the estimate weighed, never causes. Do not state causes, motives, certainty, complaints, competitors, profitability, retention effectiveness or recommendations; prioritisation is the committee's decision.
@@ -236,6 +237,7 @@ VALIDATION_RULES={
     'Question audience lacks matching evidence':'question_audience', 'Question exceeds bounded length':'question_length',
     'AI text exceeds bounded length':'model_word_limit',
     'Client question uses internal or competitor language':'client_language', 'Client question requests internal data':'client_data_request',
+    'Client question offers bank pricing or terms actions':'client_offer',
 }
 
 

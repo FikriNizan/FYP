@@ -396,3 +396,23 @@ The deterministic card is unchanged: April 2024 flagged cards are 207–236 word
 The old block/clause discussion contract and its rules were removed once nothing used them.
 
 **Not yet established:** no live client-question run has been made, and no client or RM has reviewed the questions. The banned-term rules prevent internal language from reaching the client; they cannot guarantee that a question is well judged for a particular relationship. The RM's review, through the existing acknowledgement, remains the control.
+
+### Live evaluation: AI client questions (m6-narrative-7), 21 November 2026
+
+**Run:** the owner generated AI client questions on demand for one prioritised case (`08a3f19a…`, synthetic M6 Test data, Gemini 3.5 Flash-Lite). **All 3 questions were accepted** by the validator; all were client-safe and evidence-linked.
+
+| # | Question (as generated) | RM-only basis | Owner judgement |
+|---|---|---|---|
+| Q1 | "How have you been managing your incoming collections and outgoing payments recently?" | Collections vs 12-month average; Payments vs 12-month average | Good: combines collections and payments into one natural question |
+| Q2 | "Have you experienced any technical difficulties when signing in to use online banking lately?" | Login failure rate; Days since last successful login | Good |
+| Q3 | "Would you like to review the account fees and any applicable waivers on your profile?" | Estimated monthly fees; Estimated monthly waivers | **Not acceptable:** an **offer**, not a question about the client's situation. It commits the bank to a pricing conversation, which is a committee decision |
+
+**Change (`m6-narrative-8`):**
+- **New validator rule `client_offer`:** rejects client questions that offer or propose bank actions on pricing or terms, i.e. "Would you like (us) to / Do you want / Can we / Could we / Shall we … review, reduce, waive, discount, lower, change, adjust, revise, renegotiate, reprice or match", and the words discount, rebate, waive, "reduce/lower your fees" and "fee reduction".
+- **Prompt:** now says "Ask about the client's situation and experience; never offer reviews, discounts, waivers or changes to fees or terms.", with Q3 as a bad example.
+- **Tests:**
+  - Q3 and similar offers are rejected;
+  - Q1, Q2 and every standard question in the client question bank, including "Are the fees and charges on your accounts clear and in line with what you expected?", still pass all client rules.
+- **Cache identity:** the contract-version bump makes the stored draft containing Q3 stale, so it is no longer served as current.
+
+**Milestone 6 is closed.** The deterministic card is the comprehension layer. The LLM's role is narrowed to optional internal summary questions and on-demand client questions, under strict grounding and client-safe rules, with RM review. The full 206-customer summary batch remains on hold until Revenue at Risk / Fee Subsidy Leakage revise the Finance section.
