@@ -286,12 +286,24 @@ New rules:
 - questions cite their audience's section;
 - notes and questions are at most 25 words each;
 - model text totals at most 100 words;
-- the rendered card is at most 320 words.
+- (the earlier rendered-card limit of 320 words was removed on 21 November; see "Card length" below).
 
 `placeholder_boundary`, `missing_protected_clause`, `statement_kind`, `block_count` and the old resolved-length rule do not apply to summaries (obsolete by construction). They still apply to the discussion purpose until stage 2. Contract version is **`m6-narrative-5`**. The renderer version is part of cache identity, so drafts stored under earlier versions are not shown as current.
 
+**Card length (owner decision, 21 November).** A card's length comes from the server's own sentences, so rejecting an AI note would only fall back to a card that is just as long. The post-render word limit was therefore **removed as a rejection rule**. AI text stays bounded by its own limits: 25 words per note, 25 per question, 100 in total.
+
+The server sentences were shortened instead:
+- the trend reads "Transaction value in {period} averaged X% below (above) its 12-month average", while the exact ratio stays in "View supporting evidence";
+- whole-number percentages drop ".0";
+- the flag, signal-family, deposit, fee and frequency lines and the template questions are more compact;
+- "12-month averages include the latest 3 months." appears **once**, as a footnote just before Decision, whenever any recorded sentence uses a 12-month average (Finance ratios, the Operations frequency sentences, or the usual monthly value).
+
+The risk sentence's own 12-month baseline is the forecast target definition, so it does not trigger that footnote.
+
+Card length is now a **test on server output**: every fixture fallback card must be at most 240 words.
+
 **Measured length.**
-- Fallback cards for the six summary fixtures: 207–226 words.
-- The 206 flagged April 2024 customers in M6 Test (read-only): 257–305 words, median 269.
+- Before shortening: fixture fallback cards 207–226 words; April 2024 flagged cards 257–305 (median 269).
+- After shortening: fixture fallback cards 175–190 words; the demo customer with full synthetic features 225; **the 206 flagged April 2024 cards in M6 Test (read-only): 212–240 words, median 222.**
 
 Stage 2 (separate approval) moves the discussion purpose, the Briefing screen and print/PDF to the same contract. Comprehension improvement has not been measured.
