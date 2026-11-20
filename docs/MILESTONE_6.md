@@ -370,3 +370,29 @@ The deterministic card is unchanged: April 2024 flagged cards are 207–236 word
 **Finding.** Strict grounding made the LLM safe: across the evaluated runs, no accepted output contained an unsupported value, date, cause or recommendation. The **deterministic server card is the main comprehension layer**. The LLM's measurable added value is narrow: **tailored Operations questions**. This is a small, single-reviewer qualitative judgement, not a measured comprehension result.
 
 **Decision.** The full 206-customer summary batch is **deliberately on hold** until the planned Revenue at Risk and Fee Subsidy Leakage work changes the Finance section. Generating summaries now would bake in a Finance section that is about to change. The closing work instead focuses the LLM where it helped, on questions (see "Client questions" below).
+
+### Client questions: RM cheat sheet (closing work, m6-narrative-7), 21 November 2026
+
+**Purpose.** The final evaluation showed that the LLM's strength is questions, not narrative. The closing work therefore turns questions into an **RM cheat sheet**: questions the relationship manager can say directly to the client in a meeting or call.
+
+**C1. Deterministic, client-safe question bank** (`briefings.discussion_questions`, shown on the RM Briefing and in print/PDF):
+- **Triggers:** only the customer's saved higher-risk drivers, strongest first, with no thresholds.
+- **Limits:** at most one question per family and three in total.
+- **Families:** all 78 predictors map to one of ten families or to "no client question". The families are collections, payments, overall transaction value, login problems, online banking usage, payment failures and processing, service friction, fixed deposits, fees and waivers, and accounts and balances. The static attributes and device-security monitoring are "no client question".
+- **Fixed deposits:** a presence check chooses between "plans for your fixed deposits" and "surplus funds to place".
+- **Fallback:** a general relationship check-in.
+- **Wording:** approved by the owner. Questions never mention the model, estimates, risk, scores, flags, thresholds, churn, attrition, predictions, records or data, never mention other banks, and contain no numbers or dates.
+- **RM-only source:** the plain driver label and value appear in a separate "Evidence" line for the RM, never in the question.
+
+**C2. Optional on-demand AI client questions.** These replace the AI discussion draft. The same route, cache, reservations, `ON_DEMAND` retry, acknowledgement and Briefing print/PDF inclusion are reused.
+- **Output:** Gemini returns 2–3 questions, each citing 1–3 facts.
+- **Payload:** the customer's card sentences and drivers only. The committee rationale, notes and follow-ups are no longer added to the evidence and never leave the server.
+- **Validation:** the existing prohibited/causal, comparison, quantity/date, markup and reference rules, plus:
+  - `client_language`: the C1 banned terms, other banks or competitors, and placeholders, which would expose internal metric names;
+  - `client_data_request`: "how many/much…" and "what is/are … rate/number/amount/balance…".
+- **Openings:** open What/How questions are allowed for clients, unlike internal summary questions.
+- **Fallback:** the C1 questions, labelled **Standard**; AI questions are labelled **AI-suggested**. Each shows a "Based on" line for the RM, on screen, in print and in the PDF.
+
+The old block/clause discussion contract and its rules were removed once nothing used them.
+
+**Not yet established:** no live client-question run has been made, and no client or RM has reviewed the questions. The banned-term rules prevent internal language from reaching the client; they cannot guarantee that a question is well judged for a particular relationship. The RM's review, through the existing acknowledgement, remains the control.
