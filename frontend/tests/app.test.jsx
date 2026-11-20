@@ -20,7 +20,7 @@ function editDecision() {
   fireEvent.change(screen.getByLabelText('Reviewed by'),{target:{value:'Developer'}});
 }
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   const explanation = demo.record;
   customer = { prediction_id:'prediction',batch_id:'enriched',cus_id:'944',customer_name:'Acceptance test company',cutoff_month:'2024-02-29',customer_type:'CORPORATE',calibrated_risk:.844091949823281,probability_cutoff:.2586013233784648,review_alert:true,review:{...emptyReview},finance:{fd_balance_myr:0,non_fd_balance_myr:2016997.13,estimated_monthly_fee_myr:null,estimated_monthly_waiver_myr:0},operations:{combined_flow_mean_3m_myr:214333.04,combined_flow_mean_12m_myr:24622928.0491667},explanation:{...explanation,higher_risk_drivers:explanation.higher_risk_drivers||[],lower_risk_drivers:explanation.lower_risk_drivers||[]},flow_history:[],feature_count:78 };
   api.months.mockResolvedValue({items:[batch]});

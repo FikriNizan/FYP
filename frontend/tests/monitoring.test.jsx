@@ -17,7 +17,7 @@ const trend={protocol_sha256:'same',batches:[{batch_id:'april',cutoff_month:'202
   state:'not_loaded',loaded:0,unavailable:1000,mean_risk_all:.16,flagged_rate_all:.2,
   mean_risk_loaded:null,observed_rate:null,gap:null,brier:null,reference_brier:null,flagged_positive:null}]};
 function start(){render(<MemoryRouter><Monitoring batches={batches}/></MemoryRouter>);}
-beforeEach(()=>{vi.clearAllMocks();api.monitoringTrend.mockResolvedValue(trend);});
+beforeEach(()=>{vi.resetAllMocks();api.monitoringTrend.mockResolvedValue(trend);});
 function openGuide(){fireEvent.click(screen.getByText('How to read this page'));}
 
 describe('Outcome monitoring',()=>{

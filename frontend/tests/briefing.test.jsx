@@ -23,7 +23,7 @@ function start(query='?case_id=case-a') {
 }
 let click;
 beforeEach(()=>{
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   api.briefing.mockResolvedValue(payload());
   api.aiDraft.mockResolvedValue({state:'not_generated',draft:null,evidence_hash:'ai-hash',evidence:[],fallback:{format:'questions-1',questions:[],evidence_ids:[],checks:[]}});
   api.downloadBriefing.mockResolvedValue({blob:new Blob(['%PDF-1.7\nexample']),filename:'txb-rm-briefing.pdf'});
@@ -155,9 +155,9 @@ it('includes only an explicitly reviewed exact AI draft in optional PDF requests
   const content={format:'questions-1',questions:[{text:'Saved Gemini client question?',source:'ai',basis:'Login failure rate',evidence_ids:[]}],evidence_ids:[],checks:[]};
   api.aiDraft.mockResolvedValue({state:'saved',evidence_hash:'ai-hash',evidence:[],draft:{draft_id:'ai-id',generated_at:'2026-11-19T10:00:00Z',content}});
   start();await screen.findByText('Saved AI draft');
-  expect(screen.getByLabelText('Include reviewed AI discussion draft').checked).toBe(false);
+  expect(screen.getByLabelText('Include reviewed AI client questions').checked).toBe(false);
   fireEvent.click(screen.getByLabelText('I have reviewed this exact AI draft and its supporting evidence'));
-  fireEvent.click(screen.getByLabelText('Include reviewed AI discussion draft'));
+  fireEvent.click(screen.getByLabelText('Include reviewed AI client questions'));
   fireEvent.click(screen.getByRole('button',{name:'Download PDF'}));
   await waitFor(()=>expect(api.downloadBriefing).toHaveBeenCalled());
   expect(api.downloadBriefing.mock.calls[0][3]).toEqual([{case_id:'case-a',draft_id:'ai-id',evidence_hash:'ai-hash',acknowledged:true}]);
@@ -165,11 +165,11 @@ it('includes only an explicitly reviewed exact AI draft in optional PDF requests
 
 it('keeps deterministic exports available when AI inclusion has not been reviewed',async()=>{
   start();await screen.findByRole('heading',{name:'Selected company'});
-  fireEvent.click(screen.getByLabelText('Include reviewed AI discussion draft'));
+  fireEvent.click(screen.getByLabelText('Include reviewed AI client questions'));
   fireEvent.click(screen.getByRole('button',{name:'Download PDF'}));
-  expect(await screen.findByText('Review an AI draft before including it.')).toBeTruthy();
+  expect(await screen.findByText('Review the AI client questions before including them.')).toBeTruthy();
   expect(api.downloadBriefing).not.toHaveBeenCalled();
-  expect(screen.getByLabelText('Include reviewed AI discussion draft').checked).toBe(false);
+  expect(screen.getByLabelText('Include reviewed AI client questions').checked).toBe(false);
   fireEvent.click(screen.getByRole('button',{name:'Download PDF'}));
   await waitFor(()=>expect(api.downloadBriefing).toHaveBeenCalledOnce());
 });

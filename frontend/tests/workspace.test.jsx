@@ -15,7 +15,7 @@ let customer,reviewed;
 function start(path) { render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>); }
 afterEach(()=>vi.restoreAllMocks());
 beforeEach(()=>{
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   api.runtimeContext.mockResolvedValue({mode:'test',database_filename:'m5-review-20261116-030542.sqlite'});
   customer={cus_id:'944',customer_name:'Saved evidence company',batch_id:'enriched',prediction_id:'prediction',cutoff_month:'2024-02-29',calibrated_risk:.844,review_alert:true,probability_cutoff:.2586,review:{version:1,decision:'prioritise',reason:'Discuss observed activity',reviewer:'Committee',owner:'RM A',operations_notes:'Check payment experience',finance_notes:'Consider available balances'},finance:{non_fd_balance_myr:0,fd_balance_myr:null},operations:{combined_flow_mean_3m_myr:50,combined_flow_mean_12m_myr:100,outbound_failure_rate_3m:.4},explanation:demo.record,flow_history:[],actions:[]};
   reviewed={case_id:'case-a',version:1,status:'open',owner:'RM A',next_action_date:null,original:customer,latest:customer,original_review:customer.review,follow_ups:[],follow_up_counts:{planned:0,attempted:0,delivered:0},history:[],review_history:[],created_at:'2026-11-01T10:00:00Z'};

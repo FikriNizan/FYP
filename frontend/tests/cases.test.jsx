@@ -12,7 +12,7 @@ const batch={batch_id:'feb',cutoff_month:'2024-02-29',source_kind:'saved_shap_ex
 const review={decision:'prioritise',reason:'Investigate reduced activity',reviewer:'Committee',owner:'RM A'};
 function start(path='/cases/jan') { render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>); }
 beforeEach(()=>{
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   const customer={cus_id:'944',customer_name:'Constructed company',prediction_id:'jan',batch_id:'jan',cutoff_month:'2024-01-31',calibrated_risk:.84,review,explanation:demo.record,operations:{},flow_history:[],actions:[]};
   current={case_id:'jan',prediction_id:'jan',status:'open',owner:'RM A',next_action_date:null,version:1,created_at:'2026-01-01T00:00:00Z',original_review:review,original:customer,latest:{...customer,prediction_id:'feb',batch_id:'feb',cutoff_month:'2024-02-29',calibrated_risk:.12},follow_ups:[],follow_up_counts:{planned:0,attempted:0,delivered:0,cancelled:0},history:[],review_history:[]};
   api.months.mockResolvedValue({items:[batch]});

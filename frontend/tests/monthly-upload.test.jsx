@@ -6,7 +6,7 @@ import MonthlyAssessments from '../src/pages/MonthlyAssessments.jsx';
 import { api } from '../src/api.js';
 
 vi.mock('../src/api.js',async original=>({...await original(),api:{uploadAssessment:vi.fn()}}));
-beforeEach(()=>vi.clearAllMocks());
+beforeEach(()=>vi.resetAllMocks());
 it('shows real file states and an honest processing state before publication',async()=>{
   render(<MemoryRouter><MonthlyAssessments batches={[]} onPublished={vi.fn()}/></MemoryRouter>);
   expect(screen.getAllByText('Needed')).toHaveLength(2);

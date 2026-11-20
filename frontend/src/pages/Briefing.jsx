@@ -57,7 +57,7 @@ export default function Briefing() {
     const stillCurrent=()=>mounted.current && liveKey.current===key && !abort.signal.aborted;
     try {
       const aiSelections=includeAi ? ids.map(id=>reviewedAi[id]).filter(Boolean) : [];
-      if(includeAi && !aiSelections.length) throw new Error('Review an AI draft before including it.');
+      if(includeAi && !aiSelections.length) throw new Error('Review the AI client questions before including them.');
       if(kind==='print') {
         const fresh=await api.briefing(ids);
         if(!stillCurrent()) return;
@@ -103,7 +103,7 @@ export default function Briefing() {
 
   return <>
     <div className="heading no-print"><div><h1>RM Briefing</h1><p className="muted">Structured briefing preview from explicitly selected saved cases. Review before sharing.</p></div><div className="heading-actions"><Link className="button" to={reviewedPath}>Choose cases</Link><button disabled={!ready} onClick={()=>exportBriefing('print')}>Print briefing</button><button className="primary" disabled={!ready} onClick={()=>exportBriefing('pdf')}>{busy && operation.kind==='pdf' ? 'Downloading PDF…' : 'Download PDF'}</button></div></div>
-    <label className="no-print field-label"><input type="checkbox" checked={includeAi} onChange={e=>setIncludeAi(e.target.checked)} /> Include reviewed AI discussion draft</label>
+    <label className="no-print field-label"><input type="checkbox" checked={includeAi} onChange={e=>setIncludeAi(e.target.checked)} /> Include reviewed AI client questions</label>
     {current?.error && <div className="no-print"><ErrorNotice message={current.error} />{!current.needsReview && <button onClick={()=>setAttempt(n=>n+1)}>Reload selected evidence</button>}</div>}
     {current?.needsReview && <p className="no-print briefing-refresh"><strong>Review the updated evidence below.</strong> <button onClick={()=>setState(old=>({...old,needsReview:false,error:null}))}>I have reviewed the updated briefing</button></p>}
     {busy && <p className="no-print" role="status">{operation.kind==='pdf' ? 'Preparing the PDF from freshly checked saved evidence…' : 'Checking saved evidence before printing…'}</p>}
