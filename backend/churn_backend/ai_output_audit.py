@@ -18,7 +18,7 @@ MESSAGES={
  'note_fields':'Invalid note fields','note_length':'AI note exceeds bounded length',
  'section_reference':'Note cites evidence from another section','question_fields':'Invalid question fields',
  'question_audience':'Question audience lacks matching evidence','question_length':'Question exceeds bounded length',
- 'model_word_limit':'AI text exceeds bounded length','card_word_limit':'Rendered card exceeds bounded length',
+ 'model_word_limit':'AI text exceeds bounded length',
 }
 
 

@@ -289,6 +289,7 @@ details p { font-size:13px; line-height:1.7; }
 .summary-card h4 { margin: 0 0 4px; font-size: .95rem; }
 .summary-card p { margin: 0 0 4px; }
 .summary-card ul { margin: 4px 0 0; padding-left: 18px; }
+.summary-card .card-footnote { margin-top: 10px; font-size: .85rem; }
 .summary-card .ai-note { border-left: 3px solid #7a8fd6; padding-left: 8px; }
 .summary-card .ai-tag, .summary-card .audience-tag, .summary-card .standard-tag { display: inline-block; margin-right: 6px; padding: 0 6px;
   border-radius: 4px; font-size: .75rem; font-weight: 600; line-height: 1.5; }

@@ -9,9 +9,9 @@ REFERENCE_MAX=4
 LIMITS={
     # Summary (m6-narrative-5): the server writes every fact sentence; limits bound model-written text
     # (four section notes + questions). card_words bounds the whole rendered card.
-    # Measured: a full-data fallback card is ~250 words, so model text gets ~100 words and the
-    # rendered card (incl. any template questions) is checked against card_words after rendering.
-    'summary':dict(question_min=0,question_max=3,note_words=25,note_chars=200,question_words=25,model_words=100,card_words=320),
+    # Limits bound model-written text only. Card length comes from server sentences and is kept
+    # short by tests on server output, never by rejecting AI text.
+    'summary':dict(question_min=0,question_max=3,note_words=25,note_chars=200,question_words=25,model_words=100),
     'discussion':dict(block_min=1,block_max=6,question_min=0,question_max=5,word_max=340),
 }
 

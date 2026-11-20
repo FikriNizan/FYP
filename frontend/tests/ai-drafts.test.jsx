@@ -161,3 +161,16 @@ it('shows the deterministic fallback card with no AI labels',async()=>{
   expect(screen.queryByText('AI')).toBeNull();
   expect(screen.getAllByText('Standard')).toHaveLength(2);
 });
+
+it('places the 12-month footnote after the questions and before the decision, without a heading',async()=>{
+  const withFootnote={...sectionCard,sections:[...sectionCard.sections.slice(0,4),
+    {id:'footnote',title:'',items:[{text:'12-month averages include the latest 3 months.',source:'standard',evidence_ids:[]}]},sectionCard.sections[4]]};
+  api.aiDraft.mockResolvedValue({...saved,draft:{...saved.draft,content:withFootnote}});
+  const view=render(<AIBriefingDraft purpose="summary" recordId="p" />);
+  const footnote=await screen.findByText('12-month averages include the latest 3 months.');
+  const text=view.container.textContent;
+  expect(text.indexOf('Could Finance confirm the position?')).toBeLessThan(text.indexOf('12-month averages include'));
+  expect(text.indexOf('12-month averages include')).toBeLessThan(text.indexOf('Decision'));
+  expect(footnote.tagName).toBe('P');
+  expect(screen.getAllByRole('heading',{level:4}).map(h=>h.textContent)).not.toContain('');
+});

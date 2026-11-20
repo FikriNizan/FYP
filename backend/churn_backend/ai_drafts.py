@@ -221,7 +221,7 @@ VALIDATION_RULES={
     'Invalid note fields':'note_fields', 'AI note exceeds bounded length':'note_length',
     'Note cites evidence from another section':'section_reference', 'Invalid question fields':'question_fields',
     'Question audience lacks matching evidence':'question_audience', 'Question exceeds bounded length':'question_length',
-    'AI text exceeds bounded length':'model_word_limit', 'Rendered card exceeds bounded length':'card_word_limit',
+    'AI text exceeds bounded length':'model_word_limit',
 }
 
 
@@ -264,9 +264,8 @@ def _validate(raw, evidence):
     require(not report['failures'],MESSAGES[report['failures'][0]['rule']] if report['failures'] else 'Invalid narrative')
     if summary:
         # Server renders every fact sentence; validated notes/questions resolve to fact names only.
-        card=ai_render.render_summary(evidence,content['notes'],content['questions'])
-        require(ai_render.card_words(card)<=limits_for('summary')['card_words'],MESSAGES['card_word_limit'])
-        return card
+        # Card length comes from server sentences (bounded by tests), so it is never a reason to reject AI text.
+        return ai_render.render_summary(evidence,content['notes'],content['questions'])
     return content
 
 

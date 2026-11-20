@@ -19,15 +19,16 @@ function CardItem({ item }) {
 }
 
 function SummaryCard({ content }) {
-  const closing=content.sections.find(s=>s.id==='closing');
+  const closing=content.sections.find(s=>s.id==='closing'), footnote=content.sections.find(s=>s.id==='footnote');
   return <div className="summary-card">
-    {content.sections.filter(s=>s.id!=='closing').map(s=><div className="summary-section" key={s.id}>
+    {content.sections.filter(s=>s.id!=='closing' && s.id!=='footnote').map(s=><div className="summary-section" key={s.id}>
       <h4>{s.title}</h4>{s.items.map((item,i)=><CardItem item={item} key={i} />)}
     </div>)}
     {!!content.questions.length && <div className="summary-section"><h4>Questions for the meeting</h4><ul>{content.questions.map((q,i)=><li key={i}>
       <span className="audience-tag">{q.audience==='finance' ? 'Finance' : 'Operations'}</span>
       <span className={q.source==='ai' ? 'ai-tag' : 'standard-tag'}>{q.source==='ai' ? 'AI' : 'Standard'}</span>{q.text}
     </li>)}</ul></div>}
+    {footnote && <p className="muted card-footnote">{footnote.items.map(item=>item.text).join(' ')}</p>}
     {closing && <div className="summary-section"><h4>{closing.title}</h4>{closing.items.map((item,i)=><CardItem item={item} key={i} />)}</div>}
   </div>;
 }

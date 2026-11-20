@@ -19,7 +19,8 @@ FRICTION = ('login_failure_rate_3m', 'outbound_failure_rate_3m', 'outbound_bank_
 PLAIN_NAMES = {'prediction.risk': 'the estimated risk', 'prediction.threshold': 'the review threshold',
                'prediction.flag': 'the review flag'}
 NOT_NOTABLE = 'None of the service or online-banking measures are among the main signals for this estimate.'
-WEIGHED_NOTE = 'These are signals the model weighed, not proven causes.'
+WEIGHED_NOTE = 'Signals the model weighed, not proven causes.'
+FOOTNOTE = '12-month averages include the latest 3 months.'
 CLOSING = "Prioritisation is the committee's decision."
 SERVICE_CLOSING = 'Service issues can be checked and fixed independently of the outreach decision.'
 QUESTION_LIMIT = 3
@@ -37,6 +38,11 @@ def span(period):
     return f'{start:%b}–{end:%b %Y}' if start.year == end.year else f'{start:%b %Y}–{end:%b %Y}'
 
 
+def pct(value, digits=1):
+    """briefings.percent with a trailing .0/.00 dropped for whole numbers only (40.0% -> 40%)."""
+    return re.sub(r'\.0+%$', '%', briefings.percent(value, digits))
+
+
 def name(fact_id, facts):
     return PLAIN_NAMES.get(fact_id) or facts[fact_id]['label'].lower()
 
@@ -51,8 +57,9 @@ def weights(evidence):
     return {d['feature']: d['contribution_logodds'] for d in saved['higher_risk_drivers'] + saved['lower_risk_drivers']}
 
 
-def line(text, ids, features=(), source='evidence'):
-    return dict(text=text, ids=list(ids), features=list(features), source=source)
+def line(text, ids, features=(), source='evidence', twelve=False):
+    """twelve=True marks a sentence that uses a 12-month average (drives the single card footnote)."""
+    return dict(text=text, ids=list(ids), features=list(features), source=source, twelve=twelve)
 
 
 def ranked(lines, w):
@@ -74,7 +81,7 @@ def operations(evidence, w):
                               ('passive_session_rate_3m', '{p} of online banking sessions had no transaction ({period}).')]:
         fact = get(feature)
         if fact:
-            lines.append(line(template.format(p=briefings.percent(fact['value'], 1), period=span(fact['period'])), [fact['id']], [feature]))
+            lines.append(line(template.format(p=pct(fact['value'], 1), period=span(fact['period'])), [fact['id']], [feature]))
     context = []
     for recency, noun, short, long in [('outbound_success_recency_days', 'outgoing payment', 'outbound_count_mean_3m', 'outbound_count_mean_12m'),
                                        ('login_success_recency_days', 'login', 'login_success_count_mean_3m', 'login_success_count_mean_12m')]:
@@ -85,13 +92,13 @@ def operations(evidence, w):
         a, b = get(short), get(long)
         label = 'Successful outgoing payments' if noun == 'outgoing payment' else 'Successful logins'
         if a and b:
-            trend = 'lower' if a['value'] < b['value'] else 'higher' if a['value'] > b['value'] else 'the same'
-            context.append(line(f'{label}: {a["value"]:,.1f} a month on average in {span(a["period"])}, compared with '
-                                f'{b["value"]:,.1f} over the 12 months to {cutoff} ({trend}).', [a['id'], b['id']], [short, long]))
+            relation = 'below' if a['value'] < b['value'] else 'above' if a['value'] > b['value'] else 'equal to'
+            context.append(line(f'{label}: {a["value"]:,.1f} a month in {span(a["period"])}, {relation} the 12-month '
+                                f'average ({b["value"]:,.1f}).', [a['id'], b['id']], [short, long], twelve=True))
         elif a or b:
             only = a or b
-            context.append(line(f'{label}: {only["value"]:,.1f} a month on average in {span(only["period"])}.', [only['id']],
-                                [short if a else long]))
+            context.append(line(f'{label}: {only["value"]:,.1f} a month in {span(only["period"])}.', [only['id']],
+                                [short if a else long], twelve=only is b))
     notable, rest = ranked(lines + context, w)
     if notable:
         return (notable + rest)[:3]
@@ -105,16 +112,14 @@ def finance(evidence, w):
     trend = []
     ratio = get('combined_flow_ratio_3m_to_12m')
     if ratio:
-        r = ratio['value']
-        change = 'unchanged' if r == 1 else f'{briefings.percent(abs(1 - r), 2)} {"lower" if r < 1 else "higher"}'
-        trend.append(line(f'Average monthly transaction value in {span(ratio["period"])} was {briefings.percent(r, 2)} of its '
-                          f'12-month average (which includes these 3 months): {change}.', [ratio['id']], ['combined_flow_ratio_3m_to_12m']))
+        trend.append(line(f'Transaction value in {span(ratio["period"])} {relative(ratio["value"], "its")}.', [ratio['id']],
+                          ['combined_flow_ratio_3m_to_12m'], twelve=True))
     lines = []
-    for feature, noun in [('inbound_flow_ratio_3m_to_12m', 'incoming'), ('outbound_flow_ratio_3m_to_12m', 'outgoing')]:
+    for feature, noun in [('inbound_flow_ratio_3m_to_12m', 'Incoming'), ('outbound_flow_ratio_3m_to_12m', 'Outgoing')]:
         fact = get(feature)
         if fact:
-            lines.append(line(f'Average monthly {noun} payments in {span(fact["period"])} were {briefings.percent(fact["value"], 2)} '
-                              f'of their 12-month average (which includes these 3 months).', [fact['id']], [feature]))
+            lines.append(line(f'{noun} payments in {span(fact["period"])} {relative(fact["value"], "their")}.', [fact['id']],
+                              [feature], twelve=True))
     operating = get('non_fd_balance_myr')
     if operating:
         lines.append(line(f'Operating account balances on {day(operating["period"]["as_of"])}: {briefings.money(operating["value"])}.',
@@ -122,25 +127,32 @@ def finance(evidence, w):
     deposit, maturing = get('fd_balance_myr'), get('fd_maturing_30d_count')
     if deposit or maturing:  # One deposit sentence keeps the Finance section short.
         when = day((deposit or maturing)['period']['as_of'])
-        parts = [f'Fixed deposit balances on {when}: {briefings.money(deposit["value"])}'] if deposit else []
+        parts = [f'Fixed deposits on {when}: {briefings.money(deposit["value"])}'] if deposit else []
         if maturing:
             n = int(maturing['value'])
-            due = ('no fixed deposits are due to mature within 30 days' if n == 0 else
-                   f'{n} fixed deposit{" is" if n == 1 else "s are"} due to mature within 30 days')
-            parts.append(due if deposit else f'{due[:1].upper()}{due[1:]} of {when}')
+            if deposit:
+                parts.append(f'{"none" if n == 0 else n} due to mature within 30 days')
+            else:
+                parts.append(f'{"No" if n == 0 else n} fixed deposit{"" if n == 1 else "s"} due to mature within 30 days of {when}')
         lines.append(line('; '.join(parts) + '.', [f['id'] for f in (deposit, maturing) if f], ['fd_balance_myr', 'fd_maturing_30d_count']))
     fee, waiver = get('estimated_fee_mean_3m_myr'), get('estimated_waiver_mean_3m_myr')
     if fee or waiver:
         parts = []
         if fee:
-            parts.append(f'estimated fees averaged {briefings.money(fee["value"])} a month ({span(fee["period"])})')
+            parts.append(f'fees {briefings.money(fee["value"])} a month')
         if waiver:
-            parts.append(f'estimated waivers averaged {briefings.money(waiver["value"])} a month')
-        text = '; '.join(parts)
-        lines.append(line(text[0].upper() + text[1:] + '. These are historical estimates, not profit.',
+            parts.append(f'waivers {briefings.money(waiver["value"])} a month')
+        lines.append(line(f'Estimated {" and ".join(parts)} ({span((fee or waiver)["period"])}); historical estimates, not profit.',
                           [f['id'] for f in (fee, waiver) if f], ['estimated_fee_mean_3m_myr', 'estimated_waiver_mean_3m_myr']))
     notable, rest = ranked(lines, w)
     return (trend + notable + rest)[:6]
+
+
+def relative(ratio, possessive):
+    """3-month mean vs 12-month mean from the exact saved ratio; the ratio itself stays in supporting evidence."""
+    if ratio == 1:
+        return f'matched {possessive} 12-month average'
+    return f'averaged {pct(abs(1 - ratio), 2)} {"below" if ratio < 1 else "above"} {possessive} 12-month average'
 
 
 def bottom_line(evidence):
@@ -150,24 +162,25 @@ def bottom_line(evidence):
     if risk:
         lines.append(line('Estimated chance that average monthly transaction value over '
                           f'{briefings.forecast(evidence["identity"]["cutoff"])} falls to half or less of its 12-month average: '
-                          f'{briefings.percent(risk["value"], 1)}.', ['prediction.risk']))
+                          f'{pct(risk["value"], 1)}.', ['prediction.risk']))
     flag, threshold = facts.get('prediction.flag'), facts.get('prediction.threshold')
     if flag and threshold:
-        t = briefings.percent(threshold['value'], 1)
-        text = (f'Flagged for committee review: the estimate is at or above the {t} review threshold.' if flag['value']
-                else f'Not flagged: the estimate is below the {t} review threshold.')
+        t = pct(threshold['value'], 1)
+        text = (f'Flagged for committee review: at or above the {t} threshold.' if flag['value']
+                else f'Not flagged: below the {t} threshold.')
         lines.append(line(text, ['prediction.flag', 'prediction.threshold']))
     if saved['higher_risk_drivers']:
         top = max(saved['higher_risk_drivers'], key=lambda d: d['contribution_logodds'])
         if top['feature'] in DICTIONARY:
-            family = ('service and online-banking measures' if DICTIONARY[top['feature']][1] == 'Operations'
-                      else 'transaction value and balance measures')
+            family = ('service and online banking' if DICTIONARY[top['feature']][1] == 'Operations'
+                      else 'transaction value and balances')
         else:
-            family = (top.get('group') or 'other').lower() + ' measures'
-        lines.append(line(f'The strongest signals for this estimate concern {family}.', []))
+            family = (top.get('group') or 'other measures').lower()
+        lines.append(line(f'Strongest signals: {family}.', []))
     usual = facts.get('feature.combined_flow_mean_12m_myr')
     if usual:
-        lines.append(line(f'Usual monthly transaction value (12-month average): {briefings.money(usual["value"])}.', [usual['id']]))
+        lines.append(line(f'Usual monthly transaction value (12-month average): {briefings.money(usual["value"])}.', [usual['id']],
+                          twelve=True))
     return lines
 
 
@@ -207,18 +220,16 @@ def templates(evidence, card_plan):
         friction = [d['feature'] for d in sorted(evidence['explanation']['higher_risk_drivers'], key=lambda d: -d['contribution_logodds'])
                     if d['feature'] in FRICTION and 'feature.' + d['feature'] in ids['operations']]
         if friction:
-            text = (f'Could Operations check whether the recorded {DICTIONARY[friction[0]][0].lower()} point to a '
-                    'service problem that can be fixed?')
+            text = f'Could Operations check whether recorded {DICTIONARY[friction[0]][0].lower()} point to a fixable service problem?'
             cited = ['feature.' + friction[0]]
         else:
-            text = ("Could Operations confirm whether the customer's recent online-banking and payment activity "
-                    'matches what the relationship team expects?')
+            text = 'Could Operations confirm whether recent online-banking and payment activity matches what the relationship team expects?'
             cited = sorted(ids['operations'])[:1]
         result.append(dict(audience='operations', text=text, source='template', evidence_ids=cited))
     if ids['finance']:
         trend = 'feature.combined_flow_ratio_3m_to_12m'
         result.append(dict(audience='finance', source='template', evidence_ids=[trend] if trend in ids['finance'] else sorted(ids['finance'])[:1],
-                           text='Could Finance confirm what the recent change in transaction value means for the balances and fees recorded for this customer?'))
+                           text='Could Finance confirm what the transaction value change means for balances and fees?'))
     return result
 
 
@@ -237,6 +248,8 @@ def render_summary(evidence, notes=None, questions=None):
     for template in templates(evidence, card_plan):
         if len(asked) < QUESTION_LIMIT and not any(q['audience'] == template['audience'] for q in asked):
             asked.append(template)
+    if any(l['twelve'] for lines in card_plan.values() for l in lines):  # One note for every 12-month comparison.
+        sections.append(dict(id='footnote', title='', items=[dict(text=FOOTNOTE, source='standard', evidence_ids=[])]))
     closing = [CLOSING] + ([SERVICE_CLOSING] if service_issue(evidence) else [])
     sections.append(dict(id='closing', title=TITLES['closing'],
                          items=[dict(text=text, source='standard', evidence_ids=[]) for text in closing]))
