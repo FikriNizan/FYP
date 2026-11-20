@@ -1,7 +1,7 @@
 """Purpose-specific output bounds shared by SDK schema, instructions and validation."""
 from .validation import require, strict_json, ValidationError
 
-CONTRACT_VERSION='m6-narrative-5'
+CONTRACT_VERSION='m6-narrative-6'
 KINDS=['recorded_observation','model_signal','recorded_committee_context']
 REFERENCE_MIN=1
 REFERENCE_MAX=4
@@ -11,7 +11,9 @@ LIMITS={
     # (four section notes + questions). card_words bounds the whole rendered card.
     # Limits bound model-written text only. Card length comes from server sentences and is kept
     # short by tests on server output, never by rejecting AI text.
-    'summary':dict(question_min=0,question_max=3,note_words=25,note_chars=200,question_words=25,model_words=100),
+    # m6-narrative-6: one optional link note (2-3 facts from >=2 sections) and at most one question per audience.
+    'summary':dict(question_min=0,question_max=2,link_words=25,link_chars=200,link_min_refs=2,link_max_refs=3,
+        link_max_placeholders=3,link_min_connecting_words=4,question_words=25,question_chars=200,model_words=100),
     'discussion':dict(block_min=1,block_max=6,question_min=0,question_max=5,word_max=340),
 }
 
@@ -41,20 +43,18 @@ def reference_registry(evidence,payload=None):
     return registry
 
 
-NOTE_SECTIONS=['bottom_line','operations','finance','weighed']
 AUDIENCES=['operations','finance']
 
 
 def summary_schema(limits):
     def references():
         return dict(type='array',items=dict(type='string'))
-    note=dict(type='object',additionalProperties=False,required=['text','evidence_ids'],properties={
+    link=dict(type='object',additionalProperties=False,required=['text','evidence_ids'],properties={
         'text':dict(type='string'),'evidence_ids':references()})
     question=dict(type='object',additionalProperties=False,required=['audience','text','evidence_ids'],properties={
         'audience':dict(type='string',enum=list(AUDIENCES)),'text':dict(type='string'),'evidence_ids':references()})
-    return dict(type='object',additionalProperties=False,required=['notes','questions'],properties={
-        'notes':dict(type='object',additionalProperties=False,required=list(NOTE_SECTIONS),
-            properties={key:dict(note) for key in NOTE_SECTIONS}),
+    return dict(type='object',additionalProperties=False,required=['link','questions'],properties={
+        'link':link,
         'questions':dict(type='array',minItems=limits['question_min'],maxItems=limits['question_max'],items=question)})
 
 
@@ -80,11 +80,13 @@ def purpose_instruction(purpose):
     bounds=limits_for(purpose)
     if purpose=='summary':
         return ('Purpose: Customer Summary card for a monthly retention meeting, read by non-technical Operations and Finance staff. '
-            'The server already writes every fact sentence shown in payload sections (bottom_line, operations, finance, weighed). '
-            'For each section you may write notes.<section>.text: at most one short plain-English sentence (at most '+str(bounds['note_words'])+
-            " words) that helps the reader connect that section's facts, or an empty string with [] when there is nothing useful to add. "
+            'The server already writes every fact sentence shown in payload sections (bottom_line, operations, finance, weighed); '
+            'the card alone is the main explanation. You may add ONE optional link.text: a single plain-English sentence (at most '+str(bounds['link_words'])+
+            ' words) that says what connects '+str(bounds['link_min_refs'])+'–'+str(bounds['link_max_refs'])+' facts from at least two different sections. '
+            'Never list fact names; return an empty string with [] when nothing genuinely links. '
             'The questions field must be a JSON array containing '+str(bounds['question_min'])+'–'+str(bounds['question_max'])+
-            ' verification questions, each with audience operations or finance: internal checks staff could make before deciding. '
+            ' verification questions: at most one with audience operations and at most one with audience finance. '
+            "Ask about the customer's situation or the bank's service, never for a value: the card already shows every value. "
             'Zero questions is valid: return [] when evidence is insufficient. '
             'Never invent or pad questions to meet a minimum. Shorter output is preferable when evidence is limited.')
     else:
@@ -98,10 +100,10 @@ def purpose_instruction(purpose):
 def reference_instruction(purpose='discussion'):
     if purpose=='summary':
         return ('Reference contract: to name a fact, write its placeholder exactly, e.g. {{prediction.risk}}; the card replaces it with the '
-            "fact's name, never its value. Cite every placeholder you use in that item's evidence_ids: "+str(REFERENCE_MIN)+'–'+str(REFERENCE_MAX)+
-            ' unique bare IDs copied exactly from sections[].lines[].facts[].id. An empty note has evidence_ids []. '
-            'A note may cite only facts from its own section. An operations question must cite at least one operations fact, '
-            'and a finance question at least one finance fact.')
+            "fact's name, never its value. Cite every placeholder you use in that item's evidence_ids: unique bare IDs copied exactly "
+            'from sections[].lines[].facts[].id. A non-empty link cites 2–3 facts from at least two different sections; an empty link has '
+            'evidence_ids []. A question cites '+str(REFERENCE_MIN)+'–'+str(REFERENCE_MAX)+' facts. An operations question must cite at least '
+            'one operations fact, and a finance question at least one finance fact.')
     return ('Reference transport contract: every evidence_ids field is an array of '+str(REFERENCE_MIN)+'–'+str(REFERENCE_MAX)+
         ' unique strings copied EXACTLY from facts[].id. Use bare IDs there, never labels, IDs from another purpose, '
         'or {{placeholder}} strings. In text, use facts[].placeholder exactly, as a complete independent clause. '

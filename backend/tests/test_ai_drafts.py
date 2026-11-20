@@ -32,12 +32,11 @@ class DraftTests(unittest.TestCase):
     def output(self, fact='prediction.risk',kind='recorded_observation',prefix='Recorded activity offers a starting point for committee discussion.'):
         return json.dumps(dict(blocks=[dict(kind=kind,text=prefix+' {{'+fact+'}}. The context remains a matter to verify.',evidence_ids=[fact])],questions=[]))
 
-    def notes(self, fact='prediction.risk', section='bottom_line', questions=(),
-              text='This card gives the committee a starting point for discussing {{FACT}}.'):
-        """Summary contract (m6-narrative-5): one short note per section plus audience-tagged questions."""
-        notes={key:dict(text='',evidence_ids=[]) for key in ['bottom_line','operations','finance','weighed']}
-        notes[section]=dict(text=text.replace('FACT',fact),evidence_ids=[fact])
-        return json.dumps(dict(notes=notes,questions=list(questions)))
+    def notes(self, fact='prediction.risk', questions=()):
+        """Summary contract (m6-narrative-6): one link note citing two card sections, plus questions."""
+        other='feature.login_failure_rate_3m'
+        link=dict(text='For this customer, {{'+fact+'}} and {{'+other+'}} both belong in the review discussion.',evidence_ids=[fact,other])
+        return json.dumps(dict(link=link,questions=list(questions)))
 
     def block_data(self):
         """Old block/clause contract still serves the discussion purpose until stage 2."""
@@ -594,7 +593,7 @@ class DraftTests(unittest.TestCase):
         payload=json.loads(self.notes())
         payload['questions']=[dict(text='PRIVATE_QUESTION',evidence_ids=['PRIVATE_REFERENCE']) for _ in range(4)]
         raw=json.dumps(payload)
-        expected=dict(purpose='summary',questions_field_type='array',actual_count=4,permitted_minimum=0,permitted_maximum=3)
+        expected=dict(purpose='summary',questions_field_type='array',actual_count=4,permitted_minimum=0,permitted_maximum=2)
         self.assertEqual(question_metadata(raw,'summary'),expected)
         self.app.config.update(TXB_LOCAL_SESSION=True,TXB_GENAI_CAPTURE_ERROR=True)
         with self.app.app_context(),self.assertLogs(self.app.logger,level='WARNING') as logs:
@@ -611,7 +610,7 @@ class DraftTests(unittest.TestCase):
 
     def test_purpose_contract_schema_and_instructions_share_zero_to_three_or_five(self):
         from churn_backend.ai_contract import limits_for,schema_for,purpose_instruction
-        for purpose,maximum in [('summary',3),('discussion',5)]:
+        for purpose,maximum in [('summary',2),('discussion',5)]:
             with self.subTest(purpose=purpose):
                 limits=limits_for(purpose)
                 schema=schema_for(purpose)
@@ -628,7 +627,7 @@ class DraftTests(unittest.TestCase):
                 self.assertEqual(schema_for(purpose)['properties']['questions']['maxItems'],maximum)
 
     def test_question_empty_boundary_over_limit_and_wrong_types_for_both_purposes(self):
-        for purpose,maximum in [('summary',3),('discussion',5)]:
+        for purpose,maximum in [('summary',2),('discussion',5)]:
             with self.app.app_context():
                 data=evidence.build('summary',self.id)
                 data['identity']['purpose']=purpose
@@ -636,9 +635,11 @@ class DraftTests(unittest.TestCase):
                 payload=json.loads(self.notes() if summary else self.output())
                 question=(dict(audience='operations',text='Could we verify the recorded context?',evidence_ids=['feature.login_failure_rate_3m'])
                     if summary else dict(text='Could we verify the recorded context?',evidence_ids=['prediction.risk']))
+                # Summary (m6-narrative-6): at most one question per audience, so the second one is Finance.
+                finance=dict(audience='finance',text='Could we verify the recorded context?',evidence_ids=['feature.non_fd_balance_myr'])
                 for count in [0,1,maximum]:
                     with self.subTest(purpose=purpose,count=count):
-                        payload['questions']=[copy.deepcopy(question) for _ in range(count)]
+                        payload['questions']=[copy.deepcopy(question if i==0 or not summary else finance) for i in range(count)]
                         accepted=ai.validate(json.dumps(payload),data)
                         # Summary cards may add template questions for a missing audience; count the model's own.
                         self.assertEqual(len([q for q in accepted['questions'] if q.get('source','ai')=='ai']),count)
@@ -656,7 +657,7 @@ class DraftTests(unittest.TestCase):
             client=factory.return_value.__enter__.return_value
             client.models.generate_content.return_value=MagicMock(candidates=[MagicMock(finish_reason=types.FinishReason.STOP)],text=self.output())
             config=dict(enabled=True,provider='gemini',model='gemini-3.5-flash-lite',timeout=12,tokens=2048)
-            for purpose,maximum in [('summary',3),('discussion',5)]:
+            for purpose,maximum in [('summary',2),('discussion',5)]:
                 with self.subTest(purpose=purpose):
                     data['identity']['purpose']=purpose
                     ai.Gemini().generate(data,config)
@@ -737,13 +738,14 @@ class DraftTests(unittest.TestCase):
                             walk(value,path+'['+str(index)+']')
                 walk(schema,'$')
                 plain={'type':'array','items':{'type':'string'}}
-                if purpose=='summary':  # m6-narrative-5: notes object + audience-tagged questions.
+                if purpose=='summary':  # m6-narrative-6: one link note + audience-tagged questions.
                     self.assertEqual(found['enum'],['$.properties.questions.items.properties.audience'])
                     self.assertEqual(found['minItems'],['$.properties.questions'])
                     self.assertEqual(found['maxItems'],['$.properties.questions'])
+                    self.assertEqual(schema['properties']['questions']['maxItems'],2)
                     self.assertEqual(schema['properties']['questions']['items']['properties']['evidence_ids'],plain)
-                    for note in ['bottom_line','operations','finance','weighed']:
-                        self.assertEqual(schema['properties']['notes']['properties'][note]['properties']['evidence_ids'],plain)
+                    self.assertEqual(schema['properties']['link']['properties']['evidence_ids'],plain)
+                    self.assertNotIn('notes',schema['properties'])
                     continue
                 self.assertEqual(found['enum'],['$.properties.blocks.items.properties.kind'])
                 self.assertEqual(sorted(found['minItems']),['$.properties.blocks','$.properties.questions'])
@@ -799,75 +801,111 @@ class DraftTests(unittest.TestCase):
                         self.assertIn('block_count',{f['rule'] for f in ai.audit_output(raw,data)['failures']})
 
 
-    def summary_raw(self, notes=None, questions=()):
-        base={key:dict(text='',evidence_ids=[]) for key in ['bottom_line','operations','finance','weighed']}
-        base.update(notes or {})
-        return json.dumps(dict(notes=base,questions=list(questions)))
+    def summary_raw(self, link=None, questions=()):
+        return json.dumps(dict(link=link or dict(text='',evidence_ids=[]),questions=list(questions)))
 
     def assert_rejected(self, raw, data, rule):
         with self.assertRaises(ValidationError):
             ai.validate(raw,data)
         self.assertIn(rule,{f['rule'] for f in ai.audit_output(raw,data)['failures']})
 
-    def test_summary_notes_reject_unsupported_text_and_bad_references(self):
-        with self.app.app_context():
-            data=evidence.build('summary',self.id)
-            risk=['prediction.risk']
-            long_note=' '.join(['word']*26)+' {{prediction.risk}}.'
-            cases=[
-                ('prohibited','bottom_line','The customer will leave because of {{prediction.risk}}.',risk,'prohibited_claim'),
-                ('comparison','finance','Activity fell for {{feature.combined_flow_ratio_3m_to_12m}}.',['feature.combined_flow_ratio_3m_to_12m'],'unprotected_comparison'),
-                ('quantity','bottom_line','Ninety percent is {{prediction.risk}}.',risk,'protected_content'),
-                ('markup','bottom_line','<b>{{prediction.risk}}</b>',risk,'protected_content'),
-                ('unknown','bottom_line','See {{unknown.fact}}.',['unknown.fact'],'evidence_references'),
-                ('duplicate','bottom_line','See {{prediction.risk}}.',risk*2,'evidence_references'),
-                ('zero refs','bottom_line','The committee can discuss this card.',[],'evidence_references'),
-                ('five refs','bottom_line','See {{prediction.risk}}.',['prediction.risk','prediction.flag','prediction.threshold',
-                    'feature.login_failure_rate_3m','feature.outbound_failure_rate_3m'],'evidence_references'),
-                ('uncited','bottom_line','{{prediction.risk}} and {{prediction.flag}} matter here.',risk,'placeholder_reference'),
-                ('other section','operations','Look again at {{prediction.risk}}.',risk,'section_reference'),
-                ('too long','bottom_line',long_note,risk,'note_length'),
-            ]
-            for name,key,text,ids,rule in cases:
-                with self.subTest(case=name):
-                    self.assert_rejected(self.summary_raw({key:dict(text=text,evidence_ids=ids)}),data,rule)
-            with self.subTest(case='empty note with references'):
-                self.assert_rejected(self.summary_raw({'bottom_line':dict(text='',evidence_ids=risk)}),data,'evidence_references')
-            with self.subTest(case='missing note key'):
-                raw=json.loads(self.summary_raw());raw['notes'].pop('weighed')
-                self.assert_rejected(json.dumps(raw),data,'note_fields')
+    LOGIN='feature.login_failure_rate_3m'
+    PASSIVE='feature.passive_session_rate_3m'
+    PAYMENTS='feature.outbound_failure_rate_3m'
+    BALANCE='feature.non_fd_balance_myr'
+    RISK='prediction.risk'
 
-    def test_summary_questions_need_matching_audience_form_and_length(self):
+    def test_summary_link_note_keeps_content_and_reference_rules(self):
         with self.app.app_context():
             data=evidence.build('summary',self.id)
-            login=['feature.login_failure_rate_3m']
+            two=[self.RISK,self.BALANCE]
             cases=[
-                ('audience mismatch',dict(audience='finance',text='Could Finance verify the recorded context?',evidence_ids=login),'question_audience'),
-                ('not a question',dict(audience='operations',text='Check the recorded context.',evidence_ids=login),'verification_question'),
-                ('too long',dict(audience='operations',text='Could '+' '.join(['word']*25)+'?',evidence_ids=login),'question_length'),
+                ('prohibited','The customer will leave because of {{prediction.risk}} and {{feature.non_fd_balance_myr}}.',two,'prohibited_claim'),
+                ('comparison','Activity fell while {{prediction.risk}} sits beside {{feature.non_fd_balance_myr}} today.',two,'unprotected_comparison'),
+                ('quantity','Ninety percent of {{prediction.risk}} sits beside {{feature.non_fd_balance_myr}} today.',two,'protected_content'),
+                ('markup','<b>{{prediction.risk}}</b> sits beside {{feature.non_fd_balance_myr}} for this customer.',two,'protected_content'),
+                ('unknown','{{unknown.fact}} sits beside {{feature.non_fd_balance_myr}} for this customer.',['unknown.fact',self.BALANCE],'evidence_references'),
+                ('duplicate','The risk estimate sits beside the operating balance for this customer.',[self.RISK,self.RISK],'evidence_references'),
+                ('one reference','The risk estimate deserves attention for this customer.',[self.RISK],'evidence_references'),
+                ('four references','These signals connect across the card for this customer.',[self.RISK,self.BALANCE,self.LOGIN,self.PASSIVE],'evidence_references'),
+                ('uncited','{{prediction.risk}} sits beside {{feature.non_fd_balance_myr}} for this customer.',[self.RISK,self.LOGIN],'placeholder_reference'),
+                ('too long',' '.join(['word']*26),two,'link_length'),
+            ]
+            for name,text,ids,rule in cases:
+                with self.subTest(case=name):
+                    self.assert_rejected(self.summary_raw(dict(text=text,evidence_ids=ids)),data,rule)
+            with self.subTest(case='empty link with references'):
+                self.assert_rejected(self.summary_raw(dict(text='',evidence_ids=two)),data,'evidence_references')
+            with self.subTest(case='old four-notes shape'):
+                raw=json.dumps(dict(notes={'bottom_line':dict(text='',evidence_ids=[])},questions=[]))
+                self.assert_rejected(raw,data,'schema')
+
+    def test_summary_link_note_rejects_lists_and_single_section_links(self):
+        with self.app.app_context():
+            data=evidence.build('summary',self.id)
+            # Observed live failure shape: a sentence that only lists fact names.
+            listing=self.summary_raw(dict(text='Exposures include {{feature.non_fd_balance_myr}}, {{feature.login_failure_rate_3m}}, {{prediction.risk}}.',
+                evidence_ids=[self.BALANCE,self.LOGIN,self.RISK]))
+            self.assert_rejected(listing,data,'link_list_only')
+            four=self.summary_raw(dict(text='{{prediction.risk}}, {{feature.non_fd_balance_myr}}, {{feature.login_failure_rate_3m}} and '
+                '{{feature.passive_session_rate_3m}} together describe this customer.',evidence_ids=[self.RISK,self.BALANCE,self.LOGIN]))
+            self.assert_rejected(four,data,'link_list_only')
+            same_section=self.summary_raw(dict(text='Failed logins and sessions without transactions both concern online banking access.',
+                evidence_ids=[self.LOGIN,self.PASSIVE]))
+            self.assert_rejected(same_section,data,'link_sections')
+            # Owner's good example ("fall" -> "change", which the comparison rule requires).
+            good=dict(text='Failed logins and sessions without transactions both concern online banking access, alongside the change in payments.',
+                      evidence_ids=[self.LOGIN,self.PASSIVE,self.BALANCE])
+            card=ai.validate(self.summary_raw(good),data)
+            link=next(s for s in card['sections'] if s['id']=='link')
+            self.assertEqual((link['title'],link['items'][0]['source']),('What links these signals','ai'))
+            self.assertEqual([s['id'] for s in card['sections']][:2],['bottom_line','link'])
+            connected=dict(text='{{feature.login_failure_rate_3m}} and {{feature.passive_session_rate_3m}} both concern online banking access, '
+                'alongside {{feature.non_fd_balance_myr}}.',evidence_ids=[self.LOGIN,self.PASSIVE,self.BALANCE])
+            self.assertTrue(ai.validate(self.summary_raw(connected),data)['sections'])
+            # The owner's original wording is still rejected by the kept comparison rule.
+            self.assert_rejected(self.summary_raw(dict(good,text=good['text'].replace('the change in','the fall in'))),data,'unprotected_comparison')
+
+    def test_summary_questions_open_with_a_verification_verb_not_a_value_request(self):
+        with self.app.app_context():
+            data=evidence.build('summary',self.id)
+            bad=[dict(audience='finance',text='What are the current operating account balances?',evidence_ids=[self.BALANCE]),
+                 dict(audience='operations',text='How many login attempts were recorded during the period?',evidence_ids=[self.LOGIN]),
+                 dict(audience='finance',text='How much has the operating account balance changed?',evidence_ids=[self.BALANCE])]
+            for question in bad:
+                with self.subTest(question=question['text']):
+                    self.assert_rejected(self.summary_raw(questions=[question]),data,'verification_question')
+            good=[dict(audience='operations',text='Has the customer reported trouble logging in or completing payments online?',
+                       evidence_ids=[self.LOGIN,self.PAYMENTS]),
+                  dict(audience='finance',text='Is the customer moving part of its payments to another bank?',evidence_ids=['feature.inbound_flow_ratio_3m_to_12m','feature.non_fd_balance_myr'])]
+            for question in good+[dict(audience='operations',text='Did the customer change how its team uses online banking?',evidence_ids=[self.LOGIN])]:
+                with self.subTest(question=question['text']):
+                    card=ai.validate(self.summary_raw(questions=[question]),data)
+                    self.assertIn(question['text'],[q['text'] for q in card['questions']])
+
+    def test_summary_has_exactly_one_question_per_audience(self):
+        with self.app.app_context():
+            data=evidence.build('summary',self.id)
+            ops=dict(audience='operations',text='Has the customer reported trouble signing in?',evidence_ids=[self.LOGIN])
+            fin=dict(audience='finance',text='Has the customer told the relationship team about changes to its business needs?',evidence_ids=[self.BALANCE])
+            self.assert_rejected(self.summary_raw(questions=[ops,dict(ops)]),data,'question_audience')
+            self.assertEqual([(q['audience'],q['source']) for q in ai.validate(self.summary_raw(),data)['questions']],
+                             [('operations','template'),('finance','template')])
+            self.assertEqual([(q['audience'],q['source']) for q in ai.validate(self.summary_raw(questions=[fin]),data)['questions']],
+                             [('operations','template'),('finance','ai')])
+            self.assertEqual([(q['audience'],q['source']) for q in ai.validate(self.summary_raw(questions=[fin,ops]),data)['questions']],
+                             [('operations','ai'),('finance','ai')])
+
+    def test_summary_questions_need_matching_audience_and_length(self):
+        with self.app.app_context():
+            data=evidence.build('summary',self.id)
+            cases=[
+                ('audience mismatch',dict(audience='finance',text='Could Finance verify the recorded context?',evidence_ids=[self.LOGIN]),'question_audience'),
+                ('too long',dict(audience='operations',text='Could '+' '.join(['word']*25)+'?',evidence_ids=[self.LOGIN]),'question_length'),
                 ('topic without evidence',dict(audience='operations',text='Could Operations verify the recorded deposit position?',
-                    evidence_ids=login),'question_relevance'),
-                ('missing audience',dict(text='Could Operations verify the recorded context?',evidence_ids=login),'question_fields'),
+                    evidence_ids=[self.LOGIN]),'question_relevance'),
+                ('missing audience',dict(text='Could Operations verify the recorded context?',evidence_ids=[self.LOGIN]),'question_fields'),
             ]
             for name,question,rule in cases:
                 with self.subTest(case=name):
                     self.assert_rejected(self.summary_raw(questions=[question]),data,rule)
-
-    def test_summary_model_word_budget_and_valid_full_output(self):
-        with self.app.app_context():
-            data=evidence.build('summary',self.id)
-            notes={'bottom_line':dict(text='The committee can read {{prediction.risk}} alongside the review flag.',evidence_ids=['prediction.risk']),
-                'operations':dict(text='Operations can verify {{feature.login_failure_rate_3m}} with the service team.',evidence_ids=['feature.login_failure_rate_3m']),
-                'finance':dict(text='Finance can review {{feature.non_fd_balance_myr}} in context.',evidence_ids=['feature.non_fd_balance_myr']),
-                'weighed':dict(text='These signals describe what the estimate weighed.',evidence_ids=['signal.combined_flow_ratio_3m_to_12m'])}
-            questions=[dict(audience='operations',text='Could Operations verify the recorded login difficulties?',evidence_ids=['feature.login_failure_rate_3m']),
-                dict(audience='finance',text='Could Finance verify the recorded balance position?',evidence_ids=['feature.non_fd_balance_myr'])]
-            card=ai.validate(self.summary_raw(notes,questions),data)
-            self.assertEqual(sum(item['source']=='ai' for s in card['sections'] for item in s['items']),4)
-            self.assertEqual([q['source'] for q in card['questions']],['ai','ai'])
-            # Each note exactly at its 25-word limit; only the 100-word total (notes + questions) is exceeded.
-            wordy={key:dict(text=' '.join(['steady']*(25-len(note['text'].split())))+' '+note['text'],evidence_ids=note['evidence_ids'])
-                   for key,note in notes.items()}
-            raw=self.summary_raw(wordy,questions)
-            self.assert_rejected(raw,data,'model_word_limit')
-            self.assertNotIn('note_length',{f['rule'] for f in ai.audit_output(raw,data)['failures']})

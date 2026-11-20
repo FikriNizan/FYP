@@ -27,10 +27,10 @@ def output(fact='prediction.risk'):
 
 
 def notes(fact='prediction.risk'):
-    """Summary contract (m6-narrative-5): section notes + audience-tagged questions."""
-    empty={key: dict(text='', evidence_ids=[]) for key in ['bottom_line', 'operations', 'finance', 'weighed']}
-    empty['bottom_line'] = dict(text='This card gives the committee a starting point for discussing {{'+fact+'}}.', evidence_ids=[fact])
-    return json.dumps(dict(notes=empty, questions=[]))
+    """Summary contract (m6-narrative-6): one link note citing two card sections, plus questions."""
+    other = 'feature.login_failure_rate_3m'
+    link = dict(text='For this customer, {{'+fact+'}} and {{'+other+'}} both belong in the review discussion.', evidence_ids=[fact, other])
+    return json.dumps(dict(link=link, questions=[]))
 
 
 def quota_error(quota_id):
@@ -268,7 +268,7 @@ class BatchCommandTests(Base):
         self.assertEqual(record['prediction_id'], self.id)
         self.assertEqual(record['raw_output'], raw)
         self.assertEqual(record['first_rule'], 'evidence_references')
-        self.assertIn({'rule': 'evidence_references', 'path': 'notes.bottom_line.evidence_ids'}, record['rules'])
+        self.assertIn({'rule': 'evidence_references', 'path': 'link.evidence_ids'}, record['rules'])
         self.assertEqual(self.counts(), [0, 0])
 
     def test_command_pins_m6_test_database_and_requires_configuration(self):

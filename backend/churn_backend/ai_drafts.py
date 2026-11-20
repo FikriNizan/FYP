@@ -29,7 +29,20 @@ Questions invite verification, without presupposing a cause or complaint. Includ
 SUMMARY_INSTRUCTION = '''Write for a non-technical meeting reader. Use only the supplied card sentences; add connection, not repetition.
 Never write numbers, number words, percentages, money, dates, months or comparison words such as higher, lower, more, less, increase, decrease, rose or fell: the card already shows every value and direction.
 Model signals describe what the estimate weighed, never causes. Do not state causes, motives, certainty, complaints, competitors, profitability, retention effectiveness or recommendations; prioritisation is the committee's decision.
-Questions start with Could, Can, Would, Has, Have, Is, Are, What, How, Do or Does and end with a question mark, invite internal verification and do not presuppose a cause. Never request tools, actions, retrieval or external knowledge. Do not output HTML or Markdown.'''
+Questions start with Has, Have, Is, Are, Could, Did, Does, Do or Can and end with a question mark. Ask about the customer's situation or the bank's service; never ask for a value, count or amount. Do not presuppose a cause. Never request tools, actions, retrieval or external knowledge. Do not output HTML or Markdown.
+Examples (style only; cite real fact IDs from the payload):
+Good link: "Failed logins and sessions without transactions both concern online banking access, alongside the change in payments." evidence_ids: login failure, sessions without transactions, payments facts.
+Good link: "Payment failures and the change in collections both relate to how the customer's money moves through the bank."
+Bad link (only lists facts): "Exposures include {{feature.non_fd_balance_myr}}, {{feature.fd_balance_myr}}, {{feature.estimated_fee_mean_3m_myr}}."
+Bad link (restates a value with a direction): "Transaction value fell sharply."
+Good operations question: "Has the customer reported trouble logging in or completing payments online?"
+Good operations question: "Is the customer's finance team still using online banking for its usual payments?"
+Bad operations question (asks for data): "How many login attempts were recorded during the period?"
+Bad operations question (asks for a value on the card): "What is the login failure rate?"
+Good finance question: "Is the customer moving part of its payments to another bank?"
+Good finance question: "Has the customer told the relationship team about changes to its business or banking needs?"
+Bad finance question (asks for a value on the card): "What are the current operating account balances?"
+Bad finance question (asks for a value, with a direction): "How much did collections fall over the period?"'''
 
 
 def settings():
@@ -218,8 +231,9 @@ VALIDATION_RULES={
     'Question must invite verification':'verification_question',
     'Question topic lacks relevant evidence':'question_relevance',
     'Unresolved placeholder':'unresolved_placeholder', 'Draft exceeds bounded length':'resolved_word_limit',
-    'Invalid note fields':'note_fields', 'AI note exceeds bounded length':'note_length',
-    'Note cites evidence from another section':'section_reference', 'Invalid question fields':'question_fields',
+    'Invalid link fields':'link_fields', 'AI link note exceeds bounded length':'link_length',
+    'Link note must connect at least two card sections':'link_sections', 'Link note only lists facts':'link_list_only',
+    'Invalid question fields':'question_fields',
     'Question audience lacks matching evidence':'question_audience', 'Question exceeds bounded length':'question_length',
     'AI text exceeds bounded length':'model_word_limit',
 }
@@ -265,7 +279,7 @@ def _validate(raw, evidence):
     if summary:
         # Server renders every fact sentence; validated notes/questions resolve to fact names only.
         # Card length comes from server sentences (bounded by tests), so it is never a reason to reject AI text.
-        return ai_render.render_summary(evidence,content['notes'],content['questions'])
+        return ai_render.render_summary(evidence,content['link'],content['questions'])
     return content
 
 

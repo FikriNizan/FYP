@@ -14,9 +14,9 @@ from churn_backend.constants import CALIBRATION_SLOPE, CALIBRATION_INTERCEPT, RA
 from churn_backend.validation import sigmoid
 
 
-SUMMARY_NOTES=repo.encode(dict(notes=dict(
-    bottom_line=dict(text='This card gives the committee a starting point for discussing {{prediction.risk}}.',evidence_ids=['prediction.risk']),
-    operations=dict(text='',evidence_ids=[]),finance=dict(text='',evidence_ids=[]),weighed=dict(text='',evidence_ids=[])),questions=[]))
+SUMMARY_NOTES=repo.encode(dict(link=dict(  # m6-narrative-6: one link note citing two card sections.
+    text="{{prediction.risk}} and {{signal.combined_flow_ratio_3m_to_12m}} both belong in this customer's review discussion.",
+    evidence_ids=['prediction.risk','signal.combined_flow_ratio_3m_to_12m']),questions=[]))
 DISCUSSION_BLOCKS=repo.encode(dict(blocks=[dict(kind='recorded_observation',
     text='The saved assessment provides context for a focused discussion. {{prediction.risk}}. Customer experience remains a matter to verify.',
     evidence_ids=['prediction.risk'])],questions=[]))

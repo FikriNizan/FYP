@@ -94,19 +94,19 @@ class RenderTests(unittest.TestCase):
         self.assertFalse(any(item['source'] == 'ai' for s in card['sections'] for item in s['items']))
 
     def test_placeholders_resolve_to_names_only_and_ai_items_are_tagged(self):
-        notes = {key: dict(text='', evidence_ids=[]) for key in render.NOTE_SECTIONS}
-        notes['operations'] = dict(text='The team may want to look at {{feature.login_failure_rate_3m}} together.',
-                                   evidence_ids=['feature.login_failure_rate_3m'])
+        link = dict(text='{{feature.login_failure_rate_3m}} and {{feature.non_fd_balance_myr}} both matter for this customer.',
+                    evidence_ids=['feature.login_failure_rate_3m', 'feature.non_fd_balance_myr'])
         questions = [dict(audience='finance', text='Could Finance check {{feature.non_fd_balance_myr}}?',
                           evidence_ids=['feature.non_fd_balance_myr'])]
-        card = render.render_summary(self.evidence, notes, questions)
-        note = section(card, 'operations')['items'][-1]
-        self.assertEqual((note['source'], note['text']), ('ai', 'The team may want to look at login failure rate together.'))
-        self.assertNotIn('50.0%', note['text'])
-        self.assertEqual(card['questions'][0]['text'], 'Could Finance check operating account balance?')
-        # An AI finance question is kept; only the missing Operations audience gets a template.
-        self.assertEqual([(q['audience'], q['source']) for q in card['questions']], [('finance', 'ai'), ('operations', 'template')])
-        self.assertIn('note_bounds', card['checks'])
+        card = render.render_summary(self.evidence, link, questions)
+        note = section(card, 'link')['items'][0]
+        self.assertEqual((note['source'], note['text']), ('ai', 'Login failure rate and operating account balance both matter for this customer.'))
+        self.assertNotIn('50%', note['text'])
+        finance = next(q for q in card['questions'] if q['audience'] == 'finance')
+        self.assertEqual(finance['text'], 'Could Finance check operating account balance?')
+        # An AI finance question is kept; the missing Operations audience gets a template; Operations is listed first.
+        self.assertEqual([(q['audience'], q['source']) for q in card['questions']], [('operations', 'template'), ('finance', 'ai')])
+        self.assertIn('link_rules', card['checks'])
 
     def test_friction_led_and_flow_led_customers_get_different_emphasis(self):
         friction = ai.fallback(self.with_drivers([('login_failure_rate_3m', 2.0), ('combined_flow_ratio_3m_to_12m', 0.5)]))
@@ -155,17 +155,19 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(checked, 6)
 
     def test_ai_text_within_its_own_limits_is_accepted_regardless_of_card_length(self):
-        ids = dict(bottom_line='prediction.risk', operations='feature.login_failure_rate_3m',
-                   finance='feature.non_fd_balance_myr', weighed='signal.combined_flow_ratio_3m_to_12m')
-        notes = {}
-        for key, fact in ids.items():
-            text = 'The committee can review {{' + fact + '}} together.'
-            notes[key] = dict(text=' '.join(['and'] * (25 - len(text.split()))) + ' ' + text, evidence_ids=[fact])  # Within 200 characters.
-        self.assertEqual(sum(len(note['text'].split()) for note in notes.values()), 100)  # Exactly at the model budget.
+        link_text = 'and the review can discuss {{feature.login_failure_rate_3m}} beside {{feature.non_fd_balance_myr}} together.'
+        link = dict(text=' '.join(['and'] * (25 - len(link_text.split()))) + ' ' + link_text,
+                    evidence_ids=['feature.login_failure_rate_3m', 'feature.non_fd_balance_myr'])
+        def question(audience, fact, opener):
+            text = opener + ' ' + ' '.join(['the'] * (24 - len(opener.split()))) + ' situation?'
+            return dict(audience=audience, text=text, evidence_ids=[fact])
+        questions = [question('operations', 'feature.login_failure_rate_3m', 'Has the customer described its'),
+                     question('finance', 'feature.non_fd_balance_myr', 'Has the customer described its')]
+        self.assertEqual([len(link['text'].split())] + [len(q['text'].split()) for q in questions], [25, 25, 25])
         with self.app.app_context():
-            card = ai.validate(json.dumps(dict(notes=notes, questions=[])), self.evidence)
-        self.assertEqual(sum(item['source'] == 'ai' for s in card['sections'] for item in s['items']), 4)
-        self.assertGreater(render.card_words(card), 320)  # Formerly rejected; now accepted because server text sets length.
+            card = ai.validate(json.dumps(dict(link=link, questions=questions)), self.evidence)
+        self.assertEqual([s['id'] for s in card['sections']][:2], ['bottom_line', 'link'])
+        self.assertEqual([q['source'] for q in card['questions']], ['ai', 'ai'])
 
     def test_footnote_appears_once_on_every_card(self):
         # Only Operations compares with a 12-month average: no Finance ratios and no bottom-line usual value.

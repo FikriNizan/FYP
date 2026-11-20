@@ -10,10 +10,11 @@ from datetime import date
 from . import briefings
 from .ai_evidence import DICTIONARY
 
-VERSION = 'render-3'
+VERSION = 'render-4'
 TOKEN = re.compile(r'\{\{([a-zA-Z0-9_.]+)\}\}')
-NOTE_SECTIONS = ('bottom_line', 'operations', 'finance', 'weighed')
-TITLES = dict(bottom_line='Bottom line', operations='Operations: what is happening',
+CARD_SECTIONS = ('bottom_line', 'operations', 'finance', 'weighed')
+AUDIENCE_ORDER = ('operations', 'finance')
+TITLES = dict(bottom_line='Bottom line', link='What links these signals', operations='Operations: what is happening',
               finance='Finance: what is at stake', weighed='What the model weighed', closing='Decision')
 FRICTION = ('login_failure_rate_3m', 'outbound_failure_rate_3m', 'outbound_bank_failure_rate_3m', 'passive_session_rate_3m')
 PLAIN_NAMES = {'prediction.risk': 'the estimated risk', 'prediction.threshold': 'the review threshold',
@@ -23,9 +24,9 @@ WEIGHED_NOTE = 'Signals the model weighed, not proven causes.'
 FOOTNOTE = '12-month averages include the latest 3 months.'
 CLOSING = "Prioritisation is the committee's decision."
 SERVICE_CLOSING = 'Service issues can be checked and fixed independently of the outreach decision.'
-QUESTION_LIMIT = 3
+QUESTION_LIMIT = 2  # Exactly one Operations and one Finance question when evidence allows.
 BASE_CHECKS = ['saved_prediction_identity', 'shap_reconstruction_2e-10', 'raw_calibration_2e-10', 'deterministic_formatting']
-AI_CHECKS = ['known_references', 'section_references', 'numeric_date_rules', 'interpretation_rules', 'note_bounds']
+AI_CHECKS = ['known_references', 'link_rules', 'question_rules', 'numeric_date_rules', 'interpretation_rules']
 
 
 # Plain driver labels for every predictor (2-5 words, no values). Meanings follow the research
@@ -345,28 +346,29 @@ def templates(evidence, card_plan):
     return result
 
 
-def render_summary(evidence, notes=None, questions=None):
+def render_summary(evidence, link=None, questions=None):
     """Same sections with or without AI text; with none it is the deterministic fallback card."""
     facts, card_plan = evidence['facts'], plan(evidence)
     sections = []
-    for key in NOTE_SECTIONS:
-        items = [dict(text=l['text'], source=l['source'], evidence_ids=l['ids']) for l in card_plan[key]]
-        note = (notes or {}).get(key)
-        if note and note['text'].strip():
-            items.append(dict(text=resolve(note['text'], facts), source='ai', evidence_ids=list(note['evidence_ids'])))
-        sections.append(dict(id=key, title=TITLES[key], items=items))
+    for key in CARD_SECTIONS:
+        sections.append(dict(id=key, title=TITLES[key],
+                             items=[dict(text=l['text'], source=l['source'], evidence_ids=l['ids']) for l in card_plan[key]]))
+        if key == 'bottom_line' and link and link['text'].strip():
+            sections.append(dict(id='link', title=TITLES['link'], items=[dict(
+                text=resolve(link['text'], facts), source='ai', evidence_ids=list(link['evidence_ids']))]))
     asked = [dict(audience=q['audience'], text=resolve(q['text'], facts), source='ai', evidence_ids=list(q['evidence_ids']))
              for q in questions or []]
     for template in templates(evidence, card_plan):
         if len(asked) < QUESTION_LIMIT and not any(q['audience'] == template['audience'] for q in asked):
             asked.append(template)
+    asked.sort(key=lambda q: AUDIENCE_ORDER.index(q['audience']))
     if any(l['twelve'] for lines in card_plan.values() for l in lines):  # Every card: the risk sentence uses a 12-month average.
         sections.append(dict(id='footnote', title='', items=[dict(text=FOOTNOTE, source='standard', evidence_ids=[])]))
     closing = [CLOSING] + ([SERVICE_CLOSING] if service_issue(evidence) else [])
     sections.append(dict(id='closing', title=TITLES['closing'],
                          items=[dict(text=text, source='standard', evidence_ids=[]) for text in closing]))
     cited = {i for s in sections for item in s['items'] for i in item['evidence_ids']} | {i for q in asked for i in q['evidence_ids']}
-    ai_used = notes is not None or questions is not None
+    ai_used = link is not None or questions is not None
     return dict(format='sections-1', sections=sections, questions=asked, evidence_ids=sorted(cited),
                 checks=BASE_CHECKS + (AI_CHECKS if ai_used else []))
 
@@ -380,7 +382,7 @@ def provider_payload(evidence):
     """What Gemini sees: the card's own sentences per section, with citable fact names. No identifiers."""
     facts, card_plan = evidence['facts'], plan(evidence)
     sections = []
-    for key in NOTE_SECTIONS:
+    for key in CARD_SECTIONS:
         sections.append(dict(section=key, title=TITLES[key], lines=[dict(sentence=l['text'], facts=[
             dict(id=i, placeholder='{{' + i + '}}', name=name(i, facts), kind=facts[i]['kind'],
                  direction=facts[i].get('direction'), group=facts[i].get('group')) for i in l['ids']]) for l in card_plan[key]]))
