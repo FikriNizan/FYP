@@ -55,4 +55,3 @@ propose a plan, and wait for approval before editing.
   stay local.
 * Validation failures fall back to deterministic text and are never stored as Gemini drafts.
 * SHAP influence is not causation; balances are exposures; fee/waiver figures are estimates.
-
