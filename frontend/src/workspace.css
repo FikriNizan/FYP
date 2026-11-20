@@ -285,3 +285,13 @@ details p { font-size:13px; line-height:1.7; }
 .ai-draft .field-label { margin-top: 12px; }
 .ai-draft dl { display: block; }
 .ai-draft dd { text-align: left; }
+.summary-card .summary-section { margin-top: 12px; }
+.summary-card h4 { margin: 0 0 4px; font-size: .95rem; }
+.summary-card p { margin: 0 0 4px; }
+.summary-card ul { margin: 4px 0 0; padding-left: 18px; }
+.summary-card .ai-note { border-left: 3px solid #7a8fd6; padding-left: 8px; }
+.summary-card .ai-tag, .summary-card .audience-tag, .summary-card .standard-tag { display: inline-block; margin-right: 6px; padding: 0 6px;
+  border-radius: 4px; font-size: .75rem; font-weight: 600; line-height: 1.5; }
+.summary-card .ai-tag { background: #e3e8fb; color: #2c3e8f; }
+.summary-card .audience-tag { background: #eef1f4; color: #33404d; }
+.summary-card .standard-tag { background: transparent; color: #5b6670; border: 1px solid var(--line); }

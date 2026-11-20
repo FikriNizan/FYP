@@ -12,6 +12,26 @@ function observationPeriod(period) {
   return 'Date unavailable';
 }
 
+// Server-rendered meeting card: fact sentences come from saved evidence; only items tagged
+// source 'ai' were written by Gemini, and they are labelled so readers can tell them apart.
+function CardItem({ item }) {
+  return <p className={item.source==='ai' ? 'ai-note' : undefined}>{item.source==='ai' && <span className="ai-tag">AI note</span>}{item.text}</p>;
+}
+
+function SummaryCard({ content }) {
+  const closing=content.sections.find(s=>s.id==='closing');
+  return <div className="summary-card">
+    {content.sections.filter(s=>s.id!=='closing').map(s=><div className="summary-section" key={s.id}>
+      <h4>{s.title}</h4>{s.items.map((item,i)=><CardItem item={item} key={i} />)}
+    </div>)}
+    {!!content.questions.length && <div className="summary-section"><h4>Questions for the meeting</h4><ul>{content.questions.map((q,i)=><li key={i}>
+      <span className="audience-tag">{q.audience==='finance' ? 'Finance' : 'Operations'}</span>
+      <span className={q.source==='ai' ? 'ai-tag' : 'standard-tag'}>{q.source==='ai' ? 'AI' : 'Standard'}</span>{q.text}
+    </li>)}</ul></div>}
+    {closing && <div className="summary-section"><h4>{closing.title}</h4>{closing.items.map((item,i)=><CardItem item={item} key={i} />)}</div>}
+  </div>;
+}
+
 export default function AIBriefingDraft({ purpose='discussion', recordId, onReview }) {
   const [state,setState]=useState(null), [error,setError]=useState(''), [busy,setBusy]=useState(false);
   const [attempt,setAttempt]=useState(0), [reviewed,setReviewed]=useState(false);
@@ -51,8 +71,10 @@ export default function AIBriefingDraft({ purpose='discussion', recordId, onRevi
       : state.failure_code==='invalid_key_format'
       ? 'The backend API key has invalid formatting. Re-enter it locally and restart the session. No Gemini request was sent.'
       : 'Gemini did not return a usable draft ('+state.failure_code.replaceAll('_',' ')+'). The saved evidence remains available.'}</p>}
-    {content?.blocks.map((block,i)=><p key={i}>{block.text}</p>)}
-    {!!content?.questions.length && <ul>{content.questions.map((q,i)=><li key={i}>{q.text}</li>)}</ul>}
+    {content?.format==='sections-1' ? <SummaryCard content={content} /> : <>
+      {content?.blocks.map((block,i)=><p key={i}>{block.text}</p>)}
+      {!!content?.questions.length && <ul>{content.questions.map((q,i)=><li key={i}>{q.text}</li>)}</ul>}
+    </>}
     {!summary && <button disabled={!state || busy} onClick={generate}>{busy ? 'Generating…' : draft ? 'Regenerate draft' : 'Generate discussion draft'}</button>}
     {error && <button disabled={busy} onClick={()=>setAttempt(n=>n+1)}>Reload saved evidence</button>}
     {draft && purpose==='discussion' && <label className="field-label"><input type="checkbox" checked={reviewed} onChange={e=>{

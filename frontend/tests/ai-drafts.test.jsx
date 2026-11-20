@@ -118,3 +118,46 @@ it('falls back to deterministic summary text when no current stored draft exists
   }
   expect(api.aiDraft.mock.calls.every(call=>call[0]==='summary' && call[2]===null)).toBe(true);
 });
+
+// m6-narrative-5 server-rendered card: fixed sections, AI items labelled, questions tagged by audience.
+const sectionCard={format:'sections-1',evidence_ids:[],checks:['known_references'],sections:[
+  {id:'bottom_line',title:'Bottom line',items:[{text:'Risk sentence from saved evidence.',source:'evidence',evidence_ids:['prediction.risk']},
+    {text:'A short connecting note.',source:'ai',evidence_ids:['prediction.risk']}]},
+  {id:'operations',title:'Operations: what is happening',items:[{text:'Operations fact.',source:'evidence',evidence_ids:[]}]},
+  {id:'finance',title:'Finance: what is at stake',items:[{text:'Finance fact.',source:'evidence',evidence_ids:[]}]},
+  {id:'weighed',title:'What the model weighed',items:[{text:'Weighed fact.',source:'evidence',evidence_ids:[]}]},
+  {id:'closing',title:'Decision',items:[{text:"Prioritisation is the committee's decision.",source:'standard',evidence_ids:[]}]}],
+  questions:[{audience:'operations',text:'Could Operations check the record?',source:'ai',evidence_ids:[]},
+    {audience:'finance',text:'Could Finance confirm the position?',source:'template',evidence_ids:[]}]};
+const deterministicCard={...sectionCard,checks:[],sections:sectionCard.sections.map(s=>({...s,items:s.items.filter(item=>item.source!=='ai')})),
+  questions:sectionCard.questions.map(q=>({...q,source:'template'}))};
+
+it('renders the summary card sections in fixed order with questions before the decision',async()=>{
+  api.aiDraft.mockResolvedValue({...saved,draft:{...saved.draft,content:sectionCard}});
+  render(<AIBriefingDraft purpose="summary" recordId="p" />);
+  await screen.findByText('Risk sentence from saved evidence.');
+  expect(screen.getAllByRole('heading',{level:4}).map(h=>h.textContent)).toEqual(['Bottom line','Operations: what is happening',
+    'Finance: what is at stake','What the model weighed','Questions for the meeting','Decision']);
+  expect(screen.queryAllByRole('button')).toHaveLength(0);
+});
+
+it('labels only AI-written sentences and tags questions by audience and source',async()=>{
+  api.aiDraft.mockResolvedValue({...saved,draft:{...saved.draft,content:sectionCard}});
+  render(<AIBriefingDraft purpose="summary" recordId="p" />);
+  const note=await screen.findByText('A short connecting note.');
+  expect(screen.getAllByText('AI note')).toHaveLength(1);
+  expect(note.closest('p').textContent).toBe('AI noteA short connecting note.');
+  expect(screen.getByText('Risk sentence from saved evidence.').closest('p').textContent).toBe('Risk sentence from saved evidence.');
+  expect(screen.getByText('Could Operations check the record?').closest('li').textContent).toBe('OperationsAICould Operations check the record?');
+  expect(screen.getByText('Could Finance confirm the position?').closest('li').textContent).toBe('FinanceStandardCould Finance confirm the position?');
+});
+
+it('shows the deterministic fallback card with no AI labels',async()=>{
+  api.aiDraft.mockResolvedValue({...fallback,fallback:deterministicCard});
+  render(<AIBriefingDraft purpose="summary" recordId="p" />);
+  expect(await screen.findByText('Deterministic summary · no stored AI draft for this assessment')).toBeTruthy();
+  expect(screen.getByText('Operations fact.')).toBeTruthy();
+  expect(screen.queryByText('AI note')).toBeNull();
+  expect(screen.queryByText('AI')).toBeNull();
+  expect(screen.getAllByText('Standard')).toHaveLength(2);
+});
