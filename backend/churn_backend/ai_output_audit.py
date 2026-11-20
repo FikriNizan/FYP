@@ -20,6 +20,8 @@ MESSAGES={
  'question_fields':'Invalid question fields',
  'question_audience':'Question audience lacks matching evidence','question_length':'Question exceeds bounded length',
  'model_word_limit':'AI text exceeds bounded length',
+ # Client questions (m6-narrative-7).
+ 'client_language':'Client question uses internal or competitor language','client_data_request':'Client question requests internal data',
 }
 
 
@@ -263,6 +265,81 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
     if errors:
         return report,None
     return report,dict(link=link,questions=questions)
+
+
+# Words a client must never hear from the RM (internal model language, internal records, other banks).
+CLIENT_BANNED = re.compile(r"\b(?:model\w*|estimat\w*|risk\w*|scor\w*|flag\w*|threshold\w*|churn\w*|attrition|predict\w*|"
+    r"recorded|records?|data|other banks?|another bank|competitor\w*|switch\w*)\b", re.I)
+# Requests for internal figures: "how many/much ...", or "what is/are ... rate/number/count/amount/balance/total/level/percentage".
+CLIENT_DATA_REQUEST = re.compile(r"\bhow (?:many|much)\b|^what (?:is|are|was|were) (?:the|your)\b[^?]*"
+    r"\b(?:rates?|numbers?|counts?|amounts?|balances?|totals?|levels?|percentages?)\b", re.I)
+CLIENT_OPENING = re.compile(r'^(?:Has|Have|Is|Are|Could|Can|Would|Did|Does|Do|What|How)\b')
+
+
+def inspect_client_questions(raw,evidence,token,quantity,prohibited,comparison):
+    """Client questions (m6-narrative-7): 2-3 open questions the RM can ask the client directly.
+    Existing content rules apply, plus client-safe language and no requests for internal data.
+    Open What/How questions are allowed, unlike internal summary questions."""
+    from .ai_render import plan, section_ids
+    bounds=limits_for('discussion')
+    known=set().union(*section_ids(plan(evidence)).values())
+    safe_id=reference_labeler(evidence,token)
+    errors=[]
+    def issue(rule,path,**details):
+        errors.append(dict(rule=rule,path=path,**details))
+    report=dict(purpose='discussion',expected_reference_structure='questions: 1–'+str(bounds['question_refs_max'])+
+        ' unique bare fact IDs each; no placeholders in question text',supplied_fact_count=len(known),failures=errors)
+    if not isinstance(raw,str) or len(raw.encode())>16000:
+        issue('output_size','$',received_type=json_type(raw))
+        return report,None
+    try:
+        parsed=strict_json(raw)
+    except ValidationError:
+        issue('malformed_json','$')
+        return report,None
+    if not isinstance(parsed,dict):
+        issue('schema','$',received_type=json_type(parsed))
+        return report,None
+    if set(parsed)!={'questions'}:
+        issue('schema','$')
+    questions=parsed.get('questions')
+    if not isinstance(questions,list) or not bounds['question_min']<=len(questions)<=bounds['question_max']:
+        issue('question_count','questions',received_type=json_type(questions) if 'questions' in parsed else 'missing',
+            actual_count=len(questions) if isinstance(questions,list) else None,
+            minimum=bounds['question_min'],maximum=bounds['question_max'])
+    for index,question in enumerate(questions if isinstance(questions,list) else []):
+        path=f'questions[{index}]'
+        if not isinstance(question,dict) or set(question)!={'text','evidence_ids'} or not isinstance(question.get('text'),str):
+            issue('question_fields',path,received_type=json_type(question))
+            continue
+        text,refs=question['text'],question['evidence_ids']
+        valid_refs=isinstance(refs,list) and all(isinstance(r,str) for r in refs)
+        unknown=[safe_id(r) for r in refs if not isinstance(r,str) or r not in known] if isinstance(refs,list) else []
+        if not (valid_refs and 1<=len(refs)<=bounds['question_refs_max'] and not unknown and len(set(refs))==len(refs)):
+            issue('evidence_references',path+'.evidence_ids',received_type=json_type(refs),
+                actual_count=len(refs) if isinstance(refs,list) else None,unknown_fact_ids=unknown,
+                duplicate_references=valid_refs and len(set(refs))!=len(refs))
+        if token.search(text):
+            issue('client_language',path+'.text',reason='placeholder')  # Placeholders resolve to internal metric names.
+        plain=token.sub('',text)
+        if any(c in plain for c in '{}<>`\\') or quantity.search(plain):
+            issue('protected_content',path+'.text')
+        if prohibited.search(plain):
+            issue('prohibited_claim',path+'.text')
+        if comparison.search(plain):
+            issue('unprotected_comparison',path+'.text')
+        if CLIENT_BANNED.search(plain):
+            issue('client_language',path+'.text')
+        if CLIENT_DATA_REQUEST.search(plain):
+            issue('client_data_request',path+'.text')
+        if not text.endswith('?') or not CLIENT_OPENING.match(text):
+            issue('verification_question',path+'.text')
+        if len(text.split())>bounds['question_words'] or len(text)>bounds['question_chars']:
+            issue('question_length',path+'.text',maximum=bounds['question_words'])
+    report['failure_count']=len(errors)
+    if errors:
+        return report,None
+    return report,dict(questions=questions)
 
 
 def synthetic_fixture(raw,evidence,token,report):

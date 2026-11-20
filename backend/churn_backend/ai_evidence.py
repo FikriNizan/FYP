@@ -151,34 +151,15 @@ def build(purpose, record_id):
         review = case['current_review']
         original = case['original']
         validate_record(original['explanation'])
-        add('committee.original_assessment', 'Original reviewed assessment',
-            briefings.month(original['cutoff_month'])+'; saved predicted volume-drop risk '+briefings.percent(original['calibrated_risk'],2),
-            'dated assessment',dict(assessment=original['cutoff_month']),
-            'Original reviewed prediction; separate from latest assessment', 'recorded_committee_context')
-        facts['committee.original_assessment']['source'] = dict(batch_id=original['batch_id'],prediction_id=original['prediction_id'])
-        # Human text stays local: send opaque references, never personal names or raw notes.
+        # Client questions need customer facts and drivers only: no committee facts, rationale, notes or
+        # follow-ups enter the evidence or the provider payload. The case identity and version stay in
+        # the local hash, so a committee edit still marks a saved draft as stale.
         context = dict(case_id=case['case_id'], case_version=case['version'],
             original_prediction_id=case['original']['prediction_id'], original_cutoff=case['original']['cutoff_month'],
             current_review=review, latest_prediction_id=prediction_id,
             follow_ups=case.get('follow_ups',[]))
-        add('committee.context', 'Human-recorded committee rationale', review.get('reason') or 'No rationale supplied',
-            'quoted human context', dict(assessment=review['assessment_month'], saved=review.get('updated_at')),
-            'Attributed human assessment; not independently verified bank fact', 'recorded_committee_context')
-        facts['committee.context']['clause'] = 'The committee recorded the following rationale (human assessment): '+(review.get('reason') or 'No rationale supplied')
-        for name in ['operations_notes','finance_notes']:
-            if review.get(name):
-                add('committee.'+name, 'Human-recorded '+name.replace('_',' '), review[name][:2000],
-                    'quoted human context', dict(assessment=review['assessment_month'], saved=review.get('updated_at')),
-                    'Attributed human assessment, not verified fact', 'recorded_committee_context')
         identity['original_assessment_cutoff']=case['original']['cutoff_month']
         identity['committee_assessment_cutoff']=review['assessment_month']
-        for index,task in enumerate((case.get('follow_ups') or [])[:5]):
-            event=task['current']
-            add('committee.followup_'+str(index), 'Dated human-recorded follow-up',
-                task['action_type'].replace('_',' ')+'; '+event['action_status']+'; '+str(event.get('action_date') or 'date unavailable'),
-                'human workflow record',dict(event_date=event.get('action_date'),recorded_at=event.get('recorded_at')),
-                'Workflow record; not evidence of retention effectiveness or information used in earlier prediction',
-                'recorded_committee_context')
     semantic = dict(identity=identity, facts=facts, context=context, explanation=saved)
     fingerprint = hashlib.sha256(repo.encode(semantic).encode()).hexdigest()
     return dict(**semantic, evidence_hash=fingerprint)
@@ -186,8 +167,8 @@ def build(purpose, record_id):
 
 def external(evidence):
     """No customer/batch/case IDs, names, paths, attribution or free-text notes leave the server."""
-    if evidence['identity']['purpose'] == 'summary':
-        from .ai_render import provider_payload  # Summary card: the server's own sentences per section.
+    if evidence['identity']['purpose'] in ('summary', 'discussion'):
+        from .ai_render import provider_payload  # The card's own sentences per section, with fact names.
         return provider_payload(evidence)
     facts = []
     for fact in evidence['facts'].values():

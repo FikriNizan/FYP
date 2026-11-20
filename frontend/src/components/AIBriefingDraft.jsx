@@ -33,6 +33,14 @@ function SummaryCard({ content }) {
   </div>;
 }
 
+// Client questions for the RM: the question is said to the client; "Based on" is for the RM only.
+export function ClientQuestions({ content }) {
+  return <ol className="client-questions">{content.questions.map((q,i)=><li key={i}>
+    <span className={q.source==='ai' ? 'ai-tag' : 'standard-tag'}>{q.source==='ai' ? 'AI-suggested' : 'Standard'}</span>{q.text}
+    {q.basis && <small className="muted client-basis">Based on: {q.basis}</small>}
+  </li>)}</ol>;
+}
+
 export default function AIBriefingDraft({ purpose='discussion', recordId, onReview }) {
   const [state,setState]=useState(null), [error,setError]=useState(''), [busy,setBusy]=useState(false);
   const [attempt,setAttempt]=useState(0), [reviewed,setReviewed]=useState(false);
@@ -63,7 +71,7 @@ export default function AIBriefingDraft({ purpose='discussion', recordId, onRevi
   const label=summary ? (draft ? 'AI-generated summary (stored)' : 'Deterministic summary · no stored AI draft for this assessment')
     : busy ? 'Generating' : draft ? 'Saved AI draft' : state?.state==='fallback' ? 'Deterministic fallback' : state?.state==='evidence_changed' ? 'Evidence changed · regenerate and review' : 'Not generated · deterministic fallback';
   return <section className={summary ? 'panel ai-draft no-print' : 'ai-draft briefing-section no-print'}>
-    <h3>{summary ? 'What stands out' : 'Discussion draft'}</h3>
+    <h3>{summary ? 'What stands out' : 'AI-suggested client questions'}</h3>
     <p role="status"><strong>{label}</strong>{draft && ' · '+new Date(draft.generated_at).toLocaleString('en-MY',{timeZone:'Asia/Kuala_Lumpur'})}</p>
     {draft && <p className="muted">AI draft · review before use</p>}
     {error && <p role="alert">Request failed. {error}</p>}
@@ -72,11 +80,11 @@ export default function AIBriefingDraft({ purpose='discussion', recordId, onRevi
       : state.failure_code==='invalid_key_format'
       ? 'The backend API key has invalid formatting. Re-enter it locally and restart the session. No Gemini request was sent.'
       : 'Gemini did not return a usable draft ('+state.failure_code.replaceAll('_',' ')+'). The saved evidence remains available.'}</p>}
-    {content?.format==='sections-1' ? <SummaryCard content={content} /> : <>
+    {content?.format==='sections-1' ? <SummaryCard content={content} /> : content?.format==='questions-1' ? <ClientQuestions content={content} /> : <>
       {content?.blocks.map((block,i)=><p key={i}>{block.text}</p>)}
       {!!content?.questions.length && <ul>{content.questions.map((q,i)=><li key={i}>{q.text}</li>)}</ul>}
     </>}
-    {!summary && <button disabled={!state || busy} onClick={generate}>{busy ? 'Generating…' : draft ? 'Regenerate draft' : 'Generate discussion draft'}</button>}
+    {!summary && <button disabled={!state || busy} onClick={generate}>{busy ? 'Generating…' : draft ? 'Regenerate questions' : 'Suggest client questions'}</button>}
     {error && <button disabled={busy} onClick={()=>setAttempt(n=>n+1)}>Reload saved evidence</button>}
     {draft && purpose==='discussion' && <label className="field-label"><input type="checkbox" checked={reviewed} onChange={e=>{
       setReviewed(e.target.checked);onReview?.(e.target.checked ? {case_id:recordId,draft_id:draft.draft_id,evidence_hash:state.evidence_hash,acknowledged:true} : null);

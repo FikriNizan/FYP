@@ -296,3 +296,10 @@ details p { font-size:13px; line-height:1.7; }
 .summary-card .ai-tag { background: #e3e8fb; color: #2c3e8f; }
 .summary-card .audience-tag { background: #eef1f4; color: #33404d; }
 .summary-card .standard-tag { background: transparent; color: #5b6670; border: 1px solid var(--line); }
+.client-questions { padding-left: 20px; }
+.client-questions li { margin-bottom: 8px; }
+.client-questions .ai-tag, .client-questions .standard-tag { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 4px;
+  font-size: .75rem; font-weight: 600; line-height: 1.5; }
+.client-questions .ai-tag { background: #e3e8fb; color: #2c3e8f; }
+.client-questions .standard-tag { color: #5b6670; border: 1px solid var(--line); }
+.client-questions .client-basis { display: block; }

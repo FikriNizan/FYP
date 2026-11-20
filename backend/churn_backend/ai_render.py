@@ -373,6 +373,25 @@ def render_summary(evidence, link=None, questions=None):
                 checks=BASE_CHECKS + (AI_CHECKS if ai_used else []))
 
 
+def basis(ids, facts):
+    """RM-only 'Based on' line: plain names of the cited facts."""
+    names = [name(i, facts) for i in ids if i in facts]
+    return '; '.join(n[:1].upper() + n[1:] for n in names)
+
+
+def render_client_questions(evidence, questions=None, standard=None):
+    """AI-suggested client questions, or the standard (deterministic) bank as the fallback."""
+    facts = evidence['facts']
+    if questions is not None:
+        items = [dict(text=q['text'], source='ai', basis=basis(q['evidence_ids'], facts), evidence_ids=list(q['evidence_ids']))
+                 for q in questions]
+    else:
+        items = [dict(text=q['text'], source='standard', basis=q['source'], evidence_ids=[]) for q in standard or []]
+    return dict(format='questions-1', questions=items, evidence_ids=sorted({i for q in items for i in q['evidence_ids']}),
+                checks=BASE_CHECKS + (['known_references', 'client_language', 'numeric_date_rules', 'interpretation_rules']
+                                      if questions is not None else []))
+
+
 def card_words(content):
     return (sum(len(item['text'].split()) for s in content['sections'] for item in s['items'])
             + sum(len(q['text'].split()) for q in content['questions']))
@@ -386,6 +405,6 @@ def provider_payload(evidence):
         sections.append(dict(section=key, title=TITLES[key], lines=[dict(sentence=l['text'], facts=[
             dict(id=i, placeholder='{{' + i + '}}', name=name(i, facts), kind=facts[i]['kind'],
                  direction=facts[i].get('direction'), group=facts[i].get('group')) for i in l['ids']]) for l in card_plan[key]]))
-    return dict(customer='Customer A', purpose='summary', cutoff=evidence['identity']['cutoff'], sections=sections,
+    return dict(customer='Customer A', purpose=evidence['identity']['purpose'], cutoff=evidence['identity']['cutoff'], sections=sections,
                 limits='Signals show what the estimate weighed, not causes. Balances are exposures; fees and waivers are '
                        "historical estimates, not profit. Prioritisation is the committee's decision.")

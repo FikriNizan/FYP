@@ -160,10 +160,12 @@ def render(payload):
         if item.get('ai_discussion'):
             draft=item['ai_discussion']
             content=draft['content']
-            story += [paragraph('AI draft · review before use', heading), rule(),
+            story += [paragraph('AI-suggested client questions · reviewed', heading), rule(),
                       paragraph('Saved Gemini draft · '+draft['generated_at'],note)]
-            for entry in content['blocks'] + content['questions']:
-                story.append(paragraph(entry['text']))
+            for entry in content['questions']:  # Question for the client; "Based on" is for the RM only.
+                story.append(paragraph(('AI-suggested: ' if entry.get('source')=='ai' else 'Standard: ')+entry['text']))
+                if entry.get('basis'):
+                    story.append(paragraph('Based on: '+entry['basis'], note))
         story += [paragraph('Evidence sources and identifiers', heading), rule()]
         story += rows_table(item['traceability'], WIDTH, id_style=True)
 

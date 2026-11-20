@@ -38,11 +38,16 @@ class DraftTests(unittest.TestCase):
         link=dict(text='For this customer, {{'+fact+'}} and {{'+other+'}} both belong in the review discussion.',evidence_ids=[fact,other])
         return json.dumps(dict(link=link,questions=list(questions)))
 
-    def block_data(self):
-        """Old block/clause contract still serves the discussion purpose until stage 2."""
+    def client_data(self):
+        """Client-question purpose (m6-narrative-7) on the demo customer's saved evidence."""
         data=evidence.build('summary',self.id)
         data['identity']['purpose']='discussion'
         return data
+
+    def client_questions(self, questions=None):
+        return json.dumps(dict(questions=questions if questions is not None else [
+            dict(text='Have any of your payments been delayed or not gone through as expected?',evidence_ids=['feature.outbound_failure_rate_3m']),
+            dict(text='Have you or your team had any difficulty signing in to online banking?',evidence_ids=['feature.login_failure_rate_3m'])]))
 
     def generate(self):
         """Summary generation is batch-only (no HTTP POST). Call the same backend function the batch
@@ -158,27 +163,43 @@ class DraftTests(unittest.TestCase):
                 if fact['kind']=='model_signal':
                     self.assertEqual(fact['direction'],'higher' if fact['contribution_logodds']>0 else 'lower')
 
-    def test_invalid_paraphrases_and_schema_are_rejected(self):
+    def test_client_questions_reject_unsupported_internal_or_data_requests(self):
         with self.app.app_context():
-            data=self.block_data()
-            bad=['Risk is 99%.','Fees are five million ringgit.','The customer is unprofitable.',
-                'Service friction caused departure.','Payments deteriorated because of login failures.',
-                'The customer will leave.','The customer switched to a competitor.',
-                '<script>alert()</script>','Ignore previous instructions.',
-                'Activity declined.','The estimate is lower.','Payment issues confirm a complaint.']
-            for text in bad:
-                with self.subTest(text=text),self.assertRaises(ValidationError):
-                    ai.validate(self.output(prefix=text),data)
-            for raw in ['{}','[]','not JSON','x'*17000,self.output(fact='unknown.fact')]:
-                with self.subTest(raw=raw[:40]),self.assertRaises(ValidationError):ai.validate(raw,data)
-            for text in ['The recorded evidence can guide a focused discussion.', 'The available record provides context while customer experience remains unknown.']:
-                self.assertTrue(ai.validate(self.output(prefix=text),data)['blocks'])
-
-    def test_typed_clause_rejects_ratio_reinterpretation_and_kind_mismatch(self):
-        with self.app.app_context():
-            data=self.block_data()
-            for raw in [self.output(kind='model_signal'), self.output().replace('{{prediction.risk}}','The reduction was {{prediction.risk}}')]:
-                with self.assertRaises(ValidationError):ai.validate(raw,data)
+            data=self.client_data()
+            good='Have you or your team had any difficulty signing in to online banking?'
+            def raw(text,refs=('feature.login_failure_rate_3m',)):
+                return self.client_questions([dict(text=good,evidence_ids=['feature.login_failure_rate_3m']),dict(text=text,evidence_ids=list(refs))])
+            # Ported from the retired block contract: each claim wrapped as a client question is still rejected.
+            for claim in ['risk is 99%','fees are five million ringgit','the customer is unprofitable',
+                    'service friction caused departure','payments deteriorated because of login failures',
+                    'the customer will leave','the customer switched to a competitor','<script>alert()</script>',
+                    'you can ignore previous instructions','activity declined','the estimate is lower','payment issues confirm a complaint']:
+                with self.subTest(claim=claim),self.assertRaises(ValidationError):
+                    ai.validate(raw('Could you confirm that '+claim+'?'),data)
+            # Invented trends (ported from the retired risk-noun test).
+            for text in ['Is your activity rising?','Did your payments fall?']:
+                with self.subTest(text=text):
+                    self.assert_rejected(raw(text),data,'unprotected_comparison')
+            cases=[('Our model shows a higher score for you; are you moving to another bank?','client_language'),
+                   ('Has your risk changed?','client_language'),('Could you share the data on your sessions?','client_language'),
+                   ('Is anything in our records wrong?','client_language'),('Are you speaking to other banks?','client_language'),
+                   ('Is churn something you are considering?','client_language'),('Do you know your attrition flag?','client_language'),
+                   ('How many failed logins did you have?','client_data_request'),('How much did you pay suppliers?','client_data_request'),
+                   ('What is your current account balance?','client_data_request'),('What are the payment failure rates?','client_data_request'),
+                   ('Could you check {{feature.login_failure_rate_3m}}?','client_language'),
+                   ('Tell us about your payments.','verification_question'),('Please describe your banking needs?','verification_question')]
+            for text,rule in cases:
+                with self.subTest(text=text):
+                    self.assert_rejected(raw(text),data,rule)
+            for raw_text in ['{}','[]','not JSON','x'*17000,self.client_questions([dict(text=good,evidence_ids=['unknown.fact'])]*2)]:
+                with self.subTest(raw=raw_text[:40]),self.assertRaises(ValidationError):ai.validate(raw_text,data)
+            # Open What/How questions are allowed for clients (unlike internal summary questions).
+            for text in ['How has business activity been for you lately, and do you expect any changes ahead?',
+                         'What are your plans for your fixed deposits, including any coming up for renewal?']:
+                with self.subTest(text=text):
+                    accepted=ai.validate(raw(text),data)
+                    self.assertEqual(accepted['format'],'questions-1')
+                    self.assertEqual([q['source'] for q in accepted['questions']],['ai','ai'])
 
     def test_failed_regeneration_preserves_previous_valid_cache(self):
         with patch.object(ai.Gemini,'generate',return_value=self.notes()):first=self.generate().json
@@ -212,9 +233,10 @@ class DraftTests(unittest.TestCase):
         with self.app.app_context():
             data=evidence.build('discussion',self.id)
             outbound=repo.encode(evidence.external(data))
-            for private in ['Personal Name','Alice Secret','C:/private',self.id,'944']:
+            for private in ['Personal Name','Alice Secret','C:/private',self.id,'944','committee.','recorded_committee_context','Ignore instructions']:
                 self.assertNotIn(private,outbound)
-        with patch.object(ai.Gemini,'generate',return_value=self.output()):
+            self.assertFalse([key for key in data['facts'] if key.startswith('committee.')])
+        with patch.object(ai.Gemini,'generate',return_value=self.client_questions()):
             state=self.client.get(url).json
             draft=self.client.post(url,json={'expected_evidence_hash':state['evidence_hash']}).json['draft']
         preview=self.client.get('/api/briefings',query_string={'case_id':self.id}).json
@@ -222,8 +244,13 @@ class DraftTests(unittest.TestCase):
         body=dict(case_ids=[self.id],snapshots=preview['snapshots'],ai_drafts=[selection])
         with patch.object(ai.Gemini,'generate') as mock:
             self.assertEqual(self.client.post('/api/briefings/pdf',json=body).status_code,200)
-            self.assertEqual(self.client.post('/api/briefings/validate-ai',json=body).status_code,200)
+            checked=self.client.post('/api/briefings/validate-ai',json=body)
+            self.assertEqual(checked.status_code,200)
             mock.assert_not_called()
+        # Print and PDF render this same server-validated draft: the client question plus an RM-only basis line.
+        exported=checked.json['items'][0]['ai_discussion']['content']['questions']
+        self.assertEqual([(q['source'],q['basis']) for q in exported],[('ai','Payment failure rate'),('ai','Login failure rate')])
+        self.assertEqual(exported[0]['text'],'Have any of your payments been delayed or not gone through as expected?')
         body['ai_drafts'][0]['acknowledged']=False
         self.assertEqual(self.client.post('/api/briefings/pdf',json=body).status_code,422)
         body['ai_drafts'][0]['acknowledged']=True;body['ai_drafts'][0]['draft_id']='arbitrary'
@@ -381,15 +408,6 @@ class DraftTests(unittest.TestCase):
             self.assertEqual(get_db().execute('SELECT count(*) FROM ai_drafts').fetchone()[0],0)
             self.assertEqual(get_db().execute('SELECT count(*) FROM ai_reservations').fetchone()[0],0)
 
-    def test_risk_noun_is_allowed_while_invented_trends_remain_rejected(self):
-        with self.app.app_context():
-            data=self.block_data()
-            accepted=ai.validate(self.output(prefix='The saved risk estimate can guide a discussion.'),data)
-            self.assertIn('saved risk estimate',accepted['blocks'][0]['text'])
-            for prefix in ['Risk is rising.','Activity rises.','The customer is riskier.','Payments fell.']:
-                with self.subTest(prefix=prefix),self.assertRaises(ValidationError):
-                    ai.validate(self.output(prefix=prefix),data)
-
     def test_validation_diagnostics_report_only_allowlisted_rule_without_output(self):
         from flask import g
         self.app.config['TXB_LOCAL_SESSION']=True
@@ -422,8 +440,8 @@ class DraftTests(unittest.TestCase):
             ({'error':{'code':'api_key_invalid','message':'API key not valid. PRIVATE_KEY'}},None,'API_KEY_INVALID','key_invalid',None),
             ({'message':'API key expired. PRIVATE_KEY'},None,None,'key_expired',None),
             ({'error':{'status':'INVALID_ARGUMENT','details':[{'@type':'type.googleapis.com/google.rpc.BadRequest',
-                'fieldViolations':[{'field':'generationConfig.responseJsonSchema.properties.blocks.items',
-                                    'description':'Invalid field value PRIVATE_CUSTOMER'}]}]}},'INVALID_ARGUMENT',None,'invalid_parameter','generationConfig.responseJsonSchema.properties.blocks.items'),
+                'fieldViolations':[{'field':'generationConfig.responseJsonSchema.properties.questions.items',
+                                    'description':'Invalid field value PRIVATE_CUSTOMER'}]}]}},'INVALID_ARGUMENT',None,'invalid_parameter','generationConfig.responseJsonSchema.properties.questions.items'),
             ({'error':{'status':'failed_precondition','message':'Billing is not enabled for PRIVATE_PROJECT'}},'FAILED_PRECONDITION',None,'billing_prerequisite',None),
             ({'detail':'API key expired. PRIVATE_KEY'},None,None,'key_expired',None),
             ({'error':'API key not valid. PRIVATE_KEY'},None,None,'key_invalid',None),
@@ -610,7 +628,7 @@ class DraftTests(unittest.TestCase):
 
     def test_purpose_contract_schema_and_instructions_share_zero_to_three_or_five(self):
         from churn_backend.ai_contract import limits_for,schema_for,purpose_instruction
-        for purpose,maximum in [('summary',2),('discussion',5)]:
+        for purpose,maximum in [('summary',2)]:
             with self.subTest(purpose=purpose):
                 limits=limits_for(purpose)
                 schema=schema_for(purpose)
@@ -627,7 +645,7 @@ class DraftTests(unittest.TestCase):
                 self.assertEqual(schema_for(purpose)['properties']['questions']['maxItems'],maximum)
 
     def test_question_empty_boundary_over_limit_and_wrong_types_for_both_purposes(self):
-        for purpose,maximum in [('summary',2),('discussion',5)]:
+        for purpose,maximum in [('summary',2)]:
             with self.app.app_context():
                 data=evidence.build('summary',self.id)
                 data['identity']['purpose']=purpose
@@ -657,7 +675,7 @@ class DraftTests(unittest.TestCase):
             client=factory.return_value.__enter__.return_value
             client.models.generate_content.return_value=MagicMock(candidates=[MagicMock(finish_reason=types.FinishReason.STOP)],text=self.output())
             config=dict(enabled=True,provider='gemini',model='gemini-3.5-flash-lite',timeout=12,tokens=2048)
-            for purpose,maximum in [('summary',2),('discussion',5)]:
+            for purpose,maximum in [('summary',2)]:
                 with self.subTest(purpose=purpose):
                     data['identity']['purpose']=purpose
                     ai.Gemini().generate(data,config)
@@ -677,35 +695,33 @@ class DraftTests(unittest.TestCase):
 
     def test_complete_audit_collects_all_applicable_failures_without_exposing_unknown_text(self):
         with self.app.app_context():
-            data=self.block_data()
-            raw=json.dumps(dict(blocks=[
-                dict(kind='recorded_observation',text='Synthetic context. {{prediction.risk}}. Activity fell.',evidence_ids=['PRIVATE_UNKNOWN_REFERENCE']),
-                dict(kind='model_signal',text='{{feature.login_failure_rate_3m}}. The customer will leave.',evidence_ids=['feature.login_failure_rate_3m'])],
-                questions=[dict(text='Explain profitability 5%',evidence_ids=['PRIVATE_QUESTION_REFERENCE'])]))
+            data=self.client_data()
+            raw=json.dumps(dict(questions=[
+                dict(text='Has PRIVATE activity fell since our model flagged you?',evidence_ids=['PRIVATE_UNKNOWN_REFERENCE']),
+                dict(text='How many logins will leave 5% profitability',evidence_ids=['feature.login_failure_rate_3m'])]))
             report=ai.audit_output(raw,data)
             rules={item['rule'] for item in report['failures']}
-            self.assertTrue({'evidence_references','unprotected_comparison','statement_kind','prohibited_claim','protected_content','verification_question'}<=rules)
-            refs=next(item for item in report['failures'] if item['path']=='blocks[0].evidence_ids')
+            self.assertTrue({'evidence_references','unprotected_comparison','client_language','prohibited_claim','protected_content',
+                             'client_data_request','verification_question'}<=rules)
+            refs=next(item for item in report['failures'] if item['path']=='questions[0].evidence_ids')
             self.assertEqual(refs['received_type'],'array')
-            self.assertEqual(refs['missing_references'],['prediction.risk'])
             self.assertEqual(refs['unknown_fact_ids'],['unknown_1'])
             self.assertNotIn('PRIVATE_',json.dumps(report))
             self.assertNotIn('profitability',json.dumps(report))
 
     def test_synthetic_replay_fixture_has_no_provider_prose_or_bank_values(self):
+        # Structure-only fixture: provider prose, references and bank values are replaced; no offline replay
+        # (the client-question validator needs the real saved evidence).
         from churn_backend.ai_output_audit import synthetic_fixture
         with self.app.app_context(),patch.object(ai.Gemini,'generate') as provider:
-            data=self.block_data()
-            payload=json.loads(self.output(prefix='PRIVATE_PROVIDER_PROSE.'))
-            payload['blocks'][0]['evidence_ids']=['PRIVATE_REFERENCE']
-            raw=json.dumps(payload)
+            data=self.client_data()
+            raw=json.dumps(dict(questions=[dict(text='PRIVATE_PROVIDER_PROSE?',evidence_ids=['PRIVATE_REFERENCE'])]))
             fixture=synthetic_fixture(raw,data,ai.TOKEN,ai.audit_output(raw,data))
             encoded=json.dumps(fixture)
             self.assertNotIn('PRIVATE_',encoded)
             self.assertNotIn(str(self.customer['calibrated_risk']),encoded)
             self.assertNotIn(self.id,encoded)
-            replay=ai.audit_output(repo.encode(fixture['output']),fixture['evidence'])
-            self.assertIn('evidence_references',{f['rule'] for f in replay['failures']})
+            self.assertEqual(fixture['output']['questions'][0]['evidence_ids'],['unknown_1'])
             provider.assert_not_called()
 
     def test_reference_registry_rejects_mismatched_identity(self):
@@ -747,59 +763,32 @@ class DraftTests(unittest.TestCase):
                     self.assertEqual(schema['properties']['link']['properties']['evidence_ids'],plain)
                     self.assertNotIn('notes',schema['properties'])
                     continue
-                self.assertEqual(found['enum'],['$.properties.blocks.items.properties.kind'])
-                self.assertEqual(sorted(found['minItems']),['$.properties.blocks','$.properties.questions'])
-                self.assertEqual(sorted(found['maxItems']),['$.properties.blocks','$.properties.questions'])
-                for section in ['blocks','questions']:
-                    self.assertEqual(schema['properties'][section]['items']['properties']['evidence_ids'],plain)
+                # Discussion (m6-narrative-7): client questions only; no enums, bounds on the top-level array only.
+                self.assertEqual(found['enum'],[])
+                self.assertEqual(found['minItems'],['$.properties.questions'])
+                self.assertEqual(found['maxItems'],['$.properties.questions'])
+                self.assertEqual(set(schema['properties']),{'questions'})
+                self.assertEqual(schema['properties']['questions']['items']['properties']['evidence_ids'],plain)
 
     def test_validator_enforces_reference_count_uniqueness_and_known_ids(self):
-        from churn_backend.ai_contract import reference_registry
         with self.app.app_context():
-            data=self.block_data()
-            ids=[k for k,f in reference_registry(data).items() if f['kind']=='recorded_observation']
-            self.assertGreaterEqual(len(ids),5)
-            def block(refs):
-                text=' '.join('{{'+r+'}}.' for r in dict.fromkeys(refs))
-                return dict(kind='recorded_observation',evidence_ids=refs,
-                            text='Recorded context for discussion. '+text+' The context remains a matter to verify.')
-            def question(refs):
-                return dict(text='Could we verify the recorded context?',evidence_ids=refs)
-            # Boundary: exactly four distinct known references are accepted in blocks and questions.
-            accepted=ai.validate(json.dumps(dict(blocks=[block(ids[:4])],questions=[question(ids[:4])])),data)
-            self.assertEqual(accepted['blocks'][0]['evidence_ids'],ids[:4])
-            for section in ['blocks','questions']:
-                for name,refs in [('zero',[]),('five',ids[:5]),('duplicate',[ids[0],ids[0]]),('unknown',['unknown.fact'])]:
-                    with self.subTest(section=section,case=name):
-                        payload=dict(blocks=[block(ids[:1])],questions=[question(ids[:1])])
-                        payload[section]=[block(refs) if section=='blocks' else question(refs)]
-                        raw=json.dumps(payload)
-                        with self.assertRaises(ValidationError):
-                            ai.validate(raw,data)
-                        failure=next(f for f in ai.audit_output(raw,data)['failures']
-                                     if f['rule']=='evidence_references' and f['path']==section+'[0].evidence_ids')
-                        if name=='duplicate':
-                            self.assertTrue(failure['duplicate_references'])
-                        if name=='unknown':
-                            self.assertEqual(failure['unknown_fact_ids'],['unknown_1'])
-
-    def test_validator_enforces_block_count_for_both_purposes(self):
-        with self.app.app_context():
-            data=evidence.build('summary',self.id)
-            one=json.loads(self.output())['blocks'][0]
-            for purpose,maximum in [('discussion',6)]:  # Summary has no blocks under m6-narrative-5 (note keys tested separately).
-                data['identity']['purpose']=purpose
-                payload=dict(blocks=[copy.deepcopy(one) for _ in range(maximum)],questions=[])
-                with self.subTest(purpose=purpose,count=maximum):
-                    self.assertEqual(len(ai.validate(json.dumps(payload),data)['blocks']),maximum)
-                for count in [0,maximum+1]:
-                    payload['blocks']=[copy.deepcopy(one) for _ in range(count)]
-                    raw=json.dumps(payload)
-                    with self.subTest(purpose=purpose,count=count):
-                        with self.assertRaisesRegex(ValidationError,'Invalid narrative block count'):
-                            ai.validate(raw,data)
-                        self.assertIn('block_count',{f['rule'] for f in ai.audit_output(raw,data)['failures']})
-
+            data=self.client_data()
+            ids=['feature.login_failure_rate_3m','feature.outbound_failure_rate_3m','feature.passive_session_rate_3m','prediction.risk']
+            text='Have you or your team had any difficulty signing in to online banking?'
+            other=dict(text='Have any of your payments been delayed or not gone through as expected?',evidence_ids=ids[1:2])
+            accepted=ai.validate(self.client_questions([dict(text=text,evidence_ids=ids[:3]),other]),data)  # Boundary: three refs.
+            self.assertEqual(accepted['questions'][0]['evidence_ids'],ids[:3])
+            for name,refs in [('zero',[]),('four',ids),('duplicate',[ids[0],ids[0]]),('unknown',['unknown.fact'])]:
+                with self.subTest(case=name):
+                    raw=self.client_questions([dict(text=text,evidence_ids=refs),other])
+                    with self.assertRaises(ValidationError):
+                        ai.validate(raw,data)
+                    failure=next(f for f in ai.audit_output(raw,data)['failures']
+                                 if f['rule']=='evidence_references' and f['path']=='questions[0].evidence_ids')
+                    if name=='duplicate':
+                        self.assertTrue(failure['duplicate_references'])
+                    if name=='unknown':
+                        self.assertEqual(failure['unknown_fact_ids'],['unknown_1'])
 
     def summary_raw(self, link=None, questions=()):
         return json.dumps(dict(link=link or dict(text='',evidence_ids=[]),questions=list(questions)))
@@ -909,3 +898,42 @@ class DraftTests(unittest.TestCase):
             for name,question,rule in cases:
                 with self.subTest(case=name):
                     self.assert_rejected(self.summary_raw(questions=[question]),data,rule)
+
+    def test_client_question_contract_schema_and_prompt(self):
+        from churn_backend.ai_contract import limits_for,schema_for,purpose_instruction,CONTRACT_VERSION
+        self.assertEqual(CONTRACT_VERSION,'m6-narrative-7')
+        schema=schema_for('discussion')
+        self.assertEqual((schema['properties']['questions']['minItems'],schema['properties']['questions']['maxItems']),(2,3))
+        instruction=purpose_instruction('discussion')
+        self.assertIn('2–3 open, polite questions',instruction)
+        for phrase in ['never mention other banks','Never ask the client for numbers']:
+            self.assertIn(phrase,instruction)
+        with self.app.app_context():
+            data=self.client_data()
+            for count in [2,3]:
+                with self.subTest(count=count):
+                    questions=[dict(text='Have you or your team had any difficulty signing in to online banking?',
+                                    evidence_ids=['feature.login_failure_rate_3m'])]*count
+                    self.assertEqual(len(ai.validate(self.client_questions(questions),data)['questions']),count)
+            for wrong in [[],[dict(text='Is our online banking still meeting your needs?',evidence_ids=['feature.login_failure_rate_3m'])],
+                          [dict(text='Is our online banking still meeting your needs?',evidence_ids=['feature.login_failure_rate_3m'])]*4,None,{},'x',3]:
+                with self.subTest(wrong=str(wrong)[:30]),self.assertRaisesRegex(ValidationError,'Invalid question count'):
+                    ai.validate(json.dumps(dict(questions=wrong)),data)
+
+    def test_client_question_fallback_is_the_standard_question_bank(self):
+        from churn_backend.briefings import discussion_questions
+        url=self.prioritise()
+        state=self.client.get(url).json
+        fallback=state['fallback']
+        self.assertEqual(fallback['format'],'questions-1')
+        self.assertTrue(fallback['questions'])
+        self.assertEqual({q['source'] for q in fallback['questions']},{'standard'})
+        with self.app.app_context():
+            customer=dict(explanation=evidence.build('discussion',self.id)['explanation'],
+                          features=json.loads(repo.prediction_row(self.id)['features_json']))
+            expected=discussion_questions(customer)
+        self.assertEqual([(q['text'],q['basis']) for q in fallback['questions']],[(q['text'],q['source']) for q in expected])
+        with patch.object(ai.Gemini,'generate',return_value=self.client_questions([dict(text='Tell us your balance.',evidence_ids=['feature.login_failure_rate_3m'])]*2)):
+            failed=self.client.post(url,json={'expected_evidence_hash':state['evidence_hash']}).json
+        self.assertEqual((failed['state'],failed['failure_code']),('fallback','output_validation_failed'))
+        self.assertEqual(failed['fallback'],fallback)

@@ -138,8 +138,8 @@ describe('Work-focused frontend',()=>{
     start('/briefing?case_id=case-a');
     await screen.findByRole('heading',{name:'Saved evidence company'});
     expect(api.briefing).toHaveBeenCalledWith(['case-a']);
-    expect(screen.getByRole('heading',{name:'Discussion draft'})).toBeTruthy();
-    expect(screen.getByRole('button',{name:'Generate discussion draft'}).disabled).toBe(true);
+    expect(screen.getByRole('heading',{name:'AI-suggested client questions'})).toBeTruthy();
+    expect(screen.getByRole('button',{name:'Suggest client questions'}).disabled).toBe(true);
     expect(screen.getByRole('button',{name:'Download PDF'}).disabled).toBe(false);
     expect(screen.getByText(/How has business activity been for you lately/)).toBeTruthy();
     expect(screen.getByText('No newer assessment month is available.')).toBeTruthy();

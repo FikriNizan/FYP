@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { ErrorNotice } from '../components/Common.jsx';
 import { ConnectionState } from '../components/Workspace.jsx';
-import AIBriefingDraft from '../components/AIBriefingDraft.jsx';
+import AIBriefingDraft, { ClientQuestions } from '../components/AIBriefingDraft.jsx';
 import './briefing.css';
 
 function EvidenceSection({ value, className = '', itemsFirst = false, longRows = false }) {
@@ -120,7 +120,7 @@ export default function Briefing() {
       <section className="briefing-section"><h3>Questions for the customer</h3>{item.questions.length ? <ol className="briefing-questions">{item.questions.map((q,i)=><li key={i}><p>{q.text}</p><small className="muted">Evidence: {q.source} · {q.month}</small></li>)}</ol> : <p>No evidence-linked question is available from the supplied measures. Review the case before preparing questions.</p>}</section>
       <div className="no-print"><AIBriefingDraft key={item.case_id+JSON.stringify(item.snapshot)+reviewEpoch} recordId={item.case_id} onReview={value=>setReviewedAi(old=>({...old,[item.case_id]:value}))} /></div>
       <details className="briefing-sources"><summary>Evidence sources and identifiers</summary><p className="source-id">{item.traceability.map(([label,text])=><React.Fragment key={label}>{label}: {text}<br /></React.Fragment>)}</p></details>
-      {item.ai_discussion && <section className="print-only briefing-section"><h3>AI draft · review before use</h3><p>Saved Gemini draft · {new Date(item.ai_discussion.generated_at).toLocaleString('en-MY',{timeZone:'Asia/Kuala_Lumpur'})}</p>{[...item.ai_discussion.content.blocks,...item.ai_discussion.content.questions].map((b,i)=><p key={i}>{b.text}</p>)}</section>}
+      {item.ai_discussion && <section className="print-only briefing-section"><h3>AI-suggested client questions · reviewed</h3><p>Saved Gemini draft · {new Date(item.ai_discussion.generated_at).toLocaleString('en-MY',{timeZone:'Asia/Kuala_Lumpur'})}</p><ClientQuestions content={item.ai_discussion.content} /></section>}
       <section className="print-only briefing-section"><h3>Evidence sources and identifiers</h3><dl className="briefing-followups source-id">{item.traceability.map(([label,text])=><React.Fragment key={label}><dt>{label}</dt><dd>{text}</dd></React.Fragment>)}</dl></section>
     </article>)}
   </>;

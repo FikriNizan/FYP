@@ -20,10 +20,11 @@ import generate_summaries as batch  # noqa: E402
 PF = ai.ProviderFailure
 
 
-def output(fact='prediction.risk'):
-    return json.dumps(dict(blocks=[dict(kind='recorded_observation', evidence_ids=[fact],
-        text='Recorded activity offers a starting point for committee discussion. {{'+fact+'}}. The context remains a matter to verify.')],
-        questions=[]))
+def output(fact='feature.login_failure_rate_3m'):
+    """Discussion purpose (m6-narrative-7): two client-safe questions."""
+    return json.dumps(dict(questions=[
+        dict(text='Have you or your team had any difficulty signing in to online banking?', evidence_ids=[fact]),
+        dict(text='Have any of your payments been delayed or not gone through as expected?', evidence_ids=['feature.outbound_failure_rate_3m'])]))
 
 
 def notes(fact='prediction.risk'):

@@ -1,7 +1,7 @@
 """Purpose-specific output bounds shared by SDK schema, instructions and validation."""
 from .validation import require, strict_json, ValidationError
 
-CONTRACT_VERSION='m6-narrative-6'
+CONTRACT_VERSION='m6-narrative-7'
 KINDS=['recorded_observation','model_signal','recorded_committee_context']
 REFERENCE_MIN=1
 REFERENCE_MAX=4
@@ -14,7 +14,8 @@ LIMITS={
     # m6-narrative-6: one optional link note (2-3 facts from >=2 sections) and at most one question per audience.
     'summary':dict(question_min=0,question_max=2,link_words=25,link_chars=200,link_min_refs=2,link_max_refs=3,
         link_max_placeholders=3,link_min_connecting_words=4,question_words=25,question_chars=200,model_words=100),
-    'discussion':dict(block_min=1,block_max=6,question_min=0,question_max=5,word_max=340),
+    # m6-narrative-7: the on-demand purpose produces only 2-3 client-safe questions for the RM meeting.
+    'discussion':dict(question_min=2,question_max=3,question_refs_max=3,question_words=30,question_chars=220),
 }
 
 
@@ -58,6 +59,13 @@ def summary_schema(limits):
         'questions':dict(type='array',minItems=limits['question_min'],maxItems=limits['question_max'],items=question)})
 
 
+def client_schema(limits):
+    question=dict(type='object',additionalProperties=False,required=['text','evidence_ids'],properties={
+        'text':dict(type='string'),'evidence_ids':dict(type='array',items=dict(type='string'))})
+    return dict(type='object',additionalProperties=False,required=['questions'],properties={
+        'questions':dict(type='array',minItems=limits['question_min'],maxItems=limits['question_max'],items=question)})
+
+
 def schema_for(purpose):
     """Provider schema describes shape only. Gemini rejects schemas whose constraints have
     'too many states' (long enums, nested array bounds), so known IDs, 1–4 reference counts
@@ -65,6 +73,8 @@ def schema_for(purpose):
     limits=limits_for(purpose)
     if purpose=='summary':
         return summary_schema(limits)
+    if purpose=='discussion':
+        return client_schema(limits)
     def references():
         return dict(type='array',items=dict(type='string'))
     block=dict(type='object',additionalProperties=False,required=['kind','text','evidence_ids'],properties={
@@ -89,6 +99,14 @@ def purpose_instruction(purpose):
             "Ask about the customer's situation or the bank's service, never for a value: the card already shows every value. "
             'Zero questions is valid: return [] when evidence is insufficient. '
             'Never invent or pad questions to meet a minimum. Shorter output is preferable when evidence is limited.')
+    if purpose=='discussion':
+        return ('Purpose: client questions for a relationship manager (RM) meeting or call with Customer A. '
+            'Write '+str(bounds['question_min'])+'–'+str(bounds['question_max'])+' open, polite questions the RM can say directly to the client, '
+            "about the client's business, how they pay and get paid, their use of online banking, their deposits or their fees. "
+            'Each question is at most '+str(bounds['question_words'])+' words and uses a different topic. '
+            'The client must never hear internal language: no model, estimate, risk, score, flag, threshold, churn, attrition, '
+            'prediction, records or data, and never mention other banks or competitors. Never ask the client for numbers, counts '
+            'or amounts, and never quote numbers, dates or the facts themselves. Do not presuppose a problem or its cause.')
     else:
         introduction='Purpose: RM discussion draft. Write a short discussion outline; aim for 120–200 narrative words.'
     return (introduction+' Return '+str(bounds['block_min'])+'–'+str(bounds['block_max'])+' factual blocks. '
@@ -98,6 +116,9 @@ def purpose_instruction(purpose):
 
 
 def reference_instruction(purpose='discussion'):
+    if purpose=='discussion':
+        return ('Reference contract: each question cites 1–3 unique bare fact IDs copied exactly from sections[].lines[].facts[].id '
+            'in evidence_ids, for the RM to see why it was asked. Question text never contains placeholders, fact names or values.')
     if purpose=='summary':
         return ('Reference contract: to name a fact, write its placeholder exactly, e.g. {{prediction.risk}}; the card replaces it with the '
             "fact's name, never its value. Cite every placeholder you use in that item's evidence_ids: unique bare IDs copied exactly "
