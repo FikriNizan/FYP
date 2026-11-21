@@ -31,10 +31,12 @@ describe('Customer finance metrics (Finance tab)', () => {
     expect(within(contributionBlock()).getByText(A_LABEL)).toBeTruthy();
     expect(container.textContent).not.toContain(NEGATIVE);
     // A and B are separate checks with their own amounts; no combined (25.64 + 18.23) figure.
-    const a = screen.getByRole('article', { name:'Check A: deal broken' }), b = screen.getByRole('article', { name:'Check B: deal not paying' });
+    const a = screen.getByRole('article', { name:'Check A: fee waiver condition' }), b = screen.getByRole('article', { name:'Check B: deposits vs waived cost' });
     expect(a.textContent).toMatch(/25\.64/);
     expect(b.textContent).toMatch(/18\.23/);
     expect(container.textContent).not.toMatch(/43\.87/);
+    expect(a.querySelector('h4').textContent).toBe('Check A · fee waiver condition');
+    expect(b.querySelector('h4').textContent).toBe('Check B · deposits vs waived cost');
     for (const pattern of banned) expect(container.textContent).not.toMatch(pattern);
   });
 
@@ -90,8 +92,8 @@ describe('Customer finance metrics (Finance tab)', () => {
     const metrics = customer({ tier_id:'CORP_XL', waiver_basis:'POLICY_EXEMPT', fsl_a:{ status:'policy_exemption', flagged:false, monthly:null },
       fsl_b:{ status:'policy', flagged:true, monthly:500, shortfall:500, policy:true } });
     const { container } = render(<CustomerFinanceMetrics metrics={metrics} risk={0.2} />);
-    expect(within(screen.getByRole('article', { name:'Check A: deal broken' })).getByText('Policy exemption')).toBeTruthy();
-    expect(within(screen.getByRole('article', { name:'Check B: deal not paying' })).getByText('Policy')).toBeTruthy();
+    expect(within(screen.getByRole('article', { name:'Check A: fee waiver condition' })).getByText('Policy exemption')).toBeTruthy();
+    expect(within(screen.getByRole('article', { name:'Check B: deposits vs waived cost' })).getByText('Policy')).toBeTruthy();
     expect(container.textContent).not.toContain(B_LABEL);
   });
 

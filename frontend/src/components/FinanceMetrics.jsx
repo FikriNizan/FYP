@@ -89,8 +89,8 @@ export function CustomerFinanceMetrics({ metrics, risk }) {
       <dt>Operating-balance earnings</dt><dd>{money(parts.operating_earnings)}</dd>
     </dl>
     <div className="finance-checks">
-      <article className="finance-check" aria-label="Check A: deal broken"><h4>Check A · deal broken</h4><strong>{aTitle}</strong><p className="muted">{aDetail}</p></article>
-      <article className="finance-check" aria-label="Check B: deal not paying"><h4>Check B · deal not paying</h4><strong>{bTitle}</strong><p className="muted">{bDetail}</p></article>
+      <article className="finance-check" aria-label="Check A: fee waiver condition"><h4>Check A · fee waiver condition</h4><strong>{aTitle}</strong><p className="muted">{aDetail}</p></article>
+      <article className="finance-check" aria-label="Check B: deposits vs waived cost"><h4>Check B · deposits vs waived cost</h4><strong>{bTitle}</strong><p className="muted">{bDetail}</p></article>
     </div>
     <p className="muted">Checks A and B overlap and are never added together.</p>
     <Sensitivities cost={{ columns: costCols, rows: rows(metrics.cost_sensitivity, 'Transaction cost a month', 'transaction_cost') }}
@@ -112,8 +112,8 @@ function GroupPanel({ title, tiers, group, policy }) {
     <strong className="finance-value">{millions(group.rar_3m)}</strong>
     {group.rar_3m < 0 && <p className="finance-negative">{NEGATIVE_TEXT}</p>}
     <dl>
-      <dt>Check A · deal broken</dt><dd>{policy ? 'Policy exemption: not checked' : pair(group.fsl_a_customers, group.fsl_a_monthly)}</dd>
-      <dt>{policy ? 'Check B · policy' : 'Check B · deal not paying'}</dt><dd>{policy ? pair(group.policy_fsl_b_customers, group.policy_fsl_b_monthly) : pair(group.fsl_b_customers, group.fsl_b_monthly)}</dd>
+      <dt>Check A · fee waiver condition</dt><dd>{policy ? 'Policy exemption: not checked' : pair(group.fsl_a_customers, group.fsl_a_monthly)}</dd>
+      <dt>{policy ? 'Check B · policy' : 'Check B · deposits vs waived cost'}</dt><dd>{policy ? pair(group.policy_fsl_b_customers, group.policy_fsl_b_monthly) : pair(group.fsl_b_customers, group.fsl_b_monthly)}</dd>
     </dl>
   </article>;
 }
