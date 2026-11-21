@@ -21,6 +21,7 @@ milestone list below means implemented behaviour, not acceptance, unless the ite
 | Grounded GenAI summaries and questions (M6) | Yes | Yes (provider mocked) | Accepted for the evaluated samples (5/5 summaries, 3/3 client questions; single-reviewer judgement). Full April summary batch not yet run on the current render version | No |
 | Finance: Revenue at Risk and Fee Subsidy Leakage | Yes (check B owner rule of 22 Nov 2026) | Yes | Pending owner review of the revised check B | No (assumption-based estimates; verified OPR rates end 10 Jul 2024) |
 | OPR stress demonstration (M7, package `m7-opr-2`) | Yes | Yes, plus parity, reproduction and determinism gates in the modelling environment | Pending: manual inspection of the page with `m7-opr-2` | No (illustrative assumptions; not a forecast) |
+| UI refresh to the approved mockup (Phase C) | Yes | Yes (React tests retargeted; protective assertions kept) | Pending: owner review of the before/after screenshots | No |
 | CI on Ubuntu | Yes (portable launcher) | Green in a clean Ubuntu 24.04 container (see the Phase A handoff) | Not applicable | Remote GitHub run not yet confirmed on this branch |
 
 ## Existing foundation
