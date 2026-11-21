@@ -220,7 +220,8 @@ def portfolio(batch_id):
     bases_tiers = {basis: [tier for tier, terms in TIER_TERMS.items() if terms['basis'] == basis]
                    for basis in ('FD_THRESHOLD', 'POLICY_EXEMPT')}
     return dict(cutoff=cutoff, liquidity_premium=BASE_PREMIUM, cost_ratio=BASE_COST_RATIO, cost_ratios=list(COST_RATIOS),
-                bases_tiers=bases_tiers,
+                bases_tiers=bases_tiers, opr_verified_through=OPR_VERIFIED_THROUGH,
+                opr_verified=cutoff is not None and rate_on(OPR_TABLE, cutoff) is not None,
                 liquidity_premiums=list(LIQUIDITY_PREMIUMS), window_months=WINDOW_MONTHS, totals=total,
                 by_basis=dict(sorted(bases.items())), by_tier=dict(sorted(tiers.items())), by_flag=dict(sorted(flags.items())),
                 note='Contribution at stake is an estimate of relationship contribution, not audited profit. '

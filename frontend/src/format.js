@@ -11,6 +11,12 @@ export const money = value => isNumber(value)
 export const millions = value => isNumber(value)
   ? (value < 0 ? '−' : value > 0 ? '+' : '') + 'RM' + (Math.abs(value) / 1e6).toFixed(2) + 'm'
   : 'Not provided';
+// Balances (never negative here) in millions without a sign, e.g. RM61.40m; values come from the backend.
+export const millionsPlain = value => isNumber(value) ? 'RM' + (value / 1e6).toFixed(2) + 'm' : 'Not provided';
+// Display names for the synthetic tier reference table (labels only; thresholds come from the backend).
+export const tierLabel = tier => ({ SME_S:'SME small', SME_M:'SME medium', CORP_L:'Corporate large', CORP_XL:'Corporate extra-large', GOV:'Government' }[tier] || tier || 'Tier not provided');
+// Owner decision: a waiting assessment names the LAST month of its forecast window.
+export const readyAfterLabel = month => `Ready after ${monthLabel(month)} data`;
 export const count = value => isNumber(value) ? new Intl.NumberFormat('en-MY').format(value) : 'Not provided';
 
 export function dateLabel(value) {

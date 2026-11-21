@@ -1,20 +1,30 @@
 import React from 'react';
-import { count, driverLabel, driverValue } from '../format.js';
+import { driverLabel, driverValue } from '../format.js';
+import Icon from './Icon.jsx';
 
-function Signal({ driver, direction }) {
-  return <div className="signal"><div className="signal-label"><strong>{driverLabel(driver)}</strong><span className={'signal-direction '+(direction==='lower' ? 'lower' : 'higher')}>{direction==='lower' ? 'Pushed the estimate lower' : 'Pushed the estimate higher'}</span></div><div className="signal-value">{driverValue(driver)}</div></div>;
+// Saved SHAP drivers shown in plain words. The bar is the driver's strength relative to the strongest shown
+// driver (width only); no weight, log-odds or percentage is displayed. Influence is not proof of cause.
+const SHOWN_HIGHER = 4, SHOWN_LOWER = 2;
+
+function Signal({ driver, strongest, lower, label }) {
+  const width = strongest > 0 ? Math.min(100, Math.abs(driver.contribution_logodds) / strongest * 100) : 0;
+  return <div className="sig">
+    <span className={'round ' + (lower ? 'green' : 'red')}><Icon name={lower ? 'down' : 'up'} /></span>
+    <span><strong>{label || driverLabel(driver)}</strong><span className="sig-value">{driverValue(driver)} · {lower ? 'pushed the estimate down' : 'pushed the estimate up'}</span></span>
+    <span className={'meter ' + (lower ? 'lower' : '')} aria-hidden="true"><i style={{ width: width + '%' }} /></span>
+  </div>;
 }
+
 export default function Signals({ customer }) {
   const explanation = customer.explanation;
-  const higher = explanation.higher_risk_drivers || [], lower = explanation.lower_risk_drivers || [];
-  return <section className="panel"><h2>Signals to investigate</h2><p className="muted">Start with the inputs that raised this estimate.</p>
-    {higher.slice(0,3).map(driver => <Signal key={driver.feature} driver={driver} />)}
-    {!higher.length && <p>No higher-risk signals were supplied.</p>}
-    <details><summary>What does this mean?</summary><p>These model inputs pushed the predicted risk higher or lower relative to the model’s reference. They identify evidence to investigate, not confirmed causes or guaranteed remedies.</p></details>
-    <details><summary>More model signals</summary>{higher.slice(3).map(driver => <Signal key={driver.feature} driver={driver} />)}<h3 className="spaced">Signals lowering the estimate</h3>{lower.map(driver => <Signal key={driver.feature} driver={driver} direction="lower" />)}{!lower.length && <p>No lower-risk signals were supplied.</p>}</details>
-    <details><summary>Technical explanation</summary><p>SHAP values explain the model in calibrated log-odds. They are not probability percentage points.</p>
-      <div className="technical">{JSON.stringify({ base_logodds: explanation.base_logodds, higher_risk_drivers: higher, lower_risk_drivers: lower, other_features_contribution_logodds: explanation.other_features_contribution_logodds, probability_clip_adjustment_logodds: explanation.probability_clip_adjustment_logodds }, null, 2)}</div>
-      <p className="muted">Batch {customer.batch_id} · {count(customer.feature_count)} supplied model inputs</p>
-    </details>
+  const strength = driver => Math.abs(driver.contribution_logodds || 0);
+  const higher = [...(explanation.higher_risk_drivers || [])].sort((a, b) => strength(b) - strength(a)).slice(0, SHOWN_HIGHER);
+  const lower = [...(explanation.lower_risk_drivers || [])].sort((a, b) => strength(b) - strength(a)).slice(0, SHOWN_LOWER);
+  const strongest = Math.max(0, ...[...higher, ...lower].map(strength));
+  return <section className="panel" aria-labelledby="signals-title"><h2 id="signals-title">Signals to investigate</h2>
+    <p className="muted">What pushed this estimate up or down. Not proof of cause.</p>
+    {higher.map(driver => <Signal key={driver.feature} driver={driver} strongest={strongest} label={customer.driver_labels?.[driver.feature]} />)}
+    {!higher.length && <p>No signals pushing the estimate up were supplied.</p>}
+    {lower.map(driver => <Signal key={driver.feature} driver={driver} strongest={strongest} label={customer.driver_labels?.[driver.feature]} lower />)}
   </section>;
 }

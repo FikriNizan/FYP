@@ -61,12 +61,13 @@ it('keeps every saved-assessment column and adds Outcome check, with no reset co
   const row=(id,cutoff,outcome_check)=>({batch_id:id,cutoff_month:cutoff,source_kind:'prepared_month_scored',record_count:1000,
     protocol_sha256:'p',imported_at:'2026-11-22T00:00:00Z',source:{evidence_coverage:{names_available:1000,histories_available:1000}},outcome_check});
   render(<MemoryRouter><MonthlyAssessments batches={[
-    row('apr','2024-04-30',{state:'waiting',waiting_for_month:'2024-06-30',loaded:0,records:1000}),
+    row('apr','2024-04-30',{state:'waiting',waiting_for_month:'2024-06-30',ready_after_month:'2024-07-31',loaded:0,records:1000}),
     row('feb','2024-02-29',{state:'checked',waiting_for_month:null,loaded:1000,records:1000}),
     row('jan','2024-01-31',{state:'not_checked',waiting_for_month:null,loaded:0,records:1000})]} onPublished={vi.fn()}/></MemoryRouter>);
   expect(screen.getAllByRole('columnheader').map(h=>h.textContent)).toEqual(['Assessment','Coverage','Available evidence','Imported','Outcome check','Action']);
   const rows=screen.getAllByRole('row').slice(1);
-  expect(rows.map(r=>r.querySelectorAll('td')[4].textContent)).toEqual(['Waiting for June 2024 data','Checked','Not checked']);
+  // Owner decision (Phase C): a waiting assessment names the LAST month of its forecast window.
+  expect(rows.map(r=>r.querySelectorAll('td')[4].textContent)).toEqual(['Ready after July 2024 data','Checked','Not checked']);
   expect(screen.getAllByRole('link',{name:'Open overview'})).toHaveLength(3);
   expect(screen.getAllByText('Source details')).toHaveLength(3);
   expect(screen.queryByRole('button',{name:/reset/i})).toBeNull();

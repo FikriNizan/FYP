@@ -1,127 +1,110 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Monitoring from '../src/pages/Monitoring.jsx';
 import { api } from '../src/api.js';
 
-vi.mock('../src/api.js',async original=>({...await original(),api:{monitoring:vi.fn(),monitoringTrend:vi.fn()}}));
-const batches=[{batch_id:'april',cutoff_month:'2024-04-30',record_count:1000}];
-const empty={records:0,positives:0,observed_rate:null,mean_risk:null,brier:null,reference_brier:null,flagged:0,flagged_positives:0,flagged_positive:null,
+vi.mock('../src/api.js',async original=>({...await original(),api:{monitoring:vi.fn(),monitoringTrend:vi.fn(),scenarios:vi.fn()}}));
+const batches=[{batch_id:'april',cutoff_month:'2024-04-30',record_count:1000},{batch_id:'feb',cutoff_month:'2024-02-29',record_count:1000}];
+const empty={records:0,positives:0,negatives:0,expected_positives:null,observed_rate:null,mean_risk:null,brier:null,reference_brier:null,flagged:0,flagged_positives:0,flagged_positive:null,
   true_positives:0,false_positives:0,false_negatives:0,true_negatives:0,precision:null,recall:null,f1:null};
-const base={batch_id:'april',cutoff_month:'2024-04-30',outcome_month:'2024-07-31',records:1000,state:'not_loaded',
+const waiting={state:'waiting',loaded:0,records:1000,waiting_for_month:'2024-05-31',ready_after_month:'2024-07-31',window:['2024-05-31','2024-06-30','2024-07-31']};
+const checked={state:'checked',loaded:1000,records:1000,waiting_for_month:null,ready_after_month:'2024-05-31',window:['2024-03-31','2024-04-30','2024-05-31']};
+const base={batch_id:'april',cutoff_month:'2024-04-30',outcome_month:'2024-07-31',records:1000,state:'not_loaded',outcome_check:waiting,
   outcome_coverage:{loaded:0,unavailable:1000,documented_delivery:0,without_recorded_delivery:0},
-  observed_all:empty,documented_delivery:empty,without_recorded_delivery:empty,delivery_types:{},
-  drift:null,interpretation:'No causal effects are inferred.'};
-const trend={protocol_sha256:'same',batches:[{batch_id:'april',cutoff_month:'2024-04-30',records:1000,
-  state:'not_loaded',loaded:0,unavailable:1000,mean_risk_all:.16,flagged_rate_all:.2,
-  mean_risk_loaded:null,observed_rate:null,gap:null,brier:null,reference_brier:null,flagged_positive:null}]};
-function start(){render(<MemoryRouter><Monitoring batches={batches}/></MemoryRouter>);}
-beforeEach(()=>{vi.resetAllMocks();api.monitoringTrend.mockResolvedValue(trend);});
-function openGuide(){fireEvent.click(screen.getByText('How to read this page'));}
+  observed_all:empty,documented_delivery:empty,without_recorded_delivery:empty,delivery_types:{},drift:null,interpretation:'No causal effects are inferred.'};
+const febStats={...empty,records:1000,positives:171,negatives:829,expected_positives:160.8,observed_rate:.171,mean_risk:.16,brier:.127,reference_brier:.14,flagged:208,flagged_positives:83,
+  true_positives:83,false_positives:125,false_negatives:88,true_negatives:704,precision:83/208,recall:83/171,f1:166/379};
+const feb={...base,batch_id:'feb',cutoff_month:'2024-02-29',outcome_month:'2024-05-31',state:'loaded',outcome_check:checked,
+  outcome_coverage:{loaded:1000,unavailable:0,documented_delivery:3,without_recorded_delivery:997},observed_all:febStats,
+  documented_delivery:{...empty,records:3,positives:1,negatives:2},without_recorded_delivery:{...empty,records:997,positives:170,negatives:827},
+  drift:{previous_month:'2024-01-31',previous_mean_risk:.15,current_mean_risk:.16,previous_flagged:200,current_flagged:208,
+    features:[{feature:'combined_flow_mean_1m_myr',previous_median:110900,current_median:111600}]}};
+const trendItem=(id,cutoff,check,extra={})=>({batch_id:id,cutoff_month:cutoff,records:1000,state:'loaded',loaded:check.loaded,outcome_check:check,
+  precision:null,recall:null,expected_positives:null,positives:null,...extra});
+const trend=(febCheck=checked)=>({protocol_sha256:'same',batches:[
+  trendItem('feb','2024-02-29',febCheck,febCheck.state==='checked'?{precision:83/208,recall:83/171,expected_positives:160.8,positives:171}:{}),
+  trendItem('april','2024-04-30',waiting)]});
+function start(path='/monitoring'){return render(<MemoryRouter initialEntries={[path]}><Monitoring batches={batches}/></MemoryRouter>);}
+beforeEach(()=>{vi.resetAllMocks();});
 
-describe('Outcome monitoring',()=>{
-  it('keeps unloaded outcomes unavailable and preserves interpretation in the guide',async()=>{
-    api.monitoring.mockResolvedValue(base);start();
-    expect((await screen.findAllByText('Not loaded')).length).toBeGreaterThan(0);
-    expect(screen.queryByText('Model performance')).toBeNull();
-    expect(screen.getAllByText('Not provided',{selector:'td'}).length).toBeGreaterThan(0);
-    openGuide();
-    expect(screen.getByText(/Unavailable includes outcomes not imported/)).toBeTruthy();
-    expect(screen.getByText(/This page does not create labels/)).toBeTruthy();
+describe('Monitoring · Outcomes',()=>{
+  it('shows readiness cards with "Ready after <last window month> data" and an empty state when nothing is checkable',async()=>{
+    api.monitoring.mockResolvedValue(base);api.monitoringTrend.mockResolvedValue(trend({...waiting,ready_after_month:'2024-05-31'}));
+    const {container}=start();
+    const ready=(await screen.findByRole('heading',{name:'Which assessments can be checked'})).closest('section');
+    expect([...ready.querySelectorAll('.rstep')].map(card=>card.textContent)).toEqual(['February 2024Ready after May 2024 data','April 2024Ready after July 2024 data']);
+    expect(screen.getByText('Nothing to check yet.')).toBeTruthy();
+    expect(screen.getByText('April 2024 forecasts May–Jul 2024. It becomes checkable when the July 2024 package is uploaded in Monthly Assessments.')).toBeTruthy();
+    expect(screen.queryByText('Caught')).toBeNull();                       // No outcomes are invented.
+    expect(container.textContent).not.toMatch(/Brier/);
     expect(api.monitoring).toHaveBeenCalledWith('april');
-    expect(api.monitoringTrend).toHaveBeenCalledWith('april');
   });
-  it('renders a window-open state without inventing outcomes',async()=>{
-    api.monitoring.mockResolvedValue({...base,state:'window_open',outcome_month:'2999-07-31'});start();
-    expect(await screen.findByText('Window open')).toBeTruthy();
-    expect(screen.getByText(/Outcomes cannot be assessed yet/)).toBeTruthy();
+
+  it('shows the 2x2 with the exact labels, plain sentences, F1, expected vs actual and the follow-up split',async()=>{
+    api.monitoring.mockResolvedValue(feb);api.monitoringTrend.mockResolvedValue(trend());
+    const {container}=start('/monitoring?batch_id=feb');
+    const matrix=await screen.findByRole('table',{name:'Flags against observed outcomes'});
+    expect(within(matrix).getAllByRole('columnheader').map(h=>h.textContent)).toEqual(['Activity halved','Activity held']);
+    expect(within(matrix).getAllByRole('rowheader').map(h=>h.textContent)).toEqual(['Flagged','Not flagged']);
+    expect(within(matrix).getAllByRole('cell').map(c=>c.textContent)).toEqual(['83Caught','125False alarmMay include customers an RM kept','88Missed','704Correctly quiet']);
+    expect(screen.getByText(/flags were real drops/).closest('span').textContent).toBe('83 of 208 flags were real drops (39.9%).');
+    expect(screen.getByText(/The model caught/).closest('span').textContent).toBe('The model caught 83 of 171 drops (48.5%).');
+    expect(screen.getByText('F1 0.44')).toBeTruthy();
+    const expected=screen.getByRole('heading',{name:'Expected vs actual drops'}).closest('section');
+    expect(within(expected).getByText('161')).toBeTruthy();
+    expect(within(expected).getByText('171')).toBeTruthy();
+    expect(within(expected).getByText('More drops than the predicted risk expected.')).toBeTruthy();
+    const followed=screen.getByRole('heading',{name:'Were flags followed up?'}).closest('section');
+    expect(within(followed).getByRole('img',{name:'1 halved, 2 held'})).toBeTruthy();
+    expect(within(followed).getByRole('img',{name:'170 halved, 827 held'})).toBeTruthy();
+    expect(followed.textContent).toContain('No record does not prove no contact.');
+    expect(container.textContent).not.toMatch(/Brier|reference/i);           // Brier stays in the API and docs.
+    expect(screen.queryByRole('combobox')).toBeNull();                      // No population selector toggle.
   });
-  it('renders partly loaded coverage and the empty delivery state',async()=>{
-    api.monitoring.mockResolvedValue({...base,state:'partly_loaded',
-      outcome_coverage:{loaded:1,unavailable:999,documented_delivery:0,without_recorded_delivery:1},
-      observed_all:{...empty,records:1,positives:0,observed_rate:0,mean_risk:.2,brier:.04,reference_brier:0},
-      without_recorded_delivery:{...empty,records:1,positives:0,observed_rate:0,mean_risk:.2}});
+
+  it('keeps unavailable outcomes out of the counts and never counts them as zero',async()=>{
+    api.monitoring.mockResolvedValue({...feb,outcome_coverage:{...feb.outcome_coverage,loaded:998,unavailable:2}});api.monitoringTrend.mockResolvedValue(trend());
+    start('/monitoring?batch_id=feb');
+    expect(await screen.findByText('2 unavailable outcomes are excluded and never counted as zero.')).toBeTruthy();
+  });
+
+  it('shows month by month for checked assessments and the readiness label for the rest, plus input movement',async()=>{
+    api.monitoring.mockResolvedValue(feb);api.monitoringTrend.mockResolvedValue(trend());
+    start('/monitoring?batch_id=feb');
+    const months=(await screen.findByRole('heading',{name:'Month by month'})).closest('section');
+    const rows=[...months.querySelectorAll('tbody tr')].map(r=>[...r.children].map(c=>c.textContent));
+    expect(rows).toEqual([['Flags that were real drops','39.9%','Ready after July 2024 data'],['Drops the model caught','48.5%','Ready after July 2024 data'],['Expected vs actual drops','161 / 171','Ready after July 2024 data']]);
+    const movement=screen.getByRole('heading',{name:'Input movement since last month'}).closest('section');
+    expect([...movement.querySelectorAll('tbody tr')].map(r=>[...r.children].map(c=>c.textContent.replace(/ /g,' '))))
+      .toEqual([['Average predicted risk','15.0%','16.0%'],['Flagged customers','200','208'],['Median combined flow, latest month','RM 110,900.00','RM 111,600.00']]);
+    expect(movement.querySelectorAll('details')).toHaveLength(0);
+  });
+
+  it('switches assessment from a readiness card and keeps the error state honest',async()=>{
+    api.monitoring.mockImplementation(async id=>id==='feb'?feb:base);api.monitoringTrend.mockResolvedValue(trend());
     start();
-    expect(await screen.findByText('Partly loaded')).toBeTruthy();
-    expect(screen.getByText(/999 unavailable outcomes/)).toBeTruthy();
-    expect(screen.getByText(/No documented deliveries were recorded/)).toBeTruthy();
+    fireEvent.click(await screen.findByRole('button',{name:/February 2024/}));
+    expect(await screen.findByText('Caught')).toBeTruthy();
+    expect(api.monitoring).toHaveBeenLastCalledWith('feb');
   });
-  it('shows descriptive groups and the same-customer comparison',async()=>{
-    api.monitoring.mockResolvedValue({...base,state:'loaded',
-      outcome_coverage:{loaded:1000,unavailable:0,documented_delivery:3,without_recorded_delivery:997},
-      observed_all:{...empty,records:1000,positives:184,observed_rate:.184,mean_risk:.16,brier:.127,reference_brier:.150,flagged:208,flagged_positives:40,
-        true_positives:40,false_positives:168,false_negatives:144,true_negatives:648,precision:40/208,recall:40/184,f1:80/392},
-      documented_delivery:{...empty,records:3,positives:1,observed_rate:1/3,mean_risk:.2,flagged:2,flagged_positives:1},
-      without_recorded_delivery:{...empty,records:997,positives:183,observed_rate:183/997,mean_risk:.16,flagged:206,flagged_positives:39}});
-    start();
-    expect(await screen.findByText('Documented delivery',{selector:'h3'})).toBeTruthy();
-    expect(screen.getByText('No recorded delivery',{selector:'h3'})).toBeTruthy();
-    expect(screen.getAllByText('40 of 208',{exact:false}).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByText('Classification details'));
-    expect(screen.getByText(/Missed observed drops: 144/)).toBeTruthy();
-    expect(screen.getByText(/Of all observed volume drops, how many were flagged/)).toBeTruthy();
-    openGuide();expect(screen.getByText(/do not prove retention benefit/)).toBeTruthy();
-  });
-  it('switches the panel population without changing cross-month scope',async()=>{
-    api.monitoring.mockResolvedValue({...base,state:'loaded',
-      outcome_coverage:{loaded:2,unavailable:998,documented_delivery:1,without_recorded_delivery:1},
-      observed_all:{...empty,records:2,positives:1,observed_rate:.5,mean_risk:.4,brier:.21,reference_brier:.25,
-        flagged:1,flagged_positives:1,true_positives:1,false_positives:0,false_negatives:0,true_negatives:1,precision:1,recall:1,f1:1},
-      documented_delivery:{...empty,records:1,positives:1,observed_rate:1,mean_risk:.7},
-      without_recorded_delivery:{...empty,records:1,positives:0,observed_rate:0,mean_risk:.1,brier:.01,reference_brier:0,
-        flagged:0,flagged_positives:0,true_positives:0,false_positives:0,false_negatives:0,true_negatives:1}});
-    start();
-    expect(await screen.findByLabelText('Performance population')).toBeTruthy();
-    expect(screen.getByText('50.0%')).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('Performance population'),{target:{value:'without_recorded_delivery'}});
-    expect(screen.getByText('0.0%')).toBeTruthy();
-    expect(screen.getAllByText('10.0%').length).toBeGreaterThan(0);
-    expect(screen.getByText(/Based on 1 of 2 customers with loaded outcomes/)).toBeTruthy();
-    expect(screen.getByText(/Each month uses all customers with loaded outcomes/)).toBeTruthy();
-    fireEvent.click(screen.getByText('Classification details'));
-    expect(screen.getByText(/Precision/)).toBeTruthy();
-  });
-  it('shows no selected-group ratios when all loaded customers have documented delivery',async()=>{
-    api.monitoring.mockResolvedValue({...base,state:'loaded',
-      outcome_coverage:{loaded:1,unavailable:999,documented_delivery:1,without_recorded_delivery:0},
-      observed_all:{...empty,records:1,positives:1,observed_rate:1,mean_risk:.5,brier:.25,reference_brier:0},
-      documented_delivery:{...empty,records:1,positives:1,observed_rate:1,mean_risk:.5}});
-    start();await screen.findByLabelText('Performance population');
-    fireEvent.change(screen.getByLabelText('Performance population'),{target:{value:'without_recorded_delivery'}});
-    expect(screen.getByText(/No customers with loaded outcomes in this selected population/)).toBeTruthy();
-    expect(screen.queryByText('Same-group constant reference')).toBeNull();
-  });
-  it('retains a valid panel choice and recomputes it after assessment switching',async()=>{
-    const april={...base,state:'loaded',outcome_coverage:{loaded:2,unavailable:998,documented_delivery:1,without_recorded_delivery:1},
-      observed_all:{...empty,records:2,positives:1,observed_rate:.5,mean_risk:.4,brier:.2,reference_brier:.25},
-      without_recorded_delivery:{...empty,records:1,positives:0,observed_rate:0,mean_risk:.1,brier:.01,reference_brier:0}};
-    const march={...base,batch_id:'march',cutoff_month:'2024-03-31',outcome_month:'2024-06-30',state:'loaded',
-      outcome_coverage:{loaded:1,unavailable:999,documented_delivery:1,without_recorded_delivery:0},
-      observed_all:{...empty,records:1,positives:1,observed_rate:1,mean_risk:.9,brier:.01,reference_brier:0}};
-    api.monitoring.mockImplementation(id=>Promise.resolve(id==='april'?april:march));
-    render(<MemoryRouter><Monitoring batches={[...batches,{batch_id:'march',cutoff_month:'2024-03-31',record_count:1000}]}/></MemoryRouter>);
-    await screen.findByLabelText('Performance population');
-    fireEvent.change(screen.getByLabelText('Performance population'),{target:{value:'without_recorded_delivery'}});
-    expect(screen.getAllByText('10.0%').length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button',{name:'Mar 2024'}));
-    expect(await screen.findByText(/No customers with loaded outcomes in this selected population/)).toBeTruthy();
-    expect(screen.getByLabelText('Performance population').value).toBe('without_recorded_delivery');
-    expect(screen.queryByText('10.0%')).toBeNull();
-  });
+
   it('shows a loading error without invented performance values',async()=>{
-    api.monitoring.mockRejectedValue(new Error('Saved report unavailable'));
+    api.monitoring.mockRejectedValue(new Error('Saved monitoring data is unavailable.'));api.monitoringTrend.mockResolvedValue(trend());
     start();
-    expect(await screen.findByText('Saved report unavailable')).toBeTruthy();
-    expect(screen.queryByText('Model performance')).toBeNull();
+    expect((await screen.findByRole('alert')).textContent).toBe('Saved monitoring data is unavailable.');
+    expect(screen.queryByText('Caught')).toBeNull();
   });
-  it('shows curated movement and expands remaining features',async()=>{
-    const feature=(name)=>({feature:name,previous_available:1000,current_available:1000,previous_median:10,current_median:12,unit:'saved feature units'});
-    api.monitoring.mockResolvedValue({...base,drift:{previous_month:'2024-03-31',previous_records:1000,current_records:1000,
-      previous_mean_risk:.1,current_mean_risk:.2,previous_flagged_rate:.15,current_flagged_rate:.25,
-      features:[feature('combined_flow_mean_3m_myr'),feature('active_account_count')]}});
-    start();expect((await screen.findAllByText(/Combined flow, 3-month mean/)).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByText('Show all 78 features'));
-    expect(screen.getByText(/Active Account Count/)).toBeTruthy();
+});
+
+describe('Monitoring tabs',()=>{
+  it('has exactly two tabs and opens the rate-shock what-if from the URL',async()=>{
+    api.scenarios.mockResolvedValue({state:'not_generated'});
+    start('/monitoring?tab=rate-shock');
+    expect(screen.getAllByRole('tab').map(t=>t.textContent)).toEqual(['Outcomes','Rate-shock what-if']);
+    expect(screen.getByRole('tab',{name:'Rate-shock what-if'}).getAttribute('aria-selected')).toBe('true');
+    expect(await screen.findByText(/Not calculated\./)).toBeTruthy();
+    expect(api.monitoring).not.toHaveBeenCalled();
   });
 });

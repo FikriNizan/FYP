@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { count, dateLabel, forecastLabel, monthLabel } from '../format.js';
+import { count, dateLabel, forecastLabel, monthLabel, readyAfterLabel } from '../format.js';
 import { assessmentLink } from '../navigation.js';
 import { api } from '../api.js';
 import { ConnectionState } from '../components/Workspace.jsx';
@@ -20,7 +20,7 @@ function FileCard({id,title,hint,file,accept,onChange,busy}) {
 export function outcomeCheckLabel(check) {
   if (!check) return 'Not provided';
   if (check.state === 'checked') return 'Checked';
-  if (check.state === 'waiting') return `Waiting for ${monthLabel(check.waiting_for_month)} data`;
+  if (check.state === 'waiting') return readyAfterLabel(check.ready_after_month);  // Owner decision: last month of the window.
   return 'Not checked';
 }
 

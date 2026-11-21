@@ -12,27 +12,6 @@ function observationPeriod(period) {
   return 'Date unavailable';
 }
 
-// Server-rendered meeting card: fact sentences come from saved evidence; only items tagged
-// source 'ai' were written by Gemini, and they are labelled so readers can tell them apart.
-function CardItem({ item }) {
-  return <p className={item.source==='ai' ? 'ai-note' : undefined}>{item.source==='ai' && <span className="ai-tag">AI note</span>}{item.text}</p>;
-}
-
-function SummaryCard({ content }) {
-  const closing=content.sections.find(s=>s.id==='closing'), footnote=content.sections.find(s=>s.id==='footnote');
-  return <div className="summary-card">
-    {content.sections.filter(s=>s.id!=='closing' && s.id!=='footnote').map(s=><div className="summary-section" key={s.id}>
-      <h4>{s.title}</h4>{s.items.map((item,i)=><CardItem item={item} key={i} />)}
-    </div>)}
-    {!!content.questions.length && <div className="summary-section"><h4>Questions for the meeting</h4><ul>{content.questions.map((q,i)=><li key={i}>
-      <span className="audience-tag">{q.audience==='finance' ? 'Finance' : 'Operations'}</span>
-      <span className={q.source==='ai' ? 'ai-tag' : 'standard-tag'}>{q.source==='ai' ? 'AI' : 'Standard'}</span>{q.text}
-    </li>)}</ul></div>}
-    {footnote && <p className="muted card-footnote">{footnote.items.map(item=>item.text).join(' ')}</p>}
-    {closing && <div className="summary-section"><h4>{closing.title}</h4>{closing.items.map((item,i)=><CardItem item={item} key={i} />)}</div>}
-  </div>;
-}
-
 // Client questions for the RM: the question is said to the client; "Based on" is for the RM only.
 export function ClientQuestions({ content }) {
   return <ol className="client-questions">{content.questions.map((q,i)=><li key={i}>
@@ -41,6 +20,7 @@ export function ClientQuestions({ content }) {
   </li>)}</ol>;
 }
 
+// RM briefing discussion draft (on demand, per case). The customer Summary tab uses CustomerSummary.jsx.
 export default function AIBriefingDraft({ purpose='discussion', recordId, onReview }) {
   const [state,setState]=useState(null), [error,setError]=useState(''), [busy,setBusy]=useState(false);
   const [attempt,setAttempt]=useState(0), [reviewed,setReviewed]=useState(false);
@@ -56,7 +36,7 @@ export default function AIBriefingDraft({ purpose='discussion', recordId, onRevi
     return ()=>{++lifetime.current;controller.abort();};
   },[purpose,recordId,attempt]);
   async function generate() {
-    if(purpose==='summary' || pending.current || !state)return;
+    if(pending.current || !state)return;
     pending.current=true;setBusy(true);setError('');setReviewed(false);onReview?.(null);
     const generation=lifetime.current;
     try {
@@ -66,22 +46,19 @@ export default function AIBriefingDraft({ purpose='discussion', recordId, onRevi
     finally {if(lifetime.current===generation){setBusy(false);pending.current=false;}}
   }
   const draft=state?.draft, content=draft?.content || state?.fallback;
-  // Summaries are generated only by the offline batch for flagged customers; this view only reads them.
-  const summary=purpose==='summary';
-  const label=summary ? (draft ? 'AI-generated summary (stored)' : 'Deterministic summary · no stored AI draft for this assessment')
-    : busy ? 'Generating' : draft ? 'Saved AI draft' : state?.state==='fallback' ? 'Deterministic fallback' : state?.state==='evidence_changed' ? 'Evidence changed · regenerate and review' : 'Not generated · deterministic fallback';
-  return <section className={summary ? 'panel ai-draft no-print' : 'ai-draft briefing-section no-print'}>
-    <h3>{summary ? 'What stands out' : 'AI-suggested client questions'}</h3>
+  const label=busy ? 'Generating' : draft ? 'Saved AI draft' : state?.state==='fallback' ? 'Deterministic fallback' : state?.state==='evidence_changed' ? 'Evidence changed · regenerate and review' : 'Not generated · deterministic fallback';
+  return <section className="ai-draft briefing-section no-print">
+    <h3>AI-suggested client questions</h3>
     <p role="status"><strong>{label}</strong>{draft && ' · '+new Date(draft.generated_at).toLocaleString('en-MY',{timeZone:'Asia/Kuala_Lumpur'})}</p>
-    {draft && <p className="muted">AI draft · review before use</p>}
+    {draft && <p className="muted">Facts are from saved records. Items marked AI were drafted by Gemini for review.</p>}
     {error && <p role="alert">Request failed. {error}</p>}
-    {!summary && state?.failure_code && <p className="muted">{state.failure_code==='provider_unavailable'
+    {state?.failure_code && <p className="muted">{state.failure_code==='provider_unavailable'
       ? 'Gemini is temporarily unavailable. The deterministic fallback is shown. '+(state.attempts>1 ? 'One automatic retry was attempted.' : 'No automatic retry was made.')
       : state.failure_code==='invalid_key_format'
       ? 'The backend API key has invalid formatting. Re-enter it locally and restart the session. No Gemini request was sent.'
       : 'Gemini did not return a usable draft ('+state.failure_code.replaceAll('_',' ')+'). The saved evidence remains available.'}</p>}
-    {content?.format==='sections-1' ? <SummaryCard content={content} /> : content?.format==='questions-1' ? <ClientQuestions content={content} /> : null}
-    {!summary && <button disabled={!state || busy} onClick={generate}>{busy ? 'Generating…' : draft ? 'Regenerate questions' : 'Suggest client questions'}</button>}
+    {content?.format==='questions-1' && <ClientQuestions content={content} />}
+    {<button disabled={!state || busy} onClick={generate}>{busy ? 'Generating…' : draft ? 'Regenerate questions' : 'Suggest client questions'}</button>}
     {error && <button disabled={busy} onClick={()=>setAttempt(n=>n+1)}>Reload saved evidence</button>}
     {draft && purpose==='discussion' && <label className="field-label"><input type="checkbox" checked={reviewed} onChange={e=>{
       setReviewed(e.target.checked);onReview?.(e.target.checked ? {case_id:recordId,draft_id:draft.draft_id,evidence_hash:state.evidence_hash,acknowledged:true} : null);

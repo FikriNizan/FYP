@@ -15,6 +15,19 @@ const paths = {
   clock: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,
   info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-9v.01"/></>,
   brand: <><path d="M5 20V9m7 11V4m7 16v-7"/><path d="M3 20h18"/></>,
+  summary: <><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/></>,
+  ops: <><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></>,
+  coin: <><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2c-.6-.8-1.6-1.2-2.8-1.2-1.7 0-2.8.8-2.8 2s1 1.6 2.8 2 2.8.9 2.8 2.1-1.2 1.9-2.8 1.9c-1.3 0-2.3-.5-2.9-1.3M12 6.5V8M12 16v1.5"/></>,
+  safe: <><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="12" cy="12" r="3.5"/><path d="M12 8.5V7M15.5 12H17"/></>,
+  bank: <><path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18"/></>,
+  yes: <><path d="M5 12.5l4.5 4.5L19 7.5"/></>,
+  no: <><path d="M6 6l12 12M18 6L6 18"/></>,
+  up: <><path d="M12 19V5M6 11l6-6 6 6"/></>,
+  down: <><path d="M12 5v14M6 13l6 6 6-6"/></>,
+  users: <><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.8 2.7 2.6 3 5.2"/></>,
+  left: <><path d="M15 6l-6 6 6 6"/></>,
+  screen: <><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></>,
+  minus: <><path d="M5 12h14"/></>,
 };
 export default function Icon({name,className=''}) {
   return <svg className={'icon '+className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] || paths.overview}</svg>;

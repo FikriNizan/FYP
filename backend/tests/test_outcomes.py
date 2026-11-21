@@ -569,6 +569,15 @@ class PhaseCFieldTests(unittest.TestCase):
             zero = self.batch('2024-07-31', {c: dict(login_failure_rate_3m=0.0) for c in 'ABCD'})
             self.assertEqual(repository.service_levels(zero, dict(login_failure_rate_3m=0.0))['login_failure_rate_3m']['level'], 'usual')
 
+    def test_signals_use_the_plain_driver_labels_of_the_summary_card(self):
+        from churn_backend import ai_render, repository
+        with self.app.app_context():
+            labels = repository.driver_labels(dict(higher_risk_drivers=[dict(feature='session_transactions_mean_3m')],
+                                                   lower_risk_drivers=[dict(feature='inbound_share_3m')]))
+        self.assertEqual(labels, {'session_transactions_mean_3m': ai_render.DRIVER_LABELS['session_transactions_mean_3m'],
+                                  'inbound_share_3m': 'Collections share of combined flow'})
+        self.assertNotIn('_', ''.join(labels.values()))
+
     def test_monitoring_fields_expected_drops_and_ready_after_the_last_window_month(self):
         self.later(months=('2024-03-31',))
         with self.app.app_context():

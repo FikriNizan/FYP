@@ -12,7 +12,7 @@ vi.mock('../src/api.js', async original => ({ ...await original(), api: { months
 const batch = { batch_id:'enriched', cutoff_month:'2024-02-29', source_kind:'saved_shap_export', record_count:1000, imported_at:'2026-11-02', source:{customer_names_loaded:true,flow_history_loaded:true} };
 const emptyReview = { decision:'awaiting_review',reason:'',reviewer:null,owner:'',next_action_date:null,operations_notes:'',finance_notes:'',version:0 };
 let customer;
-const summary = () => ({ batch,population:1000,flagged:208,below_threshold:792,flagged_review_counts:{awaiting_review:customer.review.version ? 207 : 208,prioritise:customer.review.version ? 1 : 0},finance:Object.fromEntries(['non_fd_balance_myr','fd_balance_myr','estimated_monthly_fee_myr','estimated_monthly_waiver_myr'].map(key=>['flagged_'+key,{total:0,records_with_value:208,records:208}])) });
+const summary = () => ({ batch,population:1000,flagged:208,flagged_share:.208,flagged_balances:{total:0,fixed_deposits:0,operating:0,records:208},below_threshold:792,flagged_review_counts:{awaiting_review:customer.review.version ? 207 : 208,prioritise:customer.review.version ? 1 : 0},finance:Object.fromEntries(['non_fd_balance_myr','fd_balance_myr','estimated_monthly_fee_myr','estimated_monthly_waiver_myr'].map(key=>['flagged_'+key,{total:0,records_with_value:208,records:208}])) });
 function start(path='/overview?batch_id=enriched') { return render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>); }
 function editDecision() {
   fireEvent.change(screen.getByLabelText('Decision'),{target:{value:'prioritise'}});
@@ -36,7 +36,7 @@ describe('React full-stack foundation', () => {
     start();
     await screen.findByRole('heading',{name:'Overview'});
     expect(screen.getByText('1,000')).toBeTruthy();
-    expect(screen.getByText('792 below the review threshold')).toBeTruthy();
+    expect(screen.getByText('20.8% of customers')).toBeTruthy();
     fireEvent.click(screen.getByRole('button',{name:'Flagged · awaiting review'}));
     await waitFor(()=>expect(api.customers).toHaveBeenLastCalledWith('enriched',expect.objectContaining({flagged:true,workflow:'needs_review'})));
     await screen.findByLabelText('Find customer');
@@ -49,14 +49,19 @@ describe('React full-stack foundation', () => {
     await screen.findByRole('heading',{name:'Acceptance test company'});
     expect(screen.getByText('84.4%')).toBeTruthy();
     expect(screen.getByText('99.1% lower')).toBeTruthy();
+    expect(screen.getByText('At or above the review threshold (25.9%)')).toBeTruthy();
+    expect(screen.getByText(/^CIF 944 · /)).toBeTruthy();
+    expect(screen.getByText('Awaiting review',{selector:'.badge'})).toBeTruthy();
     expect(screen.getByRole('heading',{name:'Signals to investigate'})).toBeTruthy();
     fireEvent.click(screen.getByRole('tab',{name:'Operations'}));
     expect(screen.getByRole('heading',{name:'Operations perspective'})).toBeTruthy();
     fireEvent.click(screen.getByRole('tab',{name:'Finance'}));
     const finance=screen.getByRole('heading',{name:'Finance perspective'}).closest('section');
     expect(within(finance).getByText(/2,016,997.13/)).toBeTruthy();
-    expect(within(finance).getByText('Not provided')).toBeTruthy();
-    expect(within(finance).getAllByText(/0.00/)).toHaveLength(2);
+    expect(within(finance).getByText('Relationship contribution is not provided for this assessment.')).toBeTruthy();
+    expect(within(finance).getByText(/^RM\s?0\.00$/)).toBeTruthy();                 // Zero fixed deposits stay zero.
+    expect(within(finance).getByText(/Waived fees: RM\s?0\.00 a month/)).toBeTruthy(); // Zero waivers stay zero.
+    expect(within(finance).queryByText(/Fee income/)).toBeNull();                       // Missing fees are never shown as zero.
     expect(screen.getByRole('tab',{name:'Finance'}).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByText('84.4%')).toBeTruthy();
   });
@@ -130,10 +135,37 @@ describe('Cutoff-safe Customer Review workflow',()=>{
     start('/customer/944?batch_id=enriched');
     await screen.findByRole('heading',{name:'Acceptance test company'});
     expect(screen.queryByRole('heading',{name:/Observed outcome/})).toBeNull();
-    expect(screen.getByRole('heading',{name:'Observed activity'})).toBeTruthy();
+    expect(screen.getByText('Recent activity vs usual')).toBeTruthy();
     expect(screen.getByLabelText('Decision')).toBeTruthy();
-    expect(screen.getByRole('heading',{name:'What stands out'})).toBeTruthy();
+    expect(screen.getByRole('heading',{name:'Summary'})).toBeTruthy();
     expect(screen.getByRole('tab',{name:'Operations'})).toBeTruthy();
     expect(screen.getByRole('tab',{name:'Finance'})).toBeTruthy();
+  });
+});
+
+describe('Customer review layout (Phase C)',()=>{
+  it('keeps the full committee decision panel beside every tab and labels tabs with icons',async()=>{
+    start('/customer/944?batch_id=enriched');
+    await screen.findByRole('heading',{name:'Acceptance test company'});
+    for (const tab of ['Summary','Operations','Finance']) {
+      fireEvent.click(screen.getByRole('tab',{name:tab}));
+      const form=screen.getByRole('heading',{name:'Record committee decision'}).closest('aside');
+      for (const label of ['Decision','Decision reason','Reviewed by','RM / action owner (optional)','Next follow-up date (optional)']) expect(within(form).getByLabelText(label)).toBeTruthy();
+      expect(within(form).getByText('Notes from each perspective (optional)')).toBeTruthy();
+      expect(within(form).getByRole('button',{name:'Save decision'})).toBeTruthy();
+      expect(within(form).getByRole('button',{name:'Discard decision changes'}).disabled).toBe(true);
+      expect(within(form).getByText('No decision saved yet')).toBeTruthy();
+      expect(screen.getByRole('tab',{name:tab}).querySelector('svg')).toBeTruthy();
+    }
+  });
+  it('shows signals with a relative bar and no numbers or percentage weights',async()=>{
+    start('/customer/944?batch_id=enriched');
+    const panel=(await screen.findByRole('heading',{name:'Signals to investigate'})).closest('section');
+    expect(panel.querySelectorAll('.sig').length).toBeGreaterThan(0);
+    for (const meter of panel.querySelectorAll('.meter')) { expect(meter.getAttribute('aria-hidden')).toBe('true'); expect(meter.textContent).toBe(''); }
+    expect(panel.textContent).not.toMatch(/log-odds|logodds|SHAP|contribution_logodds|weight/i);
+    expect(panel.querySelectorAll('details')).toHaveLength(0);
+    for (const driver of [...customer.explanation.higher_risk_drivers, ...customer.explanation.lower_risk_drivers])
+      expect(panel.textContent).not.toContain(String(driver.contribution_logodds));
   });
 });

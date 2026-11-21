@@ -44,7 +44,7 @@ describe('Work-focused frontend',()=>{
     await screen.findByRole('link',{name:'Open review'});
     fireEvent.click(screen.getByRole('link',{name:'Open review'}));
     await screen.findByRole('heading',{name:'Saved evidence company'});
-    fireEvent.click(screen.getByRole('link',{name:'← Back to review queue'}));
+    fireEvent.click(screen.getByRole('link',{name:'Review queue'}));
     await screen.findByRole('heading',{name:'Overview'});
     expect(screen.getByLabelText('Find customer').value).toBe('944');
     expect(screen.getByLabelText('This assessment decision').value).toBe('monitor');
@@ -122,12 +122,16 @@ describe('Work-focused frontend',()=>{
     expect(screen.getByRole('button',{name:'Prepare RM briefing'}).disabled).toBe(true);
   });
 
-  it('opens the OPR stress demonstration read-only and never invents a calculated output',async()=>{
-    // Replaces the disabled assumption form (Milestone 7 replaced the preview with a read-only scenario view).
+  it('redirects /research to the Monitoring rate-shock tab, read-only, never inventing a calculated output',async()=>{
+    // The OPR page moved out of Help into Monitoring (Phase C); /research is kept as a redirect.
     const fetchSpy=vi.spyOn(globalThis,'fetch');
     api.scenarios.mockResolvedValue({state:'not_generated'});
     start('/research');
-    await screen.findByRole('heading',{name:'OPR stress demonstration'});
+    await screen.findByRole('heading',{name:'Monitoring'});
+    expect(screen.getByRole('tab',{name:'Rate-shock what-if'}).getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByRole('link',{name:/OPR|Stress demonstration/})).toBeNull();     // No longer under Help.
+    expect(screen.getAllByRole('link').map(a=>a.textContent).filter(t=>['Overview','Reviewed Customers','Monthly Assessments','Monitoring'].includes(t)))
+      .toEqual(['Overview','Reviewed Customers','Monthly Assessments','Monitoring']);
     expect(await screen.findByText(/Not calculated\./)).toBeTruthy();
     expect(api.scenarios).toHaveBeenCalledTimes(1);
     expect(screen.queryAllByRole('spinbutton')).toHaveLength(0);

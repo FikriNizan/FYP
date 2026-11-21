@@ -211,8 +211,10 @@ def load():
     require(manifest['register']['version'] == version, 'Register version differs')
     text(manifest.get('reference'), 'reference')
     check_scores((folder / 'scores.csv').read_bytes(), flagged, customers)
+    from . import ai_render  # Plain input names, the same labels the summary card uses.
     return dict(state='ready', version=version, register=manifest['register'], gates=manifest['gates'],
                 reference=manifest['reference'], psi=psi, scenarios=scenarios, note=NOTE,
+                feature_labels={name: ai_render.driver_name(name) for name in PREDICTORS},
                 package_sha256=dict(manifest=digest(folder / 'manifest.json'), **files))
 
 

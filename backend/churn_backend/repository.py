@@ -168,7 +168,8 @@ def customer_record(row, detail=False):
                       finance_note="Fee and waiver figures are historical three-month monthly estimates; "
                                    "balances are exposures. These are not verified profit or retention savings.",
                       finance_metrics=finance_metrics.customer_metrics(features, evidence["cutoff_month"]),
-                      service_levels=service_levels(row['batch_id'], features))
+                      service_levels=service_levels(row['batch_id'], features),
+                      driver_labels=driver_labels(evidence))
     return record
 
 
@@ -203,6 +204,13 @@ def service_levels(batch_id, features):
             level = 'high' if value > p75 and value > 0 else 'usual'
         levels[field] = dict(value=value, level=level, p75=p75, customers=thresholds[field]['customers'])
     return levels
+
+
+def driver_labels(evidence):
+    """Plain 2-5 word names for this customer's saved drivers (the same labels the summary card uses)."""
+    from . import ai_render  # Local import: ai_render's evidence module reads this repository.
+    drivers = (evidence.get('higher_risk_drivers') or []) + (evidence.get('lower_risk_drivers') or [])
+    return {d['feature']: ai_render.driver_name(d['feature'], d) for d in drivers}
 
 
 def workflow_context(row, review, flagged, cutoff_month):

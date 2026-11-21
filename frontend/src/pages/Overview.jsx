@@ -1,20 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { count, decisionLabel, forecastLabel, monthLabel, percent, workflowLabel } from '../format.js';
+import { count, decisionLabel, forecastLabel, millionsPlain, monthLabel, percent, workflowLabel } from '../format.js';
 import { assessmentLink } from '../navigation.js';
 import { ErrorNotice, RiskBadge } from '../components/Common.jsx';
-import { ConnectionState } from '../components/Workspace.jsx';
-import FinanceCard from '../components/FinanceCard.jsx';
-import { PortfolioFinanceMetrics } from '../components/FinanceMetrics.jsx';
 
 const limit = 50;
-const financeCards = [
-  { key:'non_fd_balance_myr', label:'Operating account balances', icon:'wallet', kind:'exposure' },
-  { key:'fd_balance_myr', label:'Fixed deposit balances', icon:'deposit', kind:'exposure' },
-  { key:'estimated_monthly_fee_myr', label:'Estimated monthly fees', icon:'receipt', kind:'estimate' },
-  { key:'estimated_monthly_waiver_myr', label:'Estimated monthly waivers', icon:'waiver', kind:'estimate' },
-];
+// Every figure comes from /api/summary and /api/customers; nothing here is calculated.
 export default function Overview({ batch, revision }) {
   const [params,setParams] = useSearchParams();
   const location = useLocation();
@@ -46,34 +38,17 @@ export default function Overview({ batch, revision }) {
   const { summary, list } = data;
   const chooseFilter = value => update({filter:value,offset:0,decision:''});
   const awaiting = summary.needs_committee_review ?? summary.flagged_review_counts.awaiting_review;
-  const reviewed = summary.flagged - summary.flagged_review_counts.awaiting_review;
+  const balances = summary.flagged_balances;
   return <>
-    <div className="heading"><div><h1>Overview</h1><p className="muted">Information through {monthLabel(summary.batch.cutoff_month)} · Forecast {forecastLabel(summary.batch.cutoff_month)} · Batch {batch.slice(0,8)}</p></div><ConnectionState /></div>
+    <div className="heading"><div><h1>Overview</h1><p className="muted">Who needs the committee's attention · Information through {monthLabel(summary.batch.cutoff_month)} · Forecast {forecastLabel(summary.batch.cutoff_month)}</p></div></div>
     {summary.batch.source_kind === 'notebook_case_sample' && <p className="scope-note">Single-case sample · These totals describe this saved case, not the full portfolio.</p>}
-    <div className="stats">
-      <div className="stat"><span>Customers assessed</span><strong className="number">{count(summary.population)}</strong></div>
-      <div className="stat"><span>Flagged for review</span><strong className="number">{count(summary.flagged)}</strong><small className="muted">{count(summary.below_threshold)} below the review threshold</small></div>
-      <div className="stat"><span>Needs committee review</span><strong className="number">{count(awaiting)}</strong><small className="muted">{count(summary.workflow_counts?.existing_case ?? 0)} existing cases in this assessment</small></div>
+    <div className="stats" role="group" aria-label="Assessment at a glance">
+      <div className="stat"><span>Customers assessed</span><strong className="number">{count(summary.population)}</strong><small>{monthLabel(summary.batch.cutoff_month)} assessment</small></div>
+      <div className="stat"><span>Flagged for review</span><strong className="number">{count(summary.flagged)}</strong><small>{percent(summary.flagged_share)} of customers</small></div>
+      <div className="stat"><span>Flagged, awaiting review</span><strong className="number">{count(awaiting)}</strong><small>No decision saved yet</small></div>
+      <Link className="stat" to={assessmentLink('/finance',batch)} aria-label="Deposits held by flagged customers: open the finance picture"><span>Deposits held by flagged customers</span><strong className="number">{millionsPlain(balances?.total)}</strong><small>Fixed deposits {millionsPlain(balances?.fixed_deposits)} · Operating {millionsPlain(balances?.operating)}</small><small className="stat-link">Open finance picture ›</small></Link>
     </div>
-    <div className="review-progress"><div><strong>Flagged review progress</strong><span>{count(reviewed)} reviewed · {count(awaiting)} awaiting</span></div><progress max={summary.flagged || 1} value={reviewed} aria-label="Reviewed flagged customers" /><small>{summary.flagged ? 'Existing cases continue separately; a new score does not require repeating a decision.' : 'No flagged customers in this assessment.'}</small></div>
-    <section className="finance-context" aria-labelledby="finance-context-title">
-      <div className="section-heading"><div><h2 id="finance-context-title">Financial context for flagged customers</h2><p className="muted">Totals across the {count(summary.flagged)} flagged customers in this assessment.</p></div></div>
-      <div className="finance-cards">
-        {financeCards.map(({key,label,icon,kind}) => {
-          const value = summary.finance['flagged_' + key];
-          const coverage = value.records ? Math.round(value.records_with_value / value.records * 100) : 0;
-          return <FinanceCard key={key} label={label} icon={icon} kind={kind} value={value.total}>
-            <div className="finance-coverage"><span className="coverage-track" aria-hidden="true"><i style={{width:coverage+'%'}} /></span><small className="muted">{count(value.records_with_value)} of {count(value.records)} records available</small></div>
-          </FinanceCard>;
-        })}
-      </div>
-      <p className="muted finance-note">Balances are exposures. Fees and waivers are separate historical estimates; they do not establish profit or potential savings.</p>
-    </section>
-    {summary.finance_metrics && <section className="finance-context finance-rar" aria-labelledby="finance-rar-title">
-      <div className="section-heading"><div><h2 id="finance-rar-title">Revenue at Risk and fee subsidy leakage</h2><p className="muted">All {count(summary.finance_metrics.totals.customers)} customers in this assessment, by waiver basis. Estimates, not audited profit.</p></div></div>
-      <PortfolioFinanceMetrics metrics={summary.finance_metrics} />
-    </section>}
-    <section className="panel"><h2>Customer review queue</h2><p className="muted">Highest predicted risk first. Consider the evidence from both Operations and Finance before deciding.</p>
+    <section className="panel" aria-labelledby="queue-title"><div className="section-heading"><div><h2 id="queue-title">Review queue</h2><p className="muted">Ranked by predicted risk. Open a customer to see why.</p></div></div>
       <div className="toolbar"><div className="filters" role="group" aria-label="Customer filter">
         {[['flagged','Flagged'],['awaiting','Flagged · awaiting review'],['all','All customers']].map(([key,label]) => <button key={key} aria-pressed={filter === key} onClick={() => chooseFilter(key)}>{label}</button>)}
       </div><form className="search" onSubmit={event => { event.preventDefault(); update({q:searchText.trim(),offset:0}); }}><label htmlFor="query" className="muted">Find customer</label><input id="query" type="search" placeholder="Company name or ID" value={searchText} onChange={event => setSearchText(event.target.value)} /><button type="submit">Search</button></form></div>

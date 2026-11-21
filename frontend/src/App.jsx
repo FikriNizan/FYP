@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, NavLink, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { api } from './api.js';
 import { count, monthLabel } from './format.js';
 import { ErrorNotice } from './components/Common.jsx';
@@ -11,7 +11,7 @@ import CaseDetail from './pages/CaseDetail.jsx';
 import MonthlyAssessments from './pages/MonthlyAssessments.jsx';
 import Briefing from './pages/Briefing.jsx';
 import Guide from './pages/Guide.jsx';
-import ResearchPreview from './pages/ResearchPreview.jsx';
+import FinancePicture from './pages/FinancePicture.jsx';
 import Monitoring from './pages/Monitoring.jsx';
 import { preferredBatches } from './navigation.js';
 
@@ -36,12 +36,12 @@ export default function App() {
   const [reviewedSearch,setReviewedSearch] = useState('');
   const batch = requested || selectedBatch || batches?.[0]?.batch_id;
   const validBatch = batches?.find(b => b.batch_id === batch);
-  const assessmentScoped = ['/', '/overview'].includes(location.pathname) || location.pathname.startsWith('/customer/');
+  const assessmentScoped = ['/', '/overview', '/finance'].includes(location.pathname) || location.pathname.startsWith('/customer/');
   const returnSearch = params.get('return');
   const overviewPath = '/overview'+(returnSearch?.startsWith('?') ? returnSearch : overviewSearch || (batch ? '?batch_id='+encodeURIComponent(batch) : ''));
   const worklist=params.get('worklist');
   const reviewedPath='/reviewed'+(worklist?.startsWith('?') ? worklist : reviewedSearch);
-  const area=location.pathname.startsWith('/customer/') ? 'Customer review' : location.pathname.startsWith('/cases/') ? 'Case follow-up' : ({'/reviewed':'Reviewed Customers','/assessments':'Monthly Assessments','/monitoring':'Monitoring','/briefing':'RM Briefing','/guide':'Guide','/research':'OPR stress demonstration'})[location.pathname] || 'Overview';
+  const area=location.pathname.startsWith('/customer/') ? 'Customer review' : location.pathname.startsWith('/cases/') ? 'Case follow-up' : ({'/reviewed':'Reviewed Customers','/assessments':'Monthly Assessments','/monitoring':'Monitoring','/briefing':'RM Briefing','/guide':'Guide','/finance':'Finance picture'})[location.pathname] || 'Overview';
 
   useEffect(() => {
     let active = true;
@@ -63,7 +63,6 @@ export default function App() {
   useEffect(()=>{if(validBatch) setSelectedBatch(validBatch.batch_id);},[validBatch]);
   useEffect(()=>{if(['/', '/overview'].includes(location.pathname)) setOverviewSearch(location.search);},[location.pathname,location.search]);
   useEffect(()=>{if(location.pathname==='/reviewed')setReviewedSearch(location.search);},[location.pathname,location.search]);
-  useEffect(()=>{document.querySelector('.rail-help')?.removeAttribute('open');},[location.pathname]);
   useEffect(() => {
     const warn = event => { if (saving || Object.keys(drafts).length) { event.preventDefault(); event.returnValue = ''; } };
     window.addEventListener('beforeunload', warn);
@@ -106,7 +105,8 @@ export default function App() {
     <Route path="/monitoring" element={<Monitoring batches={batches || []} />} />
     <Route path="/briefing" element={<Briefing batches={batches || []} />} />
     <Route path="/guide" element={<Guide />} />
-    <Route path="/research" element={<ResearchPreview />} />
+    <Route path="/finance" element={<FinancePicture batch={batch} revision={revision} />} />
+    <Route path="/research" element={<Navigate to="/monitoring?tab=rate-shock" replace />} />
     <Route path="*" element={<ErrorNotice message="This page is not available. Open the monthly overview." />} />
   </Routes>;
 
@@ -116,7 +116,7 @@ export default function App() {
       <Link className="brand" aria-label="TxB Retention Studio" onClick={avoidNavigation} to={overviewPath}><span className="brand-mark"><Icon name="brand"/></span><span><strong>TxB</strong><span>Retention Studio</span></span></Link>
       <p className="rail-context">Operations &amp; Finance</p>
       <nav className="app-nav" aria-label="Workspace"><NavLink onClick={avoidNavigation} to={overviewPath} className={({isActive})=>isActive || location.pathname.startsWith('/customer/') || location.pathname==='/' ? 'active' : ''}><Icon name="overview"/><span>Overview</span></NavLink><NavLink onClick={avoidNavigation} to={reviewedPath} className={({isActive})=>isActive || location.pathname.startsWith('/cases/') || location.pathname==='/briefing' ? 'active' : ''}><Icon name="cases"/><span>Reviewed Customers</span></NavLink><NavLink onClick={avoidNavigation} to="/assessments"><Icon name="calendar"/><span>Monthly Assessments</span></NavLink><NavLink onClick={avoidNavigation} to="/monitoring"><Icon name="research"/><span>Monitoring</span></NavLink></nav>
-      <details className="rail-help"><summary><Icon name="guide"/>Help &amp; previews</summary><div className="header-utilities"><Link onClick={avoidNavigation} to="/guide"><Icon name="guide"/>Guide</Link><Link onClick={avoidNavigation} to="/research"><Icon name="research"/><span>OPR<small>Stress demonstration</small></span></Link></div></details><p className="rail-note">Decisions grounded in saved evidence.</p>
+      <div className="rail-help"><div className="header-utilities"><Link onClick={avoidNavigation} to="/guide"><Icon name="guide"/>Guide</Link></div></div><p className="rail-note">Decisions grounded in saved evidence.</p>
     </aside><div className="workspace-main">
     <header className={'app-header '+(!assessmentScoped ? 'context-only' : '')}><div className="workspace-location"><span>Committee workspace</span><strong>{area}</strong></div>
       {assessmentScoped && <div className="month-control"><label htmlFor="batch-select">Assessment</label><select id="batch-select" value={validBatch ? batch : ''} disabled={!batches?.length || saving} onChange={event => changeAssessment(event.target.value)}>

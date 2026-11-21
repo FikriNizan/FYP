@@ -1,5 +1,5 @@
 {
- "source": "M6 Test, April 2024 (cutoff 2024-04-30); /api/summary finance_metrics and the customer 604 finance_metrics, as served by the stage-1 backend",
+ "source": "M6 Test, April 2024 (cutoff 2024-04-30); /api/summary finance_metrics and the customer 604 finance_metrics, as served by the stage-1 backend; plus fd_threshold_myr, bases_tiers and opr_verified fields served by the final-refinement backend (TIER_TERMS / OPR_TABLE constants)",
  "portfolio": {
   "by_basis": {
    "FD_THRESHOLD": {
@@ -471,7 +471,20 @@
    },
    "rar_3m": -5964429.652116851
   },
-  "window_months": 3
+  "window_months": 3,
+  "bases_tiers": {
+   "FD_THRESHOLD": [
+    "SME_S",
+    "SME_M",
+    "CORP_L"
+   ],
+   "POLICY_EXEMPT": [
+    "CORP_XL",
+    "GOV"
+   ]
+  },
+  "opr_verified": true,
+  "opr_verified_through": "2024-07-10"
  },
  "customer": {
   "calibrated_risk": 0.7891507174787386,
@@ -558,7 +571,8 @@
    "tier_id": "SME_S",
    "unavailable": [],
    "waiver_basis": "FD_THRESHOLD",
-   "window_months": 3
+   "window_months": 3,
+   "fd_threshold_myr": 100000.0
   }
  }
 }
