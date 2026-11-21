@@ -42,7 +42,7 @@ export default function CustomerReview({ batch, revision, workflow }) {
       <div id="perspective-panel" role="tabpanel" aria-label={perspective+' evidence'} tabIndex={0}>
       {perspective==='Summary' && <><AIBriefingDraft key={c.prediction_id+':'+revision} purpose="summary" recordId={c.prediction_id} /><FlowHistory history={c.flow_history} baseline={ops.combined_flow_mean_12m_myr} cutoff={c.cutoff_month} /><Signals customer={c} /></>}
       {perspective==='Operations' && <OperationsPerspective operations={ops} cutoff={c.cutoff_month} />}
-      {perspective==='Finance' && <FinancePerspective finance={finance} />}
+      {perspective==='Finance' && <FinancePerspective finance={finance} metrics={c.finance_metrics} risk={c.calibrated_risk} />}
       {perspective!=='Summary' && <p className="muted shared-evidence-note">Model signals and recorded flow history are shared evidence in Summary. These views do not change your role or access.</p>}
       </div>
     </div><ReviewForm key={c.prediction_id+':'+c.review.version} customer={c} workflow={workflow} /></div>

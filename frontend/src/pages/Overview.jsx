@@ -6,6 +6,7 @@ import { assessmentLink } from '../navigation.js';
 import { ErrorNotice, RiskBadge } from '../components/Common.jsx';
 import { ConnectionState } from '../components/Workspace.jsx';
 import FinanceCard from '../components/FinanceCard.jsx';
+import { PortfolioFinanceMetrics } from '../components/FinanceMetrics.jsx';
 
 const limit = 50;
 const financeCards = [
@@ -68,6 +69,10 @@ export default function Overview({ batch, revision }) {
       </div>
       <p className="muted finance-note">Balances are exposures. Fees and waivers are separate historical estimates; they do not establish profit or potential savings.</p>
     </section>
+    {summary.finance_metrics && <section className="finance-context finance-rar" aria-labelledby="finance-rar-title">
+      <div className="section-heading"><div><h2 id="finance-rar-title">Revenue at Risk and fee subsidy leakage</h2><p className="muted">All {count(summary.finance_metrics.totals.customers)} customers in this assessment, by waiver basis. Estimates, not audited profit.</p></div></div>
+      <PortfolioFinanceMetrics metrics={summary.finance_metrics} />
+    </section>}
     <section className="panel"><h2>Customer review queue</h2><p className="muted">Highest predicted risk first. Consider the evidence from both Operations and Finance before deciding.</p>
       <div className="toolbar"><div className="filters" role="group" aria-label="Customer filter">
         {[['flagged','Flagged'],['awaiting','Flagged · awaiting review'],['all','All customers']].map(([key,label]) => <button key={key} aria-pressed={filter === key} onClick={() => chooseFilter(key)}>{label}</button>)}

@@ -2,11 +2,12 @@ import React from 'react';
 import { isNumber } from '../format.js';
 import { balanceShares, relativeEstimateWidths } from '../presentation.js';
 import FinanceCard from './FinanceCard.jsx';
+import { CustomerFinanceMetrics } from './FinanceMetrics.jsx';
 import Icon from './Icon.jsx';
 
 const missingCaption='No value was supplied for this assessment.';
 
-export default function FinancePerspective({ finance }) {
+export default function FinancePerspective({ finance, metrics, risk }) {
   const operating=finance.non_fd_balance_myr, deposit=finance.fd_balance_myr;
   const shares=balanceShares(operating,deposit);
   const widths=relativeEstimateWidths(finance.estimated_monthly_fee_myr,finance.estimated_monthly_waiver_myr);
@@ -36,6 +37,7 @@ export default function FinancePerspective({ finance }) {
         {!isNumber(finance[key]) ? <small className="finance-caption muted">{missingCaption}</small> : widths && <div className="finance-coverage"><span className="coverage-track" aria-hidden="true"><i style={{width:widths[widthKey]+'%'}} /></span><small className="muted">Relative to the larger estimate</small></div>}
       </FinanceCard>)}
     </div>
+    <CustomerFinanceMetrics metrics={metrics} risk={risk} />
     <div className="perspective-callout"><Icon name="info" /><p><strong>How to read this.</strong> Balances show exposure. Fees and waivers are separate historical three-month monthly estimates, not verified profit, actual invoices or retention savings.</p></div>
   </section>;
 }

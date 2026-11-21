@@ -7,6 +7,10 @@ export const percent = (value, digits = 1) => isNumber(value) ? (value * 100).to
 export const money = value => isNumber(value)
   ? new Intl.NumberFormat('en-MY', { style: 'currency', currency: 'MYR', maximumFractionDigits: 2 }).format(value)
   : 'Not provided';
+// Portfolio totals in millions, e.g. −RM1.23m or +RM4.56m (U+2212 minus); values come from the backend.
+export const millions = value => isNumber(value)
+  ? (value < 0 ? '−' : value > 0 ? '+' : '') + 'RM' + (Math.abs(value) / 1e6).toFixed(2) + 'm'
+  : 'Not provided';
 export const count = value => isNumber(value) ? new Intl.NumberFormat('en-MY').format(value) : 'Not provided';
 
 export function dateLabel(value) {
@@ -60,9 +64,9 @@ export function activityChange(recent, baseline) {
 }
 
 const labels = {
-  combined_flow_ratio_3m_to_12m: 'Transaction activity',
-  inbound_flow_ratio_3m_to_12m: 'Incoming payments',
-  outbound_flow_ratio_3m_to_12m: 'Outgoing payments',
+  combined_flow_ratio_3m_to_12m: 'Transaction value',
+  inbound_flow_ratio_3m_to_12m: 'Collections',
+  outbound_flow_ratio_3m_to_12m: 'Payments',
   outbound_failure_rate_3m: 'Payment failures',
   outbound_bank_failure_rate_3m: 'Bank-attributed payment failures',
   login_failure_rate_3m: 'Login difficulties',

@@ -4,6 +4,7 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Overview from '../src/pages/Overview.jsx';
 import { api } from '../src/api.js';
+import april from './fixtures/finance-april.json';
 
 vi.mock('../src/api.js', () => ({ api: { summary:vi.fn(), customers:vi.fn() } }));
 
@@ -27,5 +28,19 @@ describe('Overview financial context', () => {
     expect(cards[3].querySelector('.coverage-track i').style.width).toBe('0%');
     const queue=screen.getByRole('heading',{name:'Customer review queue'}).closest('section');
     expect(section.nextElementSibling).toBe(queue);
+  });
+  it('places Revenue at Risk and fee subsidy leakage between the financial context and the queue', async () => {
+    const keys=['non_fd_balance_myr','fd_balance_myr','estimated_monthly_fee_myr','estimated_monthly_waiver_myr'];
+    api.summary.mockResolvedValue({batch:{batch_id:'saved',cutoff_month:'2024-04-30'},population:1000,flagged:206,below_threshold:794,flagged_review_counts:{awaiting_review:206,prioritise:0},finance:Object.fromEntries(keys.map(key=>['flagged_'+key,{total:1,records:206,records_with_value:206}])),finance_metrics:april.portfolio});
+    api.customers.mockResolvedValue({total:0,items:[]});
+    render(<MemoryRouter><Overview batch="saved" revision={0} /></MemoryRouter>);
+    const context=await screen.findByRole('region',{name:'Financial context for flagged customers'});
+    const rar=screen.getByRole('region',{name:'Revenue at Risk and fee subsidy leakage'});
+    const queue=screen.getByRole('heading',{name:'Customer review queue'}).closest('section');
+    expect(context.nextElementSibling).toBe(rar);
+    expect(rar.nextElementSibling).toBe(queue);
+    expect(within(rar).getByText('All 1,000 customers in this assessment, by waiver basis. Estimates, not audited profit.')).toBeTruthy();
+    expect(within(rar).getByRole('region',{name:'Cost ratio sensitivity'})).toBeTruthy();
+    expect(within(rar).getByRole('region',{name:'Liquidity premium sensitivity'})).toBeTruthy();
   });
 });

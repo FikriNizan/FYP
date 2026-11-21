@@ -1,0 +1,564 @@
+{
+ "source": "M6 Test, April 2024 (cutoff 2024-04-30); /api/summary finance_metrics and the customer 604 finance_metrics, as served by the stage-1 backend",
+ "portfolio": {
+  "by_basis": {
+   "FD_THRESHOLD": {
+    "available": 900,
+    "both_customers": 164,
+    "cost_sensitivity": {
+     "0.5": {
+      "fsl_b_customers": 196,
+      "fsl_b_monthly": 164385.9163444232,
+      "negative_rar_customers": 38,
+      "rar_3m": 4794320.0250761295
+     },
+     "0.75": {
+      "fsl_b_customers": 275,
+      "fsl_b_monthly": 462232.94304652634,
+      "negative_rar_customers": 101,
+      "rar_3m": 2836402.850076128
+     },
+     "1.0": {
+      "fsl_b_customers": 314,
+      "fsl_b_monthly": 828703.305773902,
+      "negative_rar_customers": 171,
+      "rar_3m": 878485.675076127
+     }
+    },
+    "customers": 900,
+    "fsl_a_customers": 165,
+    "fsl_a_monthly": 335436.83773333323,
+    "fsl_b_customers": 314,
+    "fsl_b_monthly": 828703.305773902,
+    "negative_fd_earnings": 8,
+    "negative_rar_customers": 171,
+    "policy_fsl_b_customers": 0,
+    "policy_fsl_b_monthly": 0.0,
+    "premium_sensitivity": {
+     "0.0": {
+      "rar_3m": -920725.5004363729
+     },
+     "0.005": {
+      "rar_3m": 878485.675076127
+     },
+     "0.01": {
+      "rar_3m": 2677696.8505886244
+     }
+    },
+    "rar_3m": 878485.675076127
+   },
+   "POLICY_EXEMPT": {
+    "available": 100,
+    "both_customers": 0,
+    "cost_sensitivity": {
+     "0.5": {
+      "fsl_b_customers": 0,
+      "fsl_b_monthly": 0.0,
+      "negative_rar_customers": 27,
+      "rar_3m": 2002326.7478070254
+     },
+     "0.75": {
+      "fsl_b_customers": 0,
+      "fsl_b_monthly": 0.0,
+      "negative_rar_customers": 59,
+      "rar_3m": -2420294.2896929746
+     },
+     "1.0": {
+      "fsl_b_customers": 0,
+      "fsl_b_monthly": 0.0,
+      "negative_rar_customers": 71,
+      "rar_3m": -6842915.327192975
+     }
+    },
+    "customers": 100,
+    "fsl_a_customers": 0,
+    "fsl_a_monthly": 0.0,
+    "fsl_b_customers": 0,
+    "fsl_b_monthly": 0.0,
+    "negative_fd_earnings": 0,
+    "negative_rar_customers": 71,
+    "policy_fsl_b_customers": 95,
+    "policy_fsl_b_monthly": 3792166.1549121393,
+    "premium_sensitivity": {
+     "0.0": {
+      "rar_3m": -8587914.063630477
+     },
+     "0.005": {
+      "rar_3m": -6842915.327192975
+     },
+     "0.01": {
+      "rar_3m": -5097916.590755475
+     }
+    },
+    "rar_3m": -6842915.327192975
+   }
+  },
+  "by_flag": {
+   "flagged": {
+    "available": 206,
+    "both_customers": 60,
+    "cost_sensitivity": {
+     "0.5": {
+      "fsl_b_customers": 47,
+      "fsl_b_monthly": 3504.8503473452392,
+      "negative_rar_customers": 1,
+      "rar_3m": 584411.8852033216
+     },
+     "0.75": {
+      "fsl_b_customers": 63,
+      "fsl_b_monthly": 8341.575947345329,
+      "negative_rar_customers": 4,
+      "rar_3m": 506194.6477033212
+     },
+     "1.0": {
+      "fsl_b_customers": 63,
+      "fsl_b_monthly": 13223.034280678721,
+      "negative_rar_customers": 13,
+      "rar_3m": 427977.4102033209
+     }
+    },
+    "customers": 206,
+    "fsl_a_customers": 61,
+    "fsl_a_monthly": 12474.679066666806,
+    "fsl_b_customers": 63,
+    "fsl_b_monthly": 13223.034280678721,
+    "negative_fd_earnings": 1,
+    "negative_rar_customers": 13,
+    "policy_fsl_b_customers": 6,
+    "policy_fsl_b_monthly": 19345.31911620516,
+    "premium_sensitivity": {
+     "0.0": {
+      "rar_3m": 293247.54744082125
+     },
+     "0.005": {
+      "rar_3m": 427977.4102033209
+     },
+     "0.01": {
+      "rar_3m": 562707.2729658209
+     }
+    },
+    "rar_3m": 427977.4102033209
+   },
+   "not_flagged": {
+    "available": 794,
+    "both_customers": 104,
+    "cost_sensitivity": {
+     "0.5": {
+      "fsl_b_customers": 149,
+      "fsl_b_monthly": 160881.06599707797,
+      "negative_rar_customers": 64,
+      "rar_3m": 6212234.887679828
+     },
+     "0.75": {
+      "fsl_b_customers": 212,
+      "fsl_b_monthly": 453891.36709918093,
+      "negative_rar_customers": 156,
+      "rar_3m": -90086.08732016887
+     },
+     "1.0": {
+      "fsl_b_customers": 251,
+      "fsl_b_monthly": 815480.2714932233,
+      "negative_rar_customers": 229,
+      "rar_3m": -6392407.062320167
+     }
+    },
+    "customers": 794,
+    "fsl_a_customers": 104,
+    "fsl_a_monthly": 322962.15866666654,
+    "fsl_b_customers": 251,
+    "fsl_b_monthly": 815480.2714932233,
+    "negative_fd_earnings": 7,
+    "negative_rar_customers": 229,
+    "policy_fsl_b_customers": 89,
+    "policy_fsl_b_monthly": 3772820.8357959343,
+    "premium_sensitivity": {
+     "0.0": {
+      "rar_3m": -9801887.111507671
+     },
+     "0.005": {
+      "rar_3m": -6392407.062320167
+     },
+     "0.01": {
+      "rar_3m": -2982927.013132671
+     }
+    },
+    "rar_3m": -6392407.062320167
+   }
+  },
+  "by_tier": {
+   "CORP_L": {
+    "available": 250,
+    "both_customers": 68,
+    "cost_sensitivity": {
+     "0.5": {
+      "fsl_b_customers": 104,
+      "fsl_b_monthly": 155996.2278539247,
+      "negative_rar_customers": 26,
+      "rar_3m": 3705410.419459232
+     },
+     "0.75": {
+      "fsl_b_customers": 138,
+      "fsl_b_monthly": 439741.6576467458,
+      "negative_rar_customers": 66,
+      "rar_3m": 1986189.4194592314
+     },
+     "1.0": {
+      "fsl_b_customers": 158,
+      "fsl_b_monthly": 786111.9197752352,
+      "negative_rar_customers": 101,
+      "rar_3m": 266968.41945923
+     }
+    },
+    "customers": 250,
+    "fsl_a_customers": 68,
+    "fsl_a_monthly": 312741.9812999997,
+    "fsl_b_customers": 158,
+    "fsl_b_monthly": 786111.9197752352,
+    "negative_fd_earnings": 2,
+    "negative_rar_customers": 101,
+    "policy_fsl_b_customers": 0,
+    "policy_fsl_b_monthly": 0.0,
+    "premium_sensitivity": {
+     "0.0": {
+      "rar_3m": -1242503.6719657693
+     },
+     "0.005": {
+      "rar_3m": 266968.41945923
+     },
+     "0.01": {
+      "rar_3m": 1776440.510884233
+     }
+    },
+    "rar_3m": 266968.41945923
+   },
+   "CORP_XL": {
+    "available": 60,
+    "both_customers": 0,
+    "cost_sensitivity": {
+     "0.5": {
+      "fsl_b_customers": 0,
+      "fsl_b_monthly": 0.0,
+      "negative_rar_customers": 16,
+      "rar_3m": 1449607.8531502294
+     },
+     "0.75": {
+      "fsl_b_customers": 0,
+      "fsl_b_monthly": 0.0,
+      "negative_rar_customers": 37,
+      "rar_3m": -1876994.0593497711
+     },
+     "1.0": {
+      "fsl_b_customers": 0,
+      "fsl_b_monthly": 0.0,
+      "negative_rar_customers": 41,
+      "rar_3m": -5203595.971849769
+     }
+    },
+    "customers": 60,
+    "fsl_a_customers": 0,
+    "fsl_a_monthly": 0.0,
+    "fsl_b_customers": 0,
+    "fsl_b_monthly": 0.0,
+    "negative_fd_earnings": 0,
+    "negative_rar_customers": 41,
+    "policy_fsl_b_customers": 56,
+    "policy_fsl_b_monthly": 2869312.544103085,
+    "premium_sensitivity": {
+     "0.0": {
+      "rar_3m": -6555145.540437272
+     },
+     "0.005": {
+      "rar_3m": -5203595.971849769
+     },
+     "0.01": {
+      "rar_3m": -3852046.4032622706
+     }
+    },
+    "rar_3m": -5203595.971849769
+   },
+   "GOV": {
+    "available": 40,
+    "both_customers": 0,
+    "cost_sensitivity": {
+     "0.5": {
+      "fsl_b_customers": 0,
+      "fsl_b_monthly": 0.0,
+      "negative_rar_customers": 11,
+      "rar_3m": 552718.894656796
+     },
+     "0.75": {
+      "fsl_b_customers": 0,
+      "fsl_b_monthly": 0.0,
+      "negative_rar_customers": 22,
+      "rar_3m": -543300.2303432038
+     },
+     "1.0": {
+      "fsl_b_customers": 0,
+      "fsl_b_monthly": 0.0,
+      "negative_rar_customers": 30,
+      "rar_3m": -1639319.355343204
+     }
+    },
+    "customers": 40,
+    "fsl_a_customers": 0,
+    "fsl_a_monthly": 0.0,
+    "fsl_b_customers": 0,
+    "fsl_b_monthly": 0.0,
+    "negative_fd_earnings": 0,
+    "negative_rar_customers": 30,
+    "policy_fsl_b_customers": 39,
+    "policy_fsl_b_monthly": 922853.6108090527,
+    "premium_sensitivity": {
+     "0.0": {
+      "rar_3m": -2032768.5231932036
+     },
+     "0.005": {
+      "rar_3m": -1639319.355343204
+     },
+     "0.01": {
+      "rar_3m": -1245870.1874932037
+     }
+    },
+    "rar_3m": -1639319.355343204
+   },
+   "SME_M": {
+    "available": 350,
+    "both_customers": 62,
+    "cost_sensitivity": {
+     "0.5": {
+      "fsl_b_customers": 71,
+      "fsl_b_monthly": 8251.132733498602,
+      "negative_rar_customers": 11,
+      "rar_3m": 995167.0643383968
+     },
+     "0.75": {
+      "fsl_b_customers": 98,
+      "fsl_b_monthly": 22081.54394986359,
+      "negative_rar_customers": 31,
+      "rar_3m": 769667.5018383971
+     },
+     "1.0": {
+      "fsl_b_customers": 116,
+      "fsl_b_monthly": 41829.35002741677,
+      "negative_rar_customers": 55,
+      "rar_3m": 544167.9393383967
+     }
+    },
+    "customers": 350,
+    "fsl_a_customers": 62,
+    "fsl_a_monthly": 21702.206933333397,
+    "fsl_b_customers": 116,
+    "fsl_b_monthly": 41829.35002741677,
+    "negative_fd_earnings": 4,
+    "negative_rar_customers": 55,
+    "policy_fsl_b_customers": 0,
+    "policy_fsl_b_monthly": 0.0,
+    "premium_sensitivity": {
+     "0.0": {
+      "rar_3m": 274586.70865089697
+     },
+     "0.005": {
+      "rar_3m": 544167.9393383967
+     },
+     "0.01": {
+      "rar_3m": 813749.1700258974
+     }
+    },
+    "rar_3m": 544167.9393383967
+   },
+   "SME_S": {
+    "available": 300,
+    "both_customers": 34,
+    "cost_sensitivity": {
+     "0.5": {
+      "fsl_b_customers": 21,
+      "fsl_b_monthly": 138.5557570000026,
+      "negative_rar_customers": 1,
+      "rar_3m": 93742.54127850023
+     },
+     "0.75": {
+      "fsl_b_customers": 39,
+      "fsl_b_monthly": 409.7414499167694,
+      "negative_rar_customers": 4,
+      "rar_3m": 80545.92877849985
+     },
+     "1.0": {
+      "fsl_b_customers": 40,
+      "fsl_b_monthly": 762.0359712500815,
+      "negative_rar_customers": 15,
+      "rar_3m": 67349.31627849952
+     }
+    },
+    "customers": 300,
+    "fsl_a_customers": 35,
+    "fsl_a_monthly": 992.6495000002002,
+    "fsl_b_customers": 40,
+    "fsl_b_monthly": 762.0359712500815,
+    "negative_fd_earnings": 2,
+    "negative_rar_customers": 15,
+    "policy_fsl_b_customers": 0,
+    "policy_fsl_b_monthly": 0.0,
+    "premium_sensitivity": {
+     "0.0": {
+      "rar_3m": 47191.46287849956
+     },
+     "0.005": {
+      "rar_3m": 67349.31627849952
+     },
+     "0.01": {
+      "rar_3m": 87507.16967849951
+     }
+    },
+    "rar_3m": 67349.31627849952
+   }
+  },
+  "cost_ratio": 1.0,
+  "cost_ratios": [
+   1.0,
+   0.75,
+   0.5
+  ],
+  "cutoff": "2024-04-30",
+  "liquidity_premium": 0.005,
+  "liquidity_premiums": [
+   0.0,
+   0.005,
+   0.01
+  ],
+  "note": "Contribution at stake is an estimate of relationship contribution, not audited profit. Fee subsidy leakage checks A and B overlap; their totals must not be added.",
+  "totals": {
+   "available": 1000,
+   "both_customers": 164,
+   "cost_sensitivity": {
+    "0.5": {
+     "fsl_b_customers": 196,
+     "fsl_b_monthly": 164385.9163444232,
+     "negative_rar_customers": 65,
+     "rar_3m": 6796646.772883151
+    },
+    "0.75": {
+     "fsl_b_customers": 275,
+     "fsl_b_monthly": 462232.94304652634,
+     "negative_rar_customers": 160,
+     "rar_3m": 416108.5603831524
+    },
+    "1.0": {
+     "fsl_b_customers": 314,
+     "fsl_b_monthly": 828703.305773902,
+     "negative_rar_customers": 242,
+     "rar_3m": -5964429.652116851
+    }
+   },
+   "customers": 1000,
+   "fsl_a_customers": 165,
+   "fsl_a_monthly": 335436.83773333323,
+   "fsl_b_customers": 314,
+   "fsl_b_monthly": 828703.305773902,
+   "negative_fd_earnings": 8,
+   "negative_rar_customers": 242,
+   "policy_fsl_b_customers": 95,
+   "policy_fsl_b_monthly": 3792166.1549121393,
+   "premium_sensitivity": {
+    "0.0": {
+     "rar_3m": -9508639.564066848
+    },
+    "0.005": {
+     "rar_3m": -5964429.652116851
+    },
+    "0.01": {
+     "rar_3m": -2420219.740166845
+    }
+   },
+   "rar_3m": -5964429.652116851
+  },
+  "window_months": 3
+ },
+ "customer": {
+  "calibrated_risk": 0.7891507174787386,
+  "finance_metrics": {
+   "active_waiver": true,
+   "components": {
+    "fd_earnings": 0.0,
+    "fee_income": 0.2877666667,
+    "operating_earnings": 44.8681485,
+    "transaction_cost": 18.51666666671429
+   },
+   "contribution_monthly": 26.639248499985708,
+   "cost_ratio": 1.0,
+   "cost_sensitivity": [
+    {
+     "contribution_monthly": 26.639248499985708,
+     "cost_ratio": 1.0,
+     "fsl_b_flagged": true,
+     "fsl_b_monthly": 18.22890000001429,
+     "rar_3m": 79.91774549995712,
+     "transaction_cost": 18.51666666671429
+    },
+    {
+     "contribution_monthly": 31.268415166664276,
+     "cost_ratio": 0.75,
+     "fsl_b_flagged": true,
+     "fsl_b_monthly": 13.599733333335719,
+     "rar_3m": 93.80524549999282,
+     "transaction_cost": 13.887500000035718
+    },
+    {
+     "contribution_monthly": 35.897581833342855,
+     "cost_ratio": 0.5,
+     "fsl_b_flagged": true,
+     "fsl_b_monthly": 8.970566666657145,
+     "rar_3m": 107.69274550002856,
+     "transaction_cost": 9.258333333357145
+    }
+   ],
+   "cutoff": "2024-04-30",
+   "fsl_a": {
+    "flagged": true,
+    "monthly": 25.6355666667,
+    "status": "deal_broken"
+   },
+   "fsl_b": {
+    "flagged": true,
+    "monthly": 18.22890000001429,
+    "policy": false,
+    "shortfall": 18.22890000001429,
+    "status": "deal_not_paying"
+   },
+   "liquidity_premium": 0.005,
+   "opr": 0.03,
+   "rar_3m": 79.91774549995712,
+   "sensitivity": [
+    {
+     "contribution_monthly": 26.639248499985708,
+     "fd_earnings": 0.0,
+     "fsl_b_flagged": true,
+     "liquidity_premium": 0.0,
+     "rar_3m": 79.91774549995712
+    },
+    {
+     "contribution_monthly": 26.639248499985708,
+     "fd_earnings": 0.0,
+     "fsl_b_flagged": true,
+     "liquidity_premium": 0.005,
+     "rar_3m": 79.91774549995712
+    },
+    {
+     "contribution_monthly": 26.639248499985708,
+     "fd_earnings": 0.0,
+     "fsl_b_flagged": true,
+     "liquidity_premium": 0.01,
+     "rar_3m": 79.91774549995712
+    }
+   ],
+   "sources": {
+    "opr": "BNM Monetary Policy Statement 3 May 2023 (https://www.bnm.gov.my/-/monetary-policy-statement-03052023); held at 24 Jan 2024, 7 Mar 2024 and 9 May 2024 MPC meetings (https://www.bnm.gov.my/monetary-stability/opr-decisions)",
+    "srr": "BNM 19 Mar 2020: SRR lowered from 3.00% to 2.00% effective 20 March 2020"
+   },
+   "srr": 0.02,
+   "tier_id": "SME_S",
+   "unavailable": [],
+   "waiver_basis": "FD_THRESHOLD",
+   "window_months": 3
+  }
+ }
+}

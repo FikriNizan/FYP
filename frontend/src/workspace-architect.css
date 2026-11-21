@@ -231,6 +231,27 @@
 @media screen and (max-width:1250px) { .finance-cards { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media screen and (max-width:760px) { .finance-cards { grid-template-columns:1fr; gap:12px; } .finance-card { padding:16px 18px; } }
 
+/* ---- Revenue at Risk and fee subsidy leakage (Overview and Finance tab) ---- */
+@media screen {
+  .finance-metrics { display:flex; flex-direction:column; gap:14px; margin-top:18px; }
+  .finance-rar .finance-metrics { margin-top:0; }
+  .finance-stake,.finance-groups,.finance-checks,.finance-sensitivities { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+  .finance-stake>div,.finance-contribution,.finance-group,.finance-check,.finance-sensitivity { display:flex; flex-direction:column; gap:4px; min-width:0; padding:16px 18px; background:#fff; border:1px solid #eef0f3; border-radius:6px; box-shadow:var(--shadow); }
+  .finance-stake strong { font-size:22px; font-weight:650; }
+  .finance-group h3,.finance-sensitivity h3,.finance-check h4 { margin:0; font-size:14px; }
+  .finance-flags { margin:4px 0 0; padding-left:18px; font-weight:600; color:#8e2334; }
+  .finance-negative { margin:4px 0 0; font-weight:600; }
+  .finance-sign { margin:0; font-weight:600; }
+  .finance-unavailable { margin:0; padding-left:18px; font-size:13px; color:var(--muted); }
+  .finance-components { max-width:520px; }
+  .finance-sensitivity table { min-width:0; }
+  .finance-sensitivity table th,.finance-sensitivity table td { padding:8px 6px; font-size:13px; text-transform:none; letter-spacing:0; white-space:nowrap; }
+  .finance-sensitivity tbody th { white-space:normal; }
+  .secondary-row th,.secondary-row td { color:var(--muted); font-size:12px; }
+  .finance-combined { margin:0; }
+}
+@media screen and (max-width:900px) { .finance-stake,.finance-groups,.finance-checks,.finance-sensitivities { grid-template-columns:1fr; } }
+
 @media screen {
   /* ---- observed flow and reference levels ---- */
   .chart text { font-family:'Open Sans Variable','Open Sans','Segoe UI',Arial,sans-serif; font-size:11px; fill:#5f6a75; }
