@@ -49,10 +49,11 @@ def runtime_context():
     root = Path(__file__).resolve().parents[2]
     expected = {'working': root / 'backend' / 'instance' / 'churn.sqlite',
                 'test': root / 'artifacts' / 'm5-review-20261116-030542.sqlite',
-                'm6-test': root / 'artifacts' / 'm6-review.sqlite'}
+                'm6-test': root / 'artifacts' / 'm6-review.sqlite',
+                'm8-demo': root / 'artifacts' / 'm8-demo.sqlite'}
     declared = current_app.config.get('TXB_LOCAL_MODE')
     mode = declared if declared in expected and database == expected[declared].absolute() else 'unknown'
-    if mode in ('test','m6-test') and expected['working'].exists() and os.path.samefile(database,expected['working']):
+    if mode in ('test','m6-test','m8-demo') and expected['working'].exists() and os.path.samefile(database,expected['working']):
         mode = 'unknown'
     db = get_db()
     version = db.execute('SELECT COALESCE(MAX(version),0) FROM schema_migrations').fetchone()[0]

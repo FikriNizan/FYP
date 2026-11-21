@@ -19,6 +19,7 @@ from copy_database import copy_database, inspect
 ROOT = Path(__file__).resolve().parents[1]
 WORKING = ROOT / 'backend' / 'instance' / 'churn.sqlite'
 M6_TEST = ROOT / 'artifacts' / 'm6-review.sqlite'
+M8_DEMO = ROOT / 'artifacts' / 'm8-demo.sqlite'  # Phase B demo, built by scripts/demo_session.py
 TEST = ROOT / 'artifacts' / 'm5-review-20261116-030542.sqlite'
 BACKEND_URL = 'http://127.0.0.1:5000'
 FRONTEND_URL = 'http://127.0.0.1:5173'
@@ -37,9 +38,10 @@ def resolved_existing(path):
 
 
 def selected_database(mode):
-    if mode not in ('working','test','m6-test'):
+    if mode not in ('working','test','m6-test','m8-demo'):
         raise ValueError('Choose Working or Test explicitly')
-    target, version, months, counts = resolved_existing(WORKING if mode == 'working' else M6_TEST if mode == 'm6-test' else TEST)
+    paths = {'working': WORKING, 'test': TEST, 'm6-test': M6_TEST, 'm8-demo': M8_DEMO}
+    target, version, months, counts = resolved_existing(paths[mode])
     if mode == 'working' and target != WORKING.absolute():
         raise ValueError('Working path resolves outside the confirmed Working database')
     if mode == 'test' and (target != TEST.absolute() or os.path.samefile(target,WORKING)):
@@ -48,6 +50,8 @@ def selected_database(mode):
         raise ValueError('Working schema is old. Exercise the migration on a copy first.')
     if mode == 'm6-test' and (target != M6_TEST.absolute() or os.path.samefile(target,WORKING) or os.path.samefile(target,TEST)):
         raise ValueError('Milestone 6 Test must be its own confirmed file')
+    if mode == 'm8-demo' and (target != M8_DEMO.absolute() or any(p.exists() and os.path.samefile(target,p) for p in (WORKING,TEST,M6_TEST))):
+        raise ValueError('The demo must be its own confirmed Test copy')
     if version > 6:
         raise ValueError('Database schema is newer than this app')
     return target, version, months, counts
@@ -132,8 +136,8 @@ def launch(mode, backend_port=5000, frontend_port=5173):
         raise ValueError('Choose distinct unprivileged backend/frontend ports')
     BACKEND_URL=f'http://127.0.0.1:{backend_port}'
     FRONTEND_URL=f'http://127.0.0.1:{frontend_port}'
-    if mode != 'm6-test':
-        raise ValueError('Use milestone-5 code for Working/Milestone 5 Test; milestone-6 requires m6-test')
+    if mode not in ('m6-test','m8-demo'):
+        raise ValueError('Use milestone-5 code for Working/Milestone 5 Test; this branch launches m6-test or m8-demo')
     database, prior_version, months, counts = selected_database(mode)
     free_port(backend_port)
     free_port(frontend_port)
@@ -205,6 +209,9 @@ def main():
     m6=sub.add_parser('m6-test')
     m6.add_argument('--backend-port',type=int,default=5000)
     m6.add_argument('--frontend-port',type=int,default=5173)
+    demo=sub.add_parser('m8-demo')
+    demo.add_argument('--backend-port',type=int,default=5000)
+    demo.add_argument('--frontend-port',type=int,default=5173)
     fresh=sub.add_parser('new-test')
     fresh.add_argument('--source',required=True)
     fresh.add_argument('--destination',required=True)

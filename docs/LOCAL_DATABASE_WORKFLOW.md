@@ -13,6 +13,32 @@ Use the isolated **Milestone 6 Test** file `artifacts/m6-review.sqlite` (schema 
 
 Verified frontend: `http://127.0.0.1:5186/`; backend: `http://127.0.0.1:5066`. The helper checks both runtime identities/schema before reporting URLs; the badge identifies Milestone 6 Test. Port 5000 was occupied during implementation and was left untouched. The selected ports still refuse unknown occupants. Business-record counts/hashes before and after migration are in `artifacts/m6-data-verification.json`; all existing business rows survived. The only migration changes are additive cache/reservation storage and schema version 5. See [MILESTONE\_6.md](MILESTONE_6.md) for AI setup, validation and acceptance limits.
 
+### Phase B: outcomes checked on upload, gate and demo session
+
+* Publishing a monthly package now derives observed outcomes for each earlier assessment whose three
+  forecast months are all published (May completes February, June completes March, July completes April),
+  from the packages' own features. No outcome upload is needed. `flask load-outcomes` remains an
+  administrator fallback for the trusted research file.
+* The app's schema is now **6** (migration 006 adds outcome provenance). The first launch of an older Test copy
+  migrates it automatically and writes a `-pre-migration-<timestamp>` backup next to it, as before.
+* Verification gate (Test copies only; refuses Working, Milestone 5 and Milestone 6 files):
+  ```PowerShell
+  .\.venv\Scripts\python.exe scripts\verify_package_outcomes.py --db artifacts\m8-gate.sqlite --research-root $R `
+    --model-python C:\Users\fikri\fyp-model-env\Scripts\python.exe `
+    --publish artifacts\m8-packages\prepared-2024-05 --publish artifacts\m8-packages\prepared-2024-06 --publish artifacts\m8-packages\prepared-2024-07
+  ```
+* Demo session (outside the product). Build it **after** the latest summary batch, so it carries current
+  summaries; `--rebuild` replaces only `artifacts\m8-demo.sqlite`:
+  ```PowerShell
+  .\.venv\Scripts\python.exe scripts\demo_session.py build --research-root $R            # first time
+  .\.venv\Scripts\python.exe scripts\demo_session.py build --research-root $R --rebuild  # later rebuilds
+  $env:TXB_RESEARCH_ROOT = $R; $env:TXB_MODEL_PYTHON = 'C:\Users\fikri\fyp-model-env\Scripts\python.exe'
+  .\.venv\Scripts\python.exe scripts\local_session.py m8-demo --backend-port 5086 --frontend-port 5196
+  ```
+  Then open Monthly Assessments, upload `artifacts\m8-packages\prepared-2024-05\features.csv` and
+  `manifest.json`, and read "February 2024 is now ready to check". March and April show "Waiting for June 2024
+  data" / "Waiting for July 2024 data".
+
 ### Finance coverage and the OPR scenario package
 
 * **Verified OPR rates end on 10 Jul 2024.** Finance contribution measures (Revenue at Risk, check B and the

@@ -17,6 +17,7 @@ milestone list below means implemented behaviour, not acceptance, unless the ite
 | RM briefing, print and PDF (M3) | Yes | Yes | Pending: owner walkthrough | No |
 | Monthly package upload and scoring (M4) | Yes | Yes, plus the historical April replay | Partial: malformed-CSV rejection and a case scenario observed; milestone-wide sign-off pending | No (bounded local workflow) |
 | Outcome import and monitoring (M5) | Yes | Yes | Pending: walkthrough and real-bank source assurance | No |
+| Outcomes derived on upload (Phase B) | Yes | Yes, plus the gate: Feb, Mar, Apr 2024 each 1,000/1,000 equal to the trusted labels | Pending: demo walkthrough | No (synthetic historical replay) |
 | Grounded GenAI summaries and questions (M6) | Yes | Yes (provider mocked) | Accepted for the evaluated samples (5/5 summaries, 3/3 client questions; single-reviewer judgement). Full April summary batch not yet run on the current render version | No |
 | Finance: Revenue at Risk and Fee Subsidy Leakage | Yes (check B owner rule of 22 Nov 2026) | Yes | Pending owner review of the revised check B | No (assumption-based estimates; verified OPR rates end 10 Jul 2024) |
 | OPR stress demonstration (M7, package `m7-opr-2`) | Yes | Yes, plus parity, reproduction and determinism gates in the modelling environment | Pending: manual inspection of the page with `m7-opr-2` | No (illustrative assumptions; not a forecast) |
