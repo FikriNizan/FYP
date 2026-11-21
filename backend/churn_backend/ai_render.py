@@ -10,7 +10,8 @@ from datetime import date
 from . import briefings
 from .ai_evidence import DICTIONARY
 
-VERSION = 'render-6'  # render-5: Finance 'contribution at stake' sentence (RaR/FSL); render-6: stage-2 wording.
+VERSION = 'render-7'  # render-5: Finance 'contribution at stake' sentence (RaR/FSL); render-6: stage-2 wording;
+                      # render-7: check B owner rule (2026-11-22) and 'Combined flow' terminology.
 TOKEN = re.compile(r'\{\{([a-zA-Z0-9_.]+)\}\}')
 CARD_SECTIONS = ('bottom_line', 'operations', 'finance', 'weighed')
 AUDIENCE_ORDER = ('operations', 'finance')
@@ -32,7 +33,7 @@ AI_CHECKS = ['known_references', 'link_rules', 'question_rules', 'numeric_date_r
 # Plain driver labels for every predictor (2-5 words, no values). Meanings follow the research
 # project's data/features_v1/feature_dictionary.csv and, where its definition is generic, the actual
 # computation in feature_engineering_v1.py (both read-only sources). inbound = "collections",
-# outbound = "payments", combined = "transaction value".
+# outbound = "payments", combined = "combined flow".
 DRIVER_LABELS = {
     'inbound_flow_mean_1m_myr': 'Collections, latest month',
     'inbound_flow_mean_3m_myr': 'Collections, 3-month average',
@@ -50,19 +51,19 @@ DRIVER_LABELS = {
     'outbound_flow_ratio_3m_to_12m': 'Payments vs 12-month average',
     'outbound_flow_cv_12m': 'Payment variability, 12 months',
     'outbound_zero_months_3m': 'Months without payments',
-    'combined_flow_mean_1m_myr': 'Transaction value, latest month',
-    'combined_flow_mean_3m_myr': 'Transaction value, 3-month average',
-    'combined_flow_mean_6m_myr': 'Transaction value, 6-month average',
-    'combined_flow_mean_12m_myr': 'Transaction value, 12-month average',
-    'combined_flow_change_3m_vs_previous_3m': 'Transaction value, quarter-on-quarter change',
-    'combined_flow_ratio_3m_to_12m': 'Transaction value vs 12-month average',
-    'combined_flow_cv_12m': 'Transaction value variability, 12 months',
+    'combined_flow_mean_1m_myr': 'Combined flow, latest month',
+    'combined_flow_mean_3m_myr': 'Combined flow, 3-month average',
+    'combined_flow_mean_6m_myr': 'Combined flow, 6-month average',
+    'combined_flow_mean_12m_myr': 'Combined flow, 12-month average',
+    'combined_flow_change_3m_vs_previous_3m': 'Combined flow, quarter-on-quarter change',
+    'combined_flow_ratio_3m_to_12m': 'Combined flow vs 12-month average',
+    'combined_flow_cv_12m': 'Combined flow variability, 12 months',
     'combined_zero_months_3m': 'Months without transactions',
     'inbound_count_mean_3m': 'Collection count, 3 months',
     'inbound_count_mean_12m': 'Collection count, 12 months',
     'outbound_count_mean_3m': 'Successful payments, 3 months',
     'outbound_count_mean_12m': 'Successful payments, 12 months',
-    'inbound_share_3m': 'Collections share of transaction value',
+    'inbound_share_3m': 'Collections share of combined flow',
     'outbound_success_recency_days': 'Days since last successful payment',
     'inbound_recency_months': 'Months since last collection',
     'outbound_submitted_count_mean_3m': 'Payments submitted per month',
@@ -208,7 +209,7 @@ def finance(evidence, w):
     trend = []
     ratio = get('combined_flow_ratio_3m_to_12m')
     if ratio:
-        trend.append(line(f'Transaction value in {span(ratio["period"])} {relative(ratio["value"], "its")}.', [ratio['id']],
+        trend.append(line(f'Combined flow in {span(ratio["period"])} {relative(ratio["value"], "its")}.', [ratio['id']],
                           ['combined_flow_ratio_3m_to_12m'], twelve=True))
     lines = []
     for feature, noun in [('inbound_flow_ratio_3m_to_12m', 'Collections'), ('outbound_flow_ratio_3m_to_12m', 'Payments')]:
@@ -290,7 +291,7 @@ def driver_family(feature):
                                                          'active_login_users', 'passive_session', 'approver_', 'untrusted_')):
         return 'service and online banking'
     if feature.startswith('combined_'):
-        return 'transaction value'
+        return 'combined flow'
     if feature.startswith('inbound_'):
         return 'collections'
     if feature.startswith('outbound_'):
@@ -307,7 +308,7 @@ def bottom_line(evidence):
     lines = []
     risk = facts.get('prediction.risk')
     if risk:
-        lines.append(line('Estimated chance that average monthly transaction value over '
+        lines.append(line('Estimated chance that average monthly combined flow over '
                           f'{briefings.forecast(evidence["identity"]["cutoff"])} falls to half or less of its 12-month average: '
                           f'{pct(risk["value"], 1)}.', ['prediction.risk'], twelve=True))  # Baseline: 12 months ending at cutoff.
     flag, threshold = facts.get('prediction.flag'), facts.get('prediction.threshold')
@@ -321,7 +322,7 @@ def bottom_line(evidence):
         lines.append(line(f'Strongest signals: {driver_family(top["feature"])}.', []))
     usual = facts.get('feature.combined_flow_mean_12m_myr')
     if usual:
-        lines.append(line(f'Usual monthly transaction value (12-month average): {briefings.money(usual["value"])}.', [usual['id']],
+        lines.append(line(f'Usual monthly combined flow (12-month average): {briefings.money(usual["value"])}.', [usual['id']],
                           twelve=True))
     return lines
 
@@ -371,7 +372,7 @@ def templates(evidence, card_plan):
     if ids['finance']:
         trend = 'feature.combined_flow_ratio_3m_to_12m'
         result.append(dict(audience='finance', source='template', evidence_ids=[trend] if trend in ids['finance'] else sorted(ids['finance'])[:1],
-                           text='Could Finance confirm what the transaction value change means for balances and fees?'))
+                           text='Could Finance confirm what the combined flow change means for balances and fees?'))
     return result
 
 

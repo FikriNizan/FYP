@@ -104,11 +104,11 @@ function signal(driver) {
 function flowChart(history, baseline) {
   if (!history.length) return '<p class="muted">No transaction history was provided for this assessment.</p>';
   const rows = history.filter(r => isNumber(r.combined_flow_myr));
-  if (!rows.length) return '<p class="muted">Transaction values are not available.</p>';
+  if (!rows.length) return '<p class="muted">Combined flow values are not available.</p>';
   const top = Math.max(1, ...rows.map(r => r.combined_flow_myr), isNumber(baseline) ? baseline : 0) * 1.1;
   const x = i => 80 + i * (650 / rows.length);
   const y = value => 215 - (value / top) * 170;
-  return `<svg class="chart" viewBox="0 0 780 255" role="img" aria-label="Monthly combined transaction values, with a zero baseline. Exact amounts are in the table below.">
+  return `<svg class="chart" viewBox="0 0 780 255" role="img" aria-label="Monthly combined flow values, with a zero baseline. Exact amounts are in the table below.">
     ${[0, .5, 1].map(f => `<line class="grid" x1="75" x2="750" y1="${y(f*top)}" y2="${y(f*top)}"/><text x="4" y="${y(f*top)+4}">${(f*top/1e6).toFixed(1)}m</text>`).join('')}
     ${rows.map((r,i) => `<rect x="${x(i)}" y="${y(r.combined_flow_myr)}" width="${650/rows.length*.65}" height="${Math.max(0,215-y(r.combined_flow_myr))}" fill="${i >= rows.length-3 ? '#6154d9' : '#9ca9bf'}"><title>${e(monthLabel(r.snapshot_month))}: ${e(money(r.combined_flow_myr))}</title></rect><text x="${x(i)}" y="238">${e(new Date(r.snapshot_month+'T00:00:00Z').toLocaleDateString('en-MY',{month:'short',timeZone:'UTC'}))}</text>`).join('')}
     ${isNumber(baseline) ? `<line class="baseline" x1="75" x2="750" y1="${y(baseline)}" y2="${y(baseline)}"/>` : ''}

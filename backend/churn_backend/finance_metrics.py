@@ -5,6 +5,7 @@ features. See docs/FINANCE_METRICS.md for every formula, parameter, source and l
 estimates of relationship contribution: not audited profit, not expected loss.
 """
 import math
+from datetime import date
 from collections import defaultdict
 from .db import get_db
 import json
@@ -34,10 +35,14 @@ SRR_TABLE = [
     dict(start='2025-05-16', end=None, rate=0.01,
          source='BNM 8 May 2025: SRR lowered from 2% to 1% effective 16 May 2025 (https://www.bnm.gov.my/-/srr-0525)'),
 ]
+# Fail closed after the last verified OPR date: later cutoffs show Finance contribution as unavailable.
+OPR_VERIFIED_THROUGH = max(row['end'] for row in OPR_TABLE)
+_through = date.fromisoformat(OPR_VERIFIED_THROUGH)
+OPR_UNVERIFIED = f'OPR not verified for this cutoff (verified rates end {_through.day} {_through:%b %Y})'
 BASE_PREMIUM = 0.005
 LIQUIDITY_PREMIUMS = (0.0, 0.005, 0.01)
-# Share of bnm_base_fee assumed as the bank's per-transaction cost. bnm_base_fee is a customer price cap,
-# so real cost is likely lower; 1.0 is the conservative base case. This assumption decides the headline sign.
+# Share of bnm_base_fee assumed as the bank's per-transaction cost. bnm_base_fee is a customer price cap; without
+# actual cost data the direction of bias is uncertain. 1.0 is the base case. This assumption decides the headline sign.
 BASE_COST_RATIO = 1.0
 COST_RATIOS = (1.0, 0.75, 0.5)
 WINDOW_MONTHS = 3
@@ -65,7 +70,7 @@ def fd_earnings(fd_balance, offer_rate, opr, premium):
     if not number(offer_rate):
         return None, 'fixed deposit offer rate missing'
     if opr is None:
-        return None, 'OPR not verified for this cutoff'
+        return None, OPR_UNVERIFIED
     return fd_balance * (opr + premium - offer_rate) / 12, None
 
 
@@ -80,7 +85,7 @@ def customer_metrics(features, cutoff, premium=BASE_PREMIUM, with_sensitivity=Tr
     if tier is None:
         reasons.append('unknown tier')
     if opr is None:
-        reasons.append('OPR not verified for this cutoff')
+        reasons.append(OPR_UNVERIFIED)
     if srr is None:
         reasons.append('SRR not verified for this cutoff')
     fee, waiver = features.get('estimated_fee_mean_3m_myr'), features.get('estimated_waiver_mean_3m_myr')
@@ -115,17 +120,20 @@ def customer_metrics(features, cutoff, premium=BASE_PREMIUM, with_sensitivity=Tr
     else:
         fsl_a = dict(status='deal_kept', flagged=False, monthly=None)
 
-    # FSL B ("deal not paying"): uncovered transaction cost exceeds what the FD earns the bank.
+    # FSL B ("deal not paying", owner rule 2026-11-22): the assumed transaction cost exceeds fee income
+    # (a positive shortfall) and positive deposit earnings do not cover it. Uncovered = shortfall - max(FD, 0).
+    # Negative FD earnings are not folded into B; they stay visible as their own component.
     policy = basis == 'POLICY_EXEMPT'
     if active is None or cost is None or fee_income is None or fd_value is None:
         fsl_b = dict(status='unavailable', flagged=False, monthly=None, policy=policy)
     elif not active:
         fsl_b = dict(status='no_active_waiver', flagged=False, monthly=None, policy=policy)
     else:
-        shortfall = max(0.0, cost - fee_income)
-        flagged = shortfall > fd_value
+        gap = cost - fee_income
+        covered = max(fd_value, 0.0)
+        flagged = gap > 0 and covered < gap
         fsl_b = dict(status=('policy' if policy else 'deal_not_paying') if flagged else 'covered', flagged=flagged,
-                     monthly=shortfall - fd_value if flagged else None, shortfall=shortfall, policy=policy)
+                     monthly=gap - covered if flagged else None, shortfall=max(0.0, gap), policy=policy)
 
     result = dict(cutoff=str(cutoff)[:10], tier_id=tier_id, waiver_basis=basis, active_waiver=active,
                   opr=opr, srr=srr, liquidity_premium=premium, cost_ratio=cost_ratio, window_months=WINDOW_MONTHS,

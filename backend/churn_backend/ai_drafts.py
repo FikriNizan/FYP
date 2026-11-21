@@ -37,7 +37,7 @@ Examples (style only; cite real fact IDs from the payload):
 Good link: "Failed logins and sessions without transactions both concern online banking access, alongside the change in payments." evidence_ids: login failure, sessions without transactions, payments facts.
 Good link: "Payment failures and the change in collections both relate to how the customer's money moves through the bank."
 Bad link (only lists facts): "Exposures include {{feature.non_fd_balance_myr}}, {{feature.fd_balance_myr}}, {{feature.estimated_fee_mean_3m_myr}}."
-Bad link (restates a value with a direction): "Transaction value fell sharply."
+Bad link (restates a value with a direction): "Combined flow fell sharply."
 Good operations question: "Has the customer reported trouble logging in or completing payments online?"
 Good operations question: "Is the customer's finance team still using online banking for its usual payments?"
 Bad operations question (asks for data): "How many login attempts were recorded during the period?"

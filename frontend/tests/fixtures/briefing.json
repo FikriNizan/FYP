@@ -117,7 +117,7 @@
       "questions": [
         {
           "month": "February 2024",
-          "source": "Transaction value vs 12-month average: 0.87% of the twelve-month average",
+          "source": "Combined flow vs 12-month average: 0.87% of the twelve-month average",
           "text": "How has business activity been for you lately, and do you expect any changes ahead?"
         },
         {
@@ -134,7 +134,7 @@
       "sample_note": "Single-case sample evidence is included. This briefing does not represent a complete portfolio.",
       "signals": {
         "items": [
-          "Transaction value: 0.87% of the twelve-month average \u00b7 Pushed the estimate higher",
+          "Combined flow: 0.87% of the twelve-month average \u00b7 Pushed the estimate higher",
           "Collections: 15.02% of the twelve-month average \u00b7 Pushed the estimate higher",
           "Payment failures: 40.0% \u00b7 Pushed the estimate higher"
         ],

@@ -11,13 +11,13 @@ The "gentleman's agreement": the bank waives a corporate customer's transaction 
 | Measure | Formula | Notes |
 |---|---|---|
 | Fee income | `estimated_fee_mean_3m_myr` | What the customer pays **after** waivers (verified, below) |
-| Transaction cost | `(estimated_fee + estimated_waiver) / (1 + tier standard_markup_pct) × cost_ratio` | At cost_ratio 1.0, equals Σ `bnm_base_fee × count` exactly (verified, below). `bnm_base_fee` is the cost proxy |
-| FD earnings | `fd_balance_myr × (OPR + liquidity_premium − fd_balance_weighted_offer_rate) / 12` | **Signed**: negative when the rate paid exceeds OPR + premium (never clipped). A genuine zero balance earns zero |
+| Assumed transaction cost | `(estimated_fee + estimated_waiver) / (1 + tier standard_markup_pct) × cost_ratio` | At cost_ratio 1.0, equals Σ `bnm_base_fee × count` exactly (verified, below). `bnm_base_fee` is the cost proxy |
+| Deposit earnings (estimate) | `fd_balance_myr × (OPR + liquidity_premium − fd_balance_weighted_offer_rate) / 12` | **Signed**: negative when the rate paid exceeds OPR + premium (never clipped). A genuine zero balance earns zero |
 | Operating-balance earnings | `non_fd_balance_myr × (1 − SRR) × OPR / 12` | No liquidity premium |
 | Relationship contribution | fee income − transaction cost + FD earnings + operating-balance earnings | |
 | **Revenue at Risk (RaR)** | `3 × monthly contribution` | The 3-month forecast window. Shown **next to** the risk %, never multiplied by it. Label: "contribution at stake" |
 | **FSL check A ("deal broken")** | active FD_THRESHOLD waiver **and** `fd_balance_myr < tier fd_waiver_threshold_myr` (strictly less) | Leakage A = monthly estimated waiver. POLICY_EXEMPT customers are excluded and labelled "policy exemption" |
-| **FSL check B ("deal not paying")** | active waiver **and** `max(0, cost − fee income) > FD earnings` | Leakage B = shortfall − FD earnings. POLICY_EXEMPT customers are shown, labelled "policy", and totalled separately. Operating-balance earnings are deliberately ignored here: the agreement is fees-for-deposits |
+| **FSL check B ("deal not paying")** | active waiver **and** shortfall = assumed transaction cost − fee income **> 0** **and** `max(deposit earnings, 0) < shortfall` | Uncovered (leakage B) = shortfall − max(deposit earnings, 0). Owner rule of 22 Nov 2026: negative deposit earnings are **not** folded into check B; they stay visible as their own component. POLICY_EXEMPT customers are shown, labelled "policy", and totalled separately. Operating-balance earnings are deliberately ignored here. |
 
 **Rules that apply across the formulas:**
 - **Active waiver** = `catalog_waiver_mean_pct > 0`.
@@ -65,14 +65,14 @@ So fee income is after waivers, and fee + waiver = standard fee × count.
 | Component | Calculation | RM / month |
 |---|---|---|
 | Fee income | | +0.29 |
-| Transaction cost | (0.2878 + 25.6356) / 1.40 | −18.52 |
-| FD earnings | FD 0 | 0.00 |
+| Assumed transaction cost | (0.2878 + 25.6356) / 1.40 | −18.52 |
+| Deposit earnings (estimate) | FD 0 | 0.00 |
 | Operating-balance earnings | 18,313.53 × 0.98 × 0.03 / 12 | +44.87 |
 | **Contribution** | | **+26.64** |
 | **RaR** (3 months) | 3 × 26.64 | **RM79.92** |
 
 - **FSL A:** flagged (FD 0 < RM100,000) at **RM25.64** a month.
-- **FSL B:** flagged (shortfall 18.23 > FD earnings 0) at **RM18.23** a month.
+- **FSL B:** flagged (shortfall 18.23 > 0 and deposit earnings 0 do not cover it); uncovered **RM18.23** a month.
 - **Reading:** the relationship still contributes, but because of the operating balance, not the deposit the waiver was granted for.
 
 ## Sensitivity design
@@ -80,7 +80,7 @@ So fee income is after waivers, and fee + waiver = standard fee × count.
 Two assumptions are uncertain, so both are shown, as customer-level variants and as portfolio totals.
 
 - **Cost ratio (1.0 / 0.75 / 0.5).** This scales only the transaction cost. **It dominates the headline result** and decides its sign.
-- **Liquidity premium (0% / 0.5% / 1.0%).** This scales only FD earnings. Customers with no FD are unaffected. In this data its effect is **substantial, not minor**: it moves the April total by about RM7.1m, and it flips the FD-threshold total from negative to positive.
+- **Liquidity premium (0% / 0.5% / 1.0%).** This scales only FD earnings. Customers with no FD are unaffected. In this data its effect is **substantial**: it moves the April total by about RM7.1m, and it flips the FD-threshold total from negative to positive.
 
 **April 2024, Revenue at Risk over 3 months (M6 Test, 1,000 customers, read-only).** Each row varies one assumption, with the other at base.
 
@@ -90,7 +90,18 @@ Two assumptions are uncertain, so both are shown, as customer-level variants and
 | Policy-exempt tiers (CORP_XL, GOV) | **−RM6.84m / −RM2.42m / +RM2.00m** | −RM8.59m / −RM6.84m / −RM5.10m |
 | All customers | −RM5.96m / +RM0.42m / +RM6.80m | −RM9.51m / −RM5.96m / −RM2.42m |
 | Customers with negative RaR | **242 / 160 / 65** | — |
-| Customers flagged by FSL check B (non-policy) | 314 / 275 / 196 | — |
+| Customers flagged by FSL check B (non-policy, owner rule of 22 Nov 2026) | 314 / 275 / 195 | — |
+
+**Check B before and after the owner rule (April 2024, M6 Test, read-only, 22 Nov 2026).** Earlier rule: `max(0, cost − fee) > FD earnings`, so negative FD earnings could flag B with no transaction shortfall.
+
+| Cost ratio | 1.0 | 0.75 | 0.5 |
+|---|---|---|---|
+| Customers flagged, earlier rule (non-policy) | 314 | 275 | 196 |
+| Customers flagged, owner rule (non-policy) | 314 | 275 | 195 |
+| Uncovered a month, earlier rule | RM828,703.31 | RM462,232.94 | RM164,385.92 |
+| Uncovered a month, owner rule | RM826,316.33 | RM459,845.97 | RM161,998.95 |
+
+Policy-exempt check B is unchanged (95 customers, RM3,792,166.15 a month), and so is check A (165). Revenue at Risk totals and every row of both sensitivities are **identical** under both rules: check B never enters the contribution.
 
 **How to read it:**
 - **Total RaR:** the cost-ratio range spans about RM12.8m and the premium range about RM7.1m. The headline sign therefore depends on assumptions the data cannot settle. The UI shows both sensitivities with equal weight; a negative figure means the estimated contribution is negative at the assumed cost, nothing more.
@@ -109,13 +120,13 @@ Two assumptions are uncertain, so both are shown, as customer-level variants and
 
 ## Limitations
 
-- **Cost proxy:** `bnm_base_fee` stands in for the bank's per-transaction cost. Actual PayNet charges to banks are not public, and the real-world BNM figure is a **customer price cap**, so cost is likely **overstated** and leakage conservative (more likely flagged than missed). The cost-ratio sensitivity (1.0 / 0.75 / 0.5) shows how strongly the headline depends on this.
+- **Cost proxy:** `bnm_base_fee` stands in for the bank's per-transaction cost. Actual PayNet charges to banks are not public, and the real-world BNM figure is a **customer price cap**, but a price cap does not by itself show whether the proxy overstates or understates the bank's real cost; the direction of bias is **uncertain** without actual cost data. The cost-ratio sensitivity (1.0 / 0.75 / 0.5) shows how strongly the headline depends on this.
 - **Synthetic standard fees:** the synthetic standard fee (base × 1.05 to 1.40) can exceed real price caps, e.g. online IBG RM0.10. This is a known simplification of the synthetic data.
 - **Failed payments:** these carry no cost in the source counts (only inbound plus successful outbound are counted).
 - **OPR as a funding proxy:** OPR is an **overnight** rate, used as a simplified proxy for term funding value. The liquidity premium sensitivity partly addresses this.
 - **Costs left out:** no operating, staff, credit or capital costs.
 - **Basis by tier:** this is an observed property of the synthetic source, not a documented generator rule. Re-verify the hashes and `TIER_TERMS` if the source changes.
-- **OPR table range:** the table is deliberately limited to verified dates. Later cutoffs show as unavailable until a verified row is added.
+- **OPR table range:** the table is deliberately limited to verified dates; verified rates end **10 Jul 2024**. Later cutoffs (for example a July 2024 or later assessment) show Finance contribution as unavailable, with the reason "OPR not verified for this cutoff (verified rates end 10 Jul 2024)", until a verified row is added. This is deliberate fail-closed behaviour.
 - **What the numbers are not:** an estimate of relationship contribution, not audited profit, a forecast of money given up, or a retention saving.
 
 ## Where it appears
@@ -134,7 +145,7 @@ Two assumptions are uncertain, so both are shown, as customer-level variants and
   - "The sign of these totals depends on both assumptions; both matter equally.";
   - both sensitivity tables, equally sized, with "All customers combined" as a secondary last row;
   - a secondary combined line, and a collapsed by-tier table.
-- **Summary card (Finance section, render-6):** one server-written sentence, never sent to the provider, built from the flags:
+- **Summary card (Finance section, render-7):** one server-written sentence, never sent to the provider, built from the flags:
   - positive: "Contribution at stake over May–Jul 2024: RM79.92 (estimated relationship contribution; waiver condition not met; deposits don't cover waived transaction cost)." Only the checks that are true are listed;
   - negative: "Estimated relationship contribution is negative at the assumed cost; see cost sensitivity. (−RM X a month)." Each true check is appended inside the bracket;
   - POLICY_EXEMPT check-B results are not flagged on the card;

@@ -103,13 +103,53 @@ class FormulaTests(unittest.TestCase):
         self.assertGreater(just_over['fsl_b']['shortfall'], 0)
         self.assertTrue(just_over['fsl_b']['flagged'])
 
+    def test_check_b_review_probe_negative_fd_does_not_create_a_transaction_shortfall(self):
+        # Review probe: fee income RM100, assumed transaction cost RM72.14, FD earnings -RM20 -> not flagged.
+        m = fm.customer_metrics(features(estimated_fee_mean_3m_myr=100.0, estimated_waiver_mean_3m_myr=0.996,
+                                         fd_balance_myr=48000.0, fd_balance_weighted_offer_rate=0.04), APRIL)
+        self.assertAlmostEqual(m['components']['transaction_cost'], 72.14)
+        self.assertAlmostEqual(m['components']['fd_earnings'], -20.0)
+        self.assertEqual((m['fsl_b']['status'], m['fsl_b']['flagged'], m['fsl_b']['monthly'], m['fsl_b']['shortfall']),
+                         ('covered', False, None, 0.0))
+        self.assertLess(m['components']['fd_earnings'], 0)  # Still visible as its own component.
+
+    def test_check_b_shortfall_with_non_positive_fd_is_uncovered_in_full(self):
+        for rate, expected_fd in [(0.04, -20.0), (0.035, 0.0)]:
+            with self.subTest(fd=expected_fd):
+                m = fm.customer_metrics(features(fd_balance_myr=48000.0, fd_balance_weighted_offer_rate=rate), APRIL)
+                self.assertAlmostEqual(m['components']['fd_earnings'], expected_fd)
+                shortfall = m['components']['transaction_cost'] - m['components']['fee_income']
+                self.assertTrue(m['fsl_b']['flagged'])
+                self.assertAlmostEqual(m['fsl_b']['monthly'], shortfall)   # Not shortfall - FD (negative FD not folded in).
+                self.assertEqual(round(m['fsl_b']['monthly'], 2), 18.23)
+
+    def test_check_b_positive_fd_covers_or_partly_covers_the_shortfall(self):
+        covered = fm.customer_metrics(features(fd_balance_myr=48000.0, fd_balance_weighted_offer_rate=0.02), APRIL)
+        self.assertAlmostEqual(covered['components']['fd_earnings'], 60.0)
+        self.assertEqual((covered['fsl_b']['status'], covered['fsl_b']['flagged']), ('covered', False))
+        partly = fm.customer_metrics(features(fd_balance_myr=48000.0, fd_balance_weighted_offer_rate=0.033), APRIL)
+        self.assertAlmostEqual(partly['components']['fd_earnings'], 8.0)
+        self.assertTrue(partly['fsl_b']['flagged'])
+        self.assertEqual(round(partly['fsl_b']['monthly'], 2), 10.23)
+
+    def test_revenue_at_risk_and_sensitivities_do_not_depend_on_check_b(self):
+        for rate in (0.04, 0.035, 0.033, 0.02):
+            with self.subTest(rate=rate):
+                m = fm.customer_metrics(features(fd_balance_myr=48000.0, fd_balance_weighted_offer_rate=rate), APRIL)
+                c = m['components']
+                self.assertAlmostEqual(m['rar_3m'], 3 * (c['fee_income'] - c['transaction_cost'] + c['fd_earnings'] + c['operating_earnings']))
+                for variant in m['sensitivity']:
+                    self.assertAlmostEqual(variant['rar_3m'], 3 * (c['fee_income'] - c['transaction_cost'] + variant['fd_earnings'] + c['operating_earnings']))
+                for variant in m['cost_sensitivity']:
+                    self.assertAlmostEqual(variant['rar_3m'], 3 * (c['fee_income'] - variant['transaction_cost'] + c['fd_earnings'] + c['operating_earnings']))
+
     def test_unknown_tier_or_unverified_cutoff_makes_measures_unavailable(self):
         unknown = fm.customer_metrics(features(tier_id='NEW_TIER'), APRIL)
         self.assertIn('unknown tier', unknown['unavailable'])
         self.assertIsNone(unknown['rar_3m'])
         self.assertEqual(unknown['fsl_a']['status'], 'unavailable')
         later = fm.customer_metrics(WORKED, '2025-01-31')
-        self.assertIn('OPR not verified for this cutoff', later['unavailable'])
+        self.assertIn('OPR not verified for this cutoff (verified rates end 10 Jul 2024)', later['unavailable'])
         self.assertIsNone(later['rar_3m'])
         for cutoff in ['2024-02-29', '2024-03-31', APRIL]:
             self.assertEqual((fm.rate_on(fm.OPR_TABLE, cutoff)['rate'], fm.rate_on(fm.SRR_TABLE, cutoff)['rate']), (0.03, 0.02))

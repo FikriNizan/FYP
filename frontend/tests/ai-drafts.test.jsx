@@ -180,7 +180,7 @@ it('places the 12-month footnote after the questions and before the decision, wi
 // m6-narrative-7: the on-demand purpose produces client questions; "Based on" is for the RM only.
 const clientContent={format:'questions-1',evidence_ids:['feature.login_failure_rate_3m'],checks:['client_language'],questions:[
   {text:'Have you or your team had any difficulty signing in to online banking?',source:'ai',basis:'Login failure rate',evidence_ids:['feature.login_failure_rate_3m']},
-  {text:'How has business activity been for you lately, and do you expect any changes ahead?',source:'standard',basis:'Transaction value vs 12-month average: 0.87% of the twelve-month average',evidence_ids:[]}]};
+  {text:'How has business activity been for you lately, and do you expect any changes ahead?',source:'standard',basis:'Combined flow vs 12-month average: 0.87% of the twelve-month average',evidence_ids:[]}]};
 
 it('shows AI-suggested and standard client questions with an RM-only basis line',async()=>{
   api.aiDraft.mockResolvedValue({...saved,draft:{...saved.draft,content:clientContent}});

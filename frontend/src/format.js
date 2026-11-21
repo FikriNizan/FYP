@@ -64,7 +64,7 @@ export function activityChange(recent, baseline) {
 }
 
 const labels = {
-  combined_flow_ratio_3m_to_12m: 'Transaction value',
+  combined_flow_ratio_3m_to_12m: 'Combined flow',
   inbound_flow_ratio_3m_to_12m: 'Collections',
   outbound_flow_ratio_3m_to_12m: 'Payments',
   outbound_failure_rate_3m: 'Payment failures',

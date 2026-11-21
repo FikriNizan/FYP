@@ -45,10 +45,10 @@ function checkAText(a) {
 }
 
 function checkBText(b) {
-  if (b.flagged && b.policy) return ['Policy', 'Waived transaction cost beyond what deposits earn: ' + money(b.monthly) + ' a month. Shown separately because the waiver is a policy exemption.'];
-  if (b.flagged) return ['Flagged', 'Waived transaction cost beyond what deposits earn: ' + money(b.monthly) + ' a month.'];
+  if (b.flagged && b.policy) return ['Policy', 'Assumed transaction cost exceeds fee income and deposit earnings do not cover it. Uncovered: ' + money(b.monthly) + ' a month. Shown separately because the waiver is a policy exemption.'];
+  if (b.flagged) return ['Flagged', 'Assumed transaction cost exceeds fee income and deposit earnings do not cover it. Uncovered: ' + money(b.monthly) + ' a month.'];
   return {
-    covered: ['Not flagged', 'Fixed deposit earnings cover the waived transaction cost.'],
+    covered: ['Not flagged', 'Fee income, or positive deposit earnings, cover the assumed transaction cost.'],
     no_active_waiver: ['No active waiver', 'Nothing is waived, so the check does not apply.'],
   }[b.status] || ['Not provided', 'An input needed for this check is missing.'];
 }
@@ -84,8 +84,8 @@ export function CustomerFinanceMetrics({ metrics, risk }) {
     {metrics.unavailable.length > 0 && <ul className="finance-unavailable" aria-label="Unavailable inputs">{metrics.unavailable.map(reason => <li key={reason}>Not provided: {reason}</li>)}</ul>}
     <dl className="finance-components">
       <dt>Fee income</dt><dd>{money(parts.fee_income)}</dd>
-      <dt>Transaction cost</dt><dd>{isNumber(parts.transaction_cost) ? money(-parts.transaction_cost) : money(null)}</dd>
-      <dt>Fixed deposit earnings</dt><dd>{money(parts.fd_earnings)}</dd>
+      <dt>Assumed transaction cost</dt><dd>{isNumber(parts.transaction_cost) ? money(-parts.transaction_cost) : money(null)}</dd>
+      <dt>Deposit earnings (estimate)</dt><dd>{money(parts.fd_earnings)}</dd>
       <dt>Operating-balance earnings</dt><dd>{money(parts.operating_earnings)}</dd>
     </dl>
     <div className="finance-checks">
@@ -93,8 +93,8 @@ export function CustomerFinanceMetrics({ metrics, risk }) {
       <article className="finance-check" aria-label="Check B: deposits vs waived cost"><h4>Check B · deposits vs waived cost</h4><strong>{bTitle}</strong><p className="muted">{bDetail}</p></article>
     </div>
     <p className="muted">Checks A and B overlap and are never added together.</p>
-    <Sensitivities cost={{ columns: costCols, rows: rows(metrics.cost_sensitivity, 'Transaction cost a month', 'transaction_cost') }}
-      premium={{ columns: premiumCols, rows: rows(metrics.sensitivity, 'Fixed deposit earnings a month', 'fd_earnings') }} />
+    <Sensitivities cost={{ columns: costCols, rows: rows(metrics.cost_sensitivity, 'Assumed transaction cost a month', 'transaction_cost') }}
+      premium={{ columns: premiumCols, rows: rows(metrics.sensitivity, 'Deposit earnings (estimate) a month', 'fd_earnings') }} />
     <p className="muted">Monthly estimates at OPR {percent(metrics.opr, 2)} and SRR {percent(metrics.srr, 2)}. Balances are exposures; fees and waivers are estimates, not audited profit.</p>
   </div>;
 }

@@ -64,13 +64,13 @@ class RenderTests(unittest.TestCase):
     def test_plain_sentences_match_saved_values(self):
         card = ai.fallback(self.evidence)
         bottom = [item['text'] for item in section(card, 'bottom_line')['items']]
-        self.assertEqual(bottom[0], 'Estimated chance that average monthly transaction value over Mar–May 2024 falls to half or less '
+        self.assertEqual(bottom[0], 'Estimated chance that average monthly combined flow over Mar–May 2024 falls to half or less '
                                     'of its 12-month average: 84.4%.')
         self.assertEqual(bottom[1], 'Flagged for committee review: at or above the 25.9% threshold.')
-        self.assertEqual(bottom[3], 'Usual monthly transaction value (12-month average): RM 1,250,000.00.')
+        self.assertEqual(bottom[3], 'Usual monthly combined flow (12-month average): RM 1,250,000.00.')
         finance = [item['text'] for item in section(card, 'finance')['items']]
         # Exact ratio 0.87% stays in supporting evidence; the card states the gap: 1 - 0.0087046122 = 99.13%.
-        self.assertEqual(finance[0], 'Transaction value in Dec 2023–Feb 2024 averaged 99.13% below its 12-month average.')
+        self.assertEqual(finance[0], 'Combined flow in Dec 2023–Feb 2024 averaged 99.13% below its 12-month average.')
         self.assertEqual(self.evidence['facts']['feature.combined_flow_ratio_3m_to_12m']['display'],
                          '0.87% of the trailing twelve-month average')
         self.assertIn('Operating account balances on 29 Feb 2024: RM 2,016,997.13.', finance)
@@ -116,9 +116,9 @@ class RenderTests(unittest.TestCase):
         self.assertIn('Last successful payment: 41 days before 29 Feb 2024.',
                       [item['text'] for item in section(flow, 'operations')['items']])
         self.assertEqual(section(friction, 'weighed')['items'][0]['text'], 'Login failure rate: weighed toward higher risk.')
-        self.assertEqual(section(flow, 'weighed')['items'][0]['text'], 'Transaction value vs 12-month average: weighed toward higher risk.')
+        self.assertEqual(section(flow, 'weighed')['items'][0]['text'], 'Combined flow vs 12-month average: weighed toward higher risk.')
         self.assertIn('Strongest signals: service and online banking.', text_of(friction))
-        self.assertIn('Strongest signals: transaction value.', text_of(flow))
+        self.assertIn('Strongest signals: combined flow.', text_of(flow))
         self.assertIn(render.SERVICE_CLOSING, text_of(friction))
         self.assertNotIn(render.SERVICE_CLOSING, text_of(flow))
         self.assertTrue(friction['questions'][0]['text'].startswith('Could Operations check whether the recorded login failure rate points'))
@@ -130,7 +130,7 @@ class RenderTests(unittest.TestCase):
 
     def test_finance_is_trend_first_and_neutral(self):
         finance = [item['text'] for item in section(ai.fallback(self.evidence), 'finance')['items']]
-        self.assertTrue(finance[0].startswith('Transaction value in'))
+        self.assertTrue(finance[0].startswith('Combined flow in'))
         fees = next(text for text in finance if text.startswith('Estimated fees'))
         self.assertEqual(fees, 'Estimated fees RM\u00a0420.50 a month and waivers RM\u00a0120.00 a month (Dec 2023–Feb 2024); '
                                'historical estimates, not profit.')
@@ -238,11 +238,11 @@ class RenderTests(unittest.TestCase):
         weighed_lines = [item['text'] for item in section(ai.fallback(data), 'weighed')['items']]
         self.assertEqual(weighed_lines[:3], ['Average online session length: weighed toward higher risk.',
                                              'Inactive fixed deposits: weighed toward lower risk.',
-                                             'Collections share of transaction value: weighed toward higher risk.'])
+                                             'Collections share of combined flow: weighed toward higher risk.'])
         payload = render.provider_payload(self.evidence)
         names = {fact['id']: fact['name'] for s in payload['sections'] for l in s['lines'] for fact in l['facts']}
         self.assertEqual(names['feature.login_failure_rate_3m'], 'login failure rate')
-        self.assertEqual(names['signal.combined_flow_ratio_3m_to_12m'], 'transaction value vs 12-month average')
+        self.assertEqual(names['signal.combined_flow_ratio_3m_to_12m'], 'combined flow vs 12-month average')
         self.assertEqual(names['feature.non_fd_balance_myr'], 'operating account balance')
 
     def test_card_uses_collections_and_payments_terminology(self):
@@ -250,9 +250,9 @@ class RenderTests(unittest.TestCase):
         self.assertIsNone(re.search(r'\b(?:incoming|outgoing|inbound|outbound)\b', text, re.I))
         self.assertIn('Collections in Dec 2023–Feb 2024 averaged 84.98% below their 12-month average.', text)
         self.assertIn('Payments in Dec 2023–Feb 2024 averaged 98% below their 12-month average.', text)
-        # The supporting-evidence panel on the same screen uses the same terms (m6-evidence-5).
-        self.assertEqual(evidence.VERSION, 'm6-evidence-5')
-        self.assertEqual(self.evidence['facts']['feature.combined_flow_ratio_3m_to_12m']['label'], 'Transaction value')
+        # The supporting-evidence panel on the same screen uses the same terms (m6-evidence-6).
+        self.assertEqual(evidence.VERSION, 'm6-evidence-6')
+        self.assertEqual(self.evidence['facts']['feature.combined_flow_ratio_3m_to_12m']['label'], 'Combined flow')
         self.assertEqual(self.evidence['facts']['feature.login_failure_rate_3m']['label'], 'Login failure rate')
         for fact in self.evidence['facts'].values():
             with self.subTest(fact=fact['id']):
@@ -262,10 +262,10 @@ class RenderTests(unittest.TestCase):
 
     def test_bottom_line_family_names_only_the_top_positive_driver(self):
         demo = [item['text'] for item in section(ai.fallback(self.evidence), 'bottom_line')['items']]
-        self.assertIn('Strongest signals: transaction value.', demo)  # Top driver: combined_flow_ratio_3m_to_12m.
+        self.assertIn('Strongest signals: combined flow.', demo)  # Top driver: combined_flow_ratio_3m_to_12m.
         balance = text_of(ai.fallback(self.with_drivers([('non_fd_balance_myr', 2.0), ('combined_flow_ratio_3m_to_12m', 0.5)])))
         self.assertIn('Strongest signals: balances and deposits.', balance)
-        for feature, family in [('combined_flow_ratio_3m_to_12m', 'transaction value'), ('inbound_flow_mean_3m_myr', 'collections'),
+        for feature, family in [('combined_flow_ratio_3m_to_12m', 'combined flow'), ('inbound_flow_mean_3m_myr', 'collections'),
                                 ('outbound_flow_ratio_3m_to_12m', 'payments'), ('estimated_fee_mean_3m_myr', 'fees and waivers'),
                                 ('outbound_failure_rate_3m', 'service and online banking'), ('login_failure_rate_3m', 'service and online banking')]:
             with self.subTest(feature=feature):
