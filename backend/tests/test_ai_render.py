@@ -154,6 +154,37 @@ class RenderTests(unittest.TestCase):
                 checked += 1
         self.assertEqual(checked, 6)
 
+    def test_longest_theoretical_card_stays_under_its_ceiling_guard(self):
+        """Regression guard, not the design target. 240 words is a design target for real cards (the
+        representative test above; April data max 240). This synthetic card combines the longest variant of
+        every conditional piece: demo cutoff 29 Feb 2024 (every 3-month period spans a year), flagged, every
+        Operations/Finance fact present and notable, negative contribution with checks A and B both true,
+        the three longest driver labels ranked first and a friction driver (service closing and friction
+        question). It is 263 words today (262 under the stage-1 sentence). The count covers the deterministic
+        card and template questions only; AI link text and AI questions are excluded."""
+        longest_labels = ['outbound_processing_count_mean_3m', 'outbound_processing_rate_3m', 'session_started_count_mean_3m']
+        drivers = [(f, 100.0 - i) for i, f in enumerate(longest_labels)]
+        # Small weights make every Operations/Finance line notable, longest first.
+        lines = {'login_success_count_mean_12m': 15, 'login_success_count_mean_3m': 15, 'outbound_count_mean_12m': 15,
+                 'outbound_count_mean_3m': 15, 'passive_session_rate_3m': 12, 'outbound_bank_failure_rate_3m': 11,
+                 'outbound_success_recency_days': 10, 'login_success_recency_days': 10, 'login_failure_rate_3m': 9,
+                 'outbound_failure_rate_3m': 8, 'estimated_fee_mean_3m_myr': 20, 'fd_balance_myr': 16,
+                 'inbound_flow_ratio_3m_to_12m': 12, 'outbound_flow_ratio_3m_to_12m': 12, 'non_fd_balance_myr': 10}
+        drivers += [(f, 0.001 * n) for f, n in lines.items()]
+        data = self.with_drivers(drivers)
+        data['facts']['prediction.flag']['value'] = True
+        data['finance_metrics'] = dict(contribution_monthly=-9999999.99, rar_3m=-29999999.97, fsl_a=dict(flagged=True),
+                                       fsl_b=dict(flagged=True, policy=False))
+        card = ai.fallback(data)
+        text = text_of(card)
+        self.assertIn("Estimated relationship contribution is negative at the assumed cost; see cost sensitivity. ", text)
+        self.assertIn("waiver condition not met; deposits don't cover waived transaction cost).", text)
+        self.assertIn(render.SERVICE_CLOSING, text)
+        self.assertEqual(len(section(card, 'finance')['items']), 6)
+        self.assertEqual(len(section(card, 'operations')['items']), 3)
+        self.assertEqual(render.card_words(card), 263)  # Pinned so any growth is noticed.
+        self.assertLessEqual(render.card_words(card), 270)  # Ceiling guard for the longest theoretical combination.
+
     def test_ai_text_within_its_own_limits_is_accepted_regardless_of_card_length(self):
         link_text = 'and the review can discuss {{feature.login_failure_rate_3m}} beside {{feature.non_fd_balance_myr}} together.'
         link = dict(text=' '.join(['and'] * (25 - len(link_text.split()))) + ' ' + link_text,

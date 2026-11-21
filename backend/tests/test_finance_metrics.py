@@ -187,7 +187,7 @@ class PortfolioAndCardTests(unittest.TestCase):
         # Check B ignores operating-balance earnings by definition, so a large operating balance can still flag B.
         self.assertTrue(expected['fsl_a']['flagged'] and expected['fsl_b']['flagged'])
         self.assertEqual(stake, f"Contribution at stake over {forecast(data['identity']['cutoff'])}: {money(expected['rar_3m'])} "
-                                "(estimated relationship contribution; fee waiver condition not met; "
+                                "(estimated relationship contribution; waiver condition not met; "
                                 "deposits don't cover waived transaction cost).")
         for item in (i for s in card['sections'] for i in s['items']):
             self.assertNotRegex(item['text'], r'(?i)loss')
@@ -216,7 +216,7 @@ class PortfolioAndCardTests(unittest.TestCase):
         self.assertEqual(stake(-12.5, False, True, policy=True), sentence + f' ({money(-12.5)} a month).')
         prefix = f"Contribution at stake over {forecast(data['identity']['cutoff'])}: {money(30.0)} (estimated relationship contribution"
         # Positive: only the checks that are true.
-        self.assertEqual(stake(10.0, True, False), prefix + '; fee waiver condition not met).')
+        self.assertEqual(stake(10.0, True, False), prefix + '; waiver condition not met).')
         self.assertEqual(stake(10.0, False, True), prefix + f'; {b_label}).')
         self.assertEqual(stake(10.0, False, False), prefix + ').')
         self.assertEqual(render.stake_line(dict(data, finance_metrics=dict(contribution_monthly=None))), [])

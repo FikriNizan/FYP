@@ -244,7 +244,7 @@ def finance(evidence, w):
     return (trend + stake_line(evidence) + notable + rest)[:6]
 
 
-FSL_A_TEXT = 'fee waiver condition not met'
+FSL_A_TEXT = 'waiver condition not met'  # Card only (word budget); the UI says 'Fee waiver condition not met'.
 FSL_B_TEXT = "deposits don't cover waived transaction cost"
 NEGATIVE_TEXT = 'Estimated relationship contribution is negative at the assumed cost; see cost sensitivity.'
 
