@@ -73,6 +73,7 @@ def run(args, out=print):
     policy = dict(ai_drafts.BATCH, base=base, cap=max(ai_drafts.BATCH['cap'], base))
     rejected_path = ARTIFACTS / ('m6-rejected-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '.jsonl')
     generated, rejected_count, fallbacks, stopped, last, outage = 0, 0, Counter(), None, None, 0
+    drops = Counter()  # Saved drafts whose optional link / a question was dropped (item-level acceptance).
     for prediction_id in pending[:args.limit]:
         if last is not None:
             wait = args.min_interval - (time.monotonic() - last)
@@ -90,6 +91,9 @@ def run(args, out=print):
             continue
         if result['state'] == 'saved':
             generated += 1
+            item_drops = result.get('item_drops') or {}
+            drops['link'] += bool(item_drops.get('link_dropped'))
+            drops['question'] += bool(item_drops.get('question_dropped'))
             outage = 0
             continue
         code = result['failure_code']
@@ -120,6 +124,8 @@ def run(args, out=print):
         out(f'Rejected outputs kept: {rejected_count} -> {rejected_path}')
     out(f'Generated: {generated} | Fallback by reason: {json.dumps(dict(sorted(fallbacks.items())))} | '
         f'Skipped (cached): {len(cached)} | Remaining: {remaining} | Elapsed: {time.monotonic() - started:.1f}s')
+    out(f'Outcomes: accepted {generated} (link dropped {drops["link"]} | question dropped {drops["question"]}) | '
+        f'fallback {sum(fallbacks.values())}')
     return 2 if stopped else 0
 
 

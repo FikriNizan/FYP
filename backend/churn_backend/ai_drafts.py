@@ -267,6 +267,13 @@ def validate(raw, evidence):
         raise
 
 
+def item_drops(content):
+    """Counts only (no rule IDs or text): what item-level acceptance removed from a stored summary draft."""
+    dropped=(content or {}).get('dropped') or []
+    return dict(link_dropped=sum(d['item']=='link' for d in dropped),
+                question_dropped=sum(d['item'].startswith('question:') for d in dropped))
+
+
 def audit_output(raw,evidence):
     from .ai_output_audit import inspect_notes, inspect_client_questions
     inspect=inspect_notes if evidence['identity']['purpose']=='summary' else inspect_client_questions
@@ -277,11 +284,19 @@ def _validate(raw, evidence):
     from .ai_output_audit import inspect_notes, inspect_client_questions, MESSAGES
     summary=evidence['identity']['purpose']=='summary'
     report,content=(inspect_notes if summary else inspect_client_questions)(raw,evidence,TOKEN,QUANTITY,PROHIBITED,COMPARISON)
-    require(not report['failures'],MESSAGES[report['failures'][0]['rule']] if report['failures'] else 'Invalid narrative')
+    require(content is not None,MESSAGES[report['failures'][0]['rule']] if report['failures'] else 'Invalid narrative')
     if summary:
         # Server renders every fact sentence; validated notes/questions resolve to fact names only.
         # Card length comes from server sentences (bounded by tests), so it is never a reason to reject AI text.
-        return ai_render.render_summary(evidence,content['link'],content['questions'])
+        card=ai_render.render_summary(evidence,content['link'],content['questions'])
+        if content.get('dropped'):
+            # Item-level acceptance: only rule IDs of dropped items are kept; their text is discarded here.
+            card['dropped']=content['dropped']
+            if current_app.config.get('TXB_LOCAL_SESSION'):
+                g.genai_item_drops=item_drops(card)
+                current_app.logger.info('Gemini items dropped %s',repo.encode(dict(stage='validate_output',**g.genai_item_drops,
+                    rules=sorted({rule for item in card['dropped'] for rule in item['rules']}))))
+        return card
     return ai_render.render_client_questions(evidence,content['questions'])
 
 
@@ -324,10 +339,13 @@ def _load(purpose, record_id):
     row=get_db().execute('SELECT * FROM ai_drafts WHERE cache_key=? ORDER BY generated_at DESC LIMIT 1',(key,)).fetchone()
     old=get_db().execute('SELECT 1 FROM ai_drafts WHERE purpose=? AND record_id=? LIMIT 1',(purpose,record_id)).fetchone()
     draft=dict(row) if row else None
+    drops=None
     if draft:
         draft['content']=strict_json(draft.pop('content_json'))
         draft.update(version=1,source_type='gemini')
-    return dict(state='saved' if draft else 'evidence_changed' if old else 'not_generated',
+        drops=item_drops(draft['content'])
+        draft['content'].pop('dropped',None)  # Rule IDs stay in storage (local diagnostics), not in responses.
+    return dict(state='saved' if draft else 'evidence_changed' if old else 'not_generated', item_drops=drops,
         evidence_hash=evidence['evidence_hash'], evidence=list(evidence['facts'].values()),
         draft=draft, fallback=fallback(evidence), provider='gemini', model=config['model'],
         source_type='gemini' if draft else 'deterministic',

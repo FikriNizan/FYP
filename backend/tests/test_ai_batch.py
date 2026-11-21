@@ -197,6 +197,17 @@ class BatchCommandTests(Base):
         self.assertIn('Generated: 0 | Fallback by reason: {} | Skipped (cached): 1 | Remaining: 0', text)
         self.assertRegex(text, r'Elapsed: \d+\.\ds')
 
+    def test_outcome_line_counts_accepted_drops_and_fallbacks(self):
+        unfit = json.dumps(dict(link=dict(text='Failed logins and sessions without transactions both concern online banking access.',
+                                          evidence_ids=['feature.login_failure_rate_3m', 'feature.passive_session_rate_3m']),
+                                questions=[dict(audience='operations', text='Has the customer reported trouble signing in?',
+                                                evidence_ids=['feature.login_failure_rate_3m'])]))
+        with patch.object(ai.Gemini, 'generate', return_value=unfit):
+            code, text = self.run_batch()
+        self.assertEqual(code, 0)
+        self.assertIn('Generated: 1 | Fallback by reason: {}', text)
+        self.assertIn('Outcomes: accepted 1 (link dropped 1 | question dropped 0) | fallback 0', text)
+
     def simulated(self, results, ids=('a', 'b', 'c'), **options):
         ids = list(ids)
         load = lambda purpose, pid: (dict(state='not_generated', evidence_hash='h-'+pid), None, None)

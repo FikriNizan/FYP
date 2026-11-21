@@ -896,6 +896,107 @@ class DraftTests(unittest.TestCase):
                 with self.subTest(case=name):
                     self.assert_rejected(self.summary_raw(questions=[question]),data,rule)
 
+    # Item-level acceptance (21 Nov 2026, contract unchanged at m6-narrative-8): an unfit optional link, or a
+    # question failing only question_relevance, is dropped; every other rule still rejects the whole draft.
+    MARK='Zebracorn'  # Appears only in text that must be dropped: never stored, shown or logged.
+    OPS=dict(audience='operations',text='Has the customer reported trouble signing in?',evidence_ids=['feature.login_failure_rate_3m'])
+    FIN=dict(audience='finance',text='Has the customer told the relationship team about changes to its business needs?',
+             evidence_ids=['feature.non_fd_balance_myr'])
+
+    def same_section_link(self):
+        return dict(text='Failed logins and sessions without transactions both concern '+self.MARK+' online banking access.',
+                    evidence_ids=[self.LOGIN,self.PASSIVE])
+
+    def unfit_finance_question(self):
+        return dict(audience='finance',text='Has the customer changed how its '+self.MARK+' payments are made?',evidence_ids=[self.BALANCE])
+
+    def stored(self):
+        with self.app.app_context():
+            return [row[0] for row in get_db().execute('SELECT content_json FROM ai_drafts')]
+
+    def generate_with(self, raw):
+        with patch.object(ai.Gemini,'generate',return_value=raw):
+            return self.generate()
+
+    def assert_whole_fallback(self, raw, rules):
+        with self.app.app_context():
+            data=evidence.build('summary',self.id)
+            found={f['rule'] for f in ai.audit_output(raw,data)['failures']}
+            self.assertTrue(set(rules)<=found,found)
+            with self.assertRaises(ValidationError):
+                ai.validate(raw,data)
+        result=self.generate_with(raw)
+        self.assertEqual((result.json['state'],result.json['failure_code']),('fallback','output_validation_failed'))
+        self.assertIsNone(result.json['draft'])
+        self.assertEqual(self.stored(),[])
+        self.assertNotIn(self.MARK,result.get_data(as_text=True))
+
+    def test_unfit_link_alone_is_dropped_and_validated_questions_are_kept(self):
+        result=self.generate_with(self.summary_raw(self.same_section_link(),[self.OPS,self.FIN]))
+        self.assertEqual(result.json['state'],'saved')
+        content=result.json['draft']['content']
+        self.assertNotIn('link',[s['id'] for s in content['sections']])  # Same as the deterministic card: no link section.
+        self.assertEqual([(q['audience'],q['source'],q['text']) for q in content['questions']],
+                         [('operations','ai',self.OPS['text']),('finance','ai',self.FIN['text'])])
+        self.assertEqual(result.json['item_drops'],dict(link_dropped=1,question_dropped=0))
+        body=result.get_data(as_text=True)
+        self.assertNotIn(self.MARK,body)
+        self.assertNotIn('link_sections',body)  # Rule IDs stay in storage, not in browser responses.
+        [row]=self.stored()
+        self.assertNotIn(self.MARK,row)
+        self.assertEqual(json.loads(row)['dropped'],[dict(item='link',rules=['link_sections'])])
+
+    def test_unfit_link_with_a_prohibited_claim_rejects_the_whole_draft(self):
+        link=dict(text='The customer will leave because of {{prediction.risk}} and {{feature.non_fd_balance_myr}} '+self.MARK+'.',
+                  evidence_ids=[self.RISK,self.BALANCE])
+        self.assert_whole_fallback(self.summary_raw(link,[self.OPS,self.FIN]),['prohibited_claim'])
+        same=dict(self.same_section_link(),text='The customer will leave because '+self.MARK+' logins and sessions failed.')
+        self.assert_whole_fallback(self.summary_raw(same,[self.OPS,self.FIN]),['prohibited_claim','link_sections'])
+
+    def test_unfit_link_with_a_question_audience_failure_rejects_the_whole_draft(self):
+        self.assert_whole_fallback(self.summary_raw(self.same_section_link(),[self.OPS,dict(self.OPS)]),['link_sections','question_audience'])
+
+    def test_question_failing_only_relevance_is_dropped_and_the_template_fills_its_audience(self):
+        result=self.generate_with(self.summary_raw(questions=[self.OPS,self.unfit_finance_question()]))
+        self.assertEqual(result.json['state'],'saved')
+        questions=result.json['draft']['content']['questions']
+        self.assertEqual([(q['audience'],q['source']) for q in questions],[('operations','ai'),('finance','template')])
+        self.assertEqual(questions[0]['text'],self.OPS['text'])
+        self.assertEqual(result.json['item_drops'],dict(link_dropped=0,question_dropped=1))
+        self.assertNotIn(self.MARK,result.get_data(as_text=True))
+        [row]=self.stored()
+        self.assertNotIn(self.MARK,row)
+        self.assertEqual(json.loads(row)['dropped'],[dict(item='question:1/finance',rules=['question_relevance'])])
+
+    def test_relevance_failure_with_a_prohibited_claim_on_the_same_question_rejects_the_whole_draft(self):
+        question=dict(audience='finance',text='Is the customer going to leave because '+self.MARK+' payments failed?',
+                      evidence_ids=[self.BALANCE])
+        self.assert_whole_fallback(self.summary_raw(questions=[self.OPS,question]),['question_relevance','prohibited_claim'])
+
+    def test_link_reference_failure_rejects_the_whole_draft(self):
+        link=dict(text='The risk estimate deserves '+self.MARK+' attention for this customer.',evidence_ids=[self.RISK])
+        self.assert_whole_fallback(self.summary_raw(link,[self.OPS,self.FIN]),['evidence_references'])
+
+    def test_nothing_left_after_dropping_is_a_full_fallback(self):
+        ops=dict(audience='operations',text='Has the customer raised '+self.MARK+' deposit questions?',evidence_ids=[self.LOGIN])
+        self.assert_whole_fallback(self.summary_raw(self.same_section_link(),[ops,self.unfit_finance_question()]),
+                                   ['link_sections','question_relevance'])
+
+    def test_item_drop_diagnostic_counts_without_text(self):
+        from flask import g
+        self.app.config['TXB_LOCAL_SESSION']=True
+        raw=self.summary_raw(self.same_section_link(),[self.OPS,self.unfit_finance_question()])
+        with self.app.app_context():
+            data=evidence.build('summary',self.id)
+            with self.assertLogs(self.app.logger,level='INFO') as logs:
+                card=ai.validate(raw,data)
+            self.assertEqual(g.genai_item_drops,dict(link_dropped=1,question_dropped=1))
+            self.assertEqual(ai.item_drops(card),dict(link_dropped=1,question_dropped=1))
+            self.assertIn('link_sections',str(logs.output))
+            self.assertNotIn(self.MARK,str(logs.output))
+            self.assertNotIn('genai_rejected_output',g)
+            self.assertEqual([(q['audience'],q['source']) for q in card['questions']],[('operations','ai'),('finance','template')])
+
     def test_client_question_contract_schema_and_prompt(self):
         from churn_backend.ai_contract import limits_for,schema_for,purpose_instruction,CONTRACT_VERSION
         self.assertEqual(CONTRACT_VERSION,'m6-narrative-8')

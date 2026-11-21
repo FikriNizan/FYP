@@ -152,8 +152,42 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
     report['model_word_count']=words
     report['failure_count']=len(errors)
     if errors:
-        return report,None
+        kept=drop_unfit_items(errors,link,questions)
+        if kept is None:
+            return report,None
+        report['dropped']=kept['dropped']
+        return report,kept
     return report,dict(link=link,questions=questions)
+
+
+# Item-level acceptance (summary only, 21 Nov 2026; contract stays m6-narrative-8). These two kinds of
+# failure mean an optional item does not fit the card, not that the model wrote something unsafe: the
+# failing item is dropped (never stored or shown) and every other item must have passed every rule.
+LINK_FIT_RULES={'link_sections','link_list_only','link_length'}
+QUESTION_FIT=re.compile(r'questions\[(\d+)\]\.evidence_ids')
+
+
+def drop_unfit_items(errors,link,questions):
+    """Returns the kept items plus rule IDs of what was dropped, or None for whole-draft rejection:
+    any other rule on any item (safety, references, audience, schema, word limit) rejects the whole draft,
+    and so does a draft with nothing left after dropping."""
+    dropped_link,dropped_questions=[],{}
+    for error in errors:
+        match=QUESTION_FIT.fullmatch(error['path'])
+        if error['rule'] in LINK_FIT_RULES and error['path'].startswith('link'):
+            dropped_link.append(error['rule'])
+        elif error['rule']=='question_relevance' and match:
+            dropped_questions.setdefault(int(match[1]),[]).append(error['rule'])
+        else:
+            return None
+    kept_link=dict(text='',evidence_ids=[]) if dropped_link else link
+    kept_questions=[q for index,q in enumerate(questions) if index not in dropped_questions]
+    if not kept_link['text'].strip() and not kept_questions:
+        return None  # Nothing valid remains: a full fallback, not an empty Gemini draft.
+    dropped=([dict(item='link',rules=sorted(set(dropped_link)))] if dropped_link else [])+[
+        dict(item=f'question:{index}/{questions[index]["audience"]}',rules=sorted(set(rules)))
+        for index,rules in sorted(dropped_questions.items())]
+    return dict(link=kept_link,questions=kept_questions,dropped=dropped)
 
 
 # Words a client must never hear from the RM (internal model language, internal records, other banks).
