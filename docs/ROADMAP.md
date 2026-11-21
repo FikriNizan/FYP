@@ -2,6 +2,26 @@
 
 Use one current milestone at a time. Check a milestone only after its behaviour has been demonstrated; source code alone is not completion.
 
+## Current status (reconciled 22 November 2026)
+
+Four separate questions, answered per capability. **Implemented** = code exists on the branch. **Automated
+verification** = covered by `scripts/check.py` (and, where noted, the modelling-environment gates).
+**Owner acceptance** = the owner's recorded walkthrough or evaluation, quoted from the milestone notes; it is
+not inferred from later work. **Production readiness** = suitability for a real bank deployment. A tick in a
+milestone list below means implemented behaviour, not acceptance, unless the item says so.
+
+| Capability | Implemented | Automated verification | Owner acceptance | Production readiness |
+|---|---|---|---|---|
+| Committee review, saved decisions, drafts (M1) | Yes | Yes | Accepted (user confirmations recorded in Milestone 1) | No (local research app; no authentication) |
+| Reviewed Customers, cases, follow-up (M2) | Yes | Yes | Pending: the Milestone 2 acceptance walkthrough has not been demonstrated | No |
+| RM briefing, print and PDF (M3) | Yes | Yes | Pending: owner walkthrough | No |
+| Monthly package upload and scoring (M4) | Yes | Yes, plus the historical April replay | Partial: malformed-CSV rejection and a case scenario observed; milestone-wide sign-off pending | No (bounded local workflow) |
+| Outcome import and monitoring (M5) | Yes | Yes | Pending: walkthrough and real-bank source assurance | No |
+| Grounded GenAI summaries and questions (M6) | Yes | Yes (provider mocked) | Accepted for the evaluated samples (5/5 summaries, 3/3 client questions; single-reviewer judgement). Full April summary batch not yet run on the current render version | No |
+| Finance: Revenue at Risk and Fee Subsidy Leakage | Yes (check B owner rule of 22 Nov 2026) | Yes | Pending owner review of the revised check B | No (assumption-based estimates; verified OPR rates end 10 Jul 2024) |
+| OPR stress demonstration (M7, package `m7-opr-2`) | Yes | Yes, plus parity, reproduction and determinism gates in the modelling environment | Pending: manual inspection of the page with `m7-opr-2` | No (illustrative assumptions; not a forecast) |
+| CI on Ubuntu | Yes (portable launcher) | Green in a clean Ubuntu 24.04 container (see the Phase A handoff) | Not applicable | Remote GitHub run not yet confirmed on this branch |
+
 ## Existing foundation
 
 * [x] CatBoost champion policy and sigmoid recalibration exported from research.
@@ -131,13 +151,13 @@ Implementation, the live evaluations and remaining work are recorded in [MILESTO
 * [x] Stage 2: Finance tab breakdown with both sensitivities, and the Overview section (FD-threshold and policy-exempt tiers separately, combined secondary, by-tier detail). Card sentence render-6 and driver labels Transaction value / Collections / Payments (m6-evidence-5). See [handoff](handoffs/2026-11-21-finance-metrics-stage-2.md).
 * [x] Primary sources for the owner-cited references: AFP earnings credit, FCA FTP/liquidity premium and BNM 2013 pricing reform verified (see FINANCE_METRICS.md).
 * [ ] PayNet business IBG charges page still not verified (HTTP 403).
-* [ ] Resume the full summary batch now that the Finance section is final (owner, live; render-6 and m6-evidence-5 change the cache keys).
+* [ ] Resume the full summary batch now that the Finance section is final (owner, live; render-7 and m6-evidence-6 change the cache keys).
 
 ## Milestone 7 — OPR demonstration, evaluation and release
 
-* [x] Define OPR as a separate assumptions-based scenario rather than observed portfolio truth: synthetic stress demonstration `m7-opr-1` (no shock / +25 bp / +125 bp hike), offline package in `artifacts/m7-scenarios/`, read-only `/research` view. See [handoff](handoffs/2026-11-21-milestone-7-opr-demo.md).
+* [x] Define OPR as a separate assumptions-based scenario rather than observed portfolio truth: synthetic stress demonstration, now package `m7-opr-2` with the conservative maturity rule and honest event counts (`m7-opr-1` kept as prior evidence) (no shock / +25 bp / +125 bp hike), offline package in `artifacts/m7-scenarios/`, read-only `/research` view. See [handoff](handoffs/2026-11-21-milestone-7-opr-demo.md).
 * [x] Source/justify pass-through, renewal/exit and competitor-response assumptions; expose them clearly (versioned assumption register shown in the view; a change means a new register version, not an in-browser input).
-* [x] Show scenario changes and their limits: input drift (PSI/KS), prediction change and "Performance change: Not computed" kept separate; transaction response off, so the main drivers do not move by design.
+* [x] Show scenario changes and their limits: input drift (PSI/KS), prediction change and "Performance change: Not computed" kept separate; this scenario changes deposit-related inputs only; transaction activity, digital engagement and service-friction input values are held constant, and scenario-specific SHAP explanations are not computed.
 * [ ] Complete user testing and the final evidence-linked report, including accepted/rejected supervisor suggestions and their justification.
 * [ ] Select a deployment environment; add authentication, persistent storage, backups and production serving appropriate to the chosen scope.
 * [ ] Run actual deployment tests and only then add a release/CD workflow.

@@ -13,6 +13,17 @@ Use the isolated **Milestone 6 Test** file `artifacts/m6-review.sqlite` (schema 
 
 Verified frontend: `http://127.0.0.1:5186/`; backend: `http://127.0.0.1:5066`. The helper checks both runtime identities/schema before reporting URLs; the badge identifies Milestone 6 Test. Port 5000 was occupied during implementation and was left untouched. The selected ports still refuse unknown occupants. Business-record counts/hashes before and after migration are in `artifacts/m6-data-verification.json`; all existing business rows survived. The only migration changes are additive cache/reservation storage and schema version 5. See [MILESTONE\_6.md](MILESTONE_6.md) for AI setup, validation and acceptance limits.
 
+### Finance coverage and the OPR scenario package
+
+* **Verified OPR rates end on 10 Jul 2024.** Finance contribution measures (Revenue at Risk, check B and the
+  sensitivities) need a verified OPR for the assessment cutoff. A later assessment (for example July 2024 or
+  after) shows them as unavailable with the reason "OPR not verified for this cutoff (verified rates end 10 Jul
+  2024)". This is deliberate fail-closed behaviour; add a verified row to `OPR_TABLE` in
+  `backend/churn_backend/finance_metrics.py` (with its BNM source) before expecting those figures.
+* The launcher serves the OPR scenario package from `artifacts/m7-scenarios/m7-opr-2` by default (set
+  `TXB_SCENARIO_DIR` to override). `m7-opr-1` is kept as prior evidence; it predates the stricter package
+  contract, so the app reports it as unavailable if selected.
+
 The older daily commands below apply when using **milestone-5 code**. They are not Milestone 6 launch commands. Changing Git branch does not isolate a database.
 
 The [read-only database audit](../artifacts/database-audit-20261115T200253Z-213999.json) inventories 23 application SQLite candidates with full paths, integrity results, schema versions, months and table counts. It did not start Flask or choose a copy. Other copies remain preserved; their dates and row counts alone do not make them the Working database.

@@ -115,7 +115,7 @@ Backend-only checks:
 .\.venv\Scripts\python.exe scripts\check.py --backend-only
 ```
 
-The complete checks run 42 backend/API/PDF/migration tests, 8 database-copy/source-update tests, 8 JavaScript client/API tests, 58 React interaction/rendering tests, and a Vite build. Tests use temporary databases and constructed fixtures. See [Verification](docs/VERIFICATION.md) for scope and remaining user acceptance checks.
+The complete checks run the backend/API/PDF/migration tests, the utility tests, the JavaScript client/API tests, the React interaction/rendering tests and a Vite build; the latest actual counts are recorded in the most recent handoff under `docs/handoffs/`. Tests use temporary databases and constructed fixtures. See [Verification](docs/VERIFICATION.md) for scope and remaining user acceptance checks.
 
 ## 6. Current feature boundary
 
@@ -125,7 +125,7 @@ Retained: completed-export CLI import, review history and dated action-note APIs
 
 Milestone 2 implementation: Reviewed Customers, original/latest assessment comparison, persistent cases, linked follow-up tasks and events, explicit closure/defer/reopen decisions, audit history and version conflicts. Existing databases receive a timestamped SQLite backup before automatic migration on Flask startup; existing reviews are backfilled as cases. See [Milestone 2](docs/MILESTONE_2.md) for the acceptance walkthrough and [UI design](docs/UI_DESIGN.md) for the current frontend direction, connected features and preview boundaries. Browser acceptance with your portfolio remains to be completed.
 
-Briefing/PDF is implemented in Milestone 3. Prepared monthly scoring is implemented in Milestone 4. Milestone 5 adds explicit mature-outcome import and descriptive monitoring on saved evidence; see [Milestone 5](docs/MILESTONE_5.md). Grounded GenAI and an OPR scenario remain later work. See [Roadmap](docs/ROADMAP.md).
+Briefing/PDF is implemented in Milestone 3. Prepared monthly scoring is implemented in Milestone 4. Milestone 5 adds explicit mature-outcome import and descriptive monitoring on saved evidence; see [Milestone 5](docs/MILESTONE_5.md). Milestone 6 adds grounded, optional GenAI summaries and questions; Milestone 7 adds the read-only OPR stress demonstration. Implementation, automated verification, owner acceptance and production readiness are tracked separately in the [Roadmap status table](docs/ROADMAP.md#current-status-reconciled-22-november-2026).
 
 ## 7. Learn through one working change
 
