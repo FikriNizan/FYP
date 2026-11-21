@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import socket
 import sqlite3
 import subprocess
@@ -97,6 +98,21 @@ def await_context(url, child, expected, deadline=25):
     raise RuntimeError('Server did not become ready at '+url)
 
 
+WINDOWS_NODE = r'C:\Program Files\nodejs\node.exe'
+
+
+def runtime_paths(root, platform=None, environ=None, which=shutil.which):
+    """Project Python, Node and Vite for this platform. Windows keeps the existing .venv\\Scripts layout and
+    Node default; elsewhere the virtual environment uses bin/ and Node is found on PATH. TXB_NODE_EXE wins."""
+    platform = sys.platform if platform is None else platform
+    environ = os.environ if environ is None else environ
+    windows = platform.startswith('win')
+    python = Path(root) / '.venv' / ('Scripts' if windows else 'bin') / ('python.exe' if windows else 'python')
+    node = environ.get('TXB_NODE_EXE') or which('node') or (WINDOWS_NODE if windows else 'node')
+    vite = Path(root) / 'frontend' / 'node_modules' / 'vite' / 'bin' / 'vite.js'
+    return python, Path(node), vite
+
+
 def stop_owned(children):
     for child in reversed(children):
         if child.poll() is None:
@@ -122,9 +138,7 @@ def launch(mode, backend_port=5000, frontend_port=5173):
     free_port(backend_port)
     free_port(frontend_port)
     env=child_environment(mode,database)
-    python=ROOT/'.venv'/'Scripts'/'python.exe'
-    node=Path(os.environ.get('TXB_NODE_EXE') or r'C:\Program Files\nodejs\node.exe')
-    vite=ROOT/'frontend'/'node_modules'/'vite'/'bin'/'vite.js'
+    python,node,vite=runtime_paths(ROOT)
     if not python.is_file() or not node.is_file() or not vite.is_file():
         raise ValueError('Local Python, Node or Vite is missing; install the existing project dependencies')
     before_backups=set(database.parent.glob(database.name+'-pre-migration-*'))

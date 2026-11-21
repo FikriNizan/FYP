@@ -101,15 +101,44 @@ class LocalSessionTests(unittest.TestCase):
         with patch.object(local,'free_port'),patch.object(local.subprocess,'Popen',side_effect=spawn),\
              patch.object(local,'await_context',return_value=context),\
              patch.object(local.time,'sleep',side_effect=KeyboardInterrupt):
-            with patch.object(local,'ROOT',ROOT):
-                # Paths to the project's existing Python/Node/Vite are checked before spawn.
+            runtime=[self.root/'bin'/name for name in ('python','node','vite.js')]
+            runtime[0].parent.mkdir()
+            for path in runtime: path.write_text('')
+            # The resolved Python/Node/Vite paths are checked before spawn; resolution itself is tested separately.
+            with patch.object(local,'runtime_paths',return_value=tuple(runtime)):
                 local.launch('m6-test')
+            with patch.object(local,'runtime_paths',return_value=(self.root/'missing',*runtime[1:])):
+                with self.assertRaises(ValueError): local.launch('m6-test')
         self.assertEqual(len(children),2)
+        self.assertEqual(children[0].cmd[0],str(runtime[0]))
+        self.assertEqual(children[1].cmd[:2],[str(runtime[1]),str(runtime[2])])
         self.assertEqual(children[0].kwargs['env']['CHURN_DB_PATH'],str(local.M6_TEST.resolve()))
         self.assertEqual(children[1].kwargs['env']['VITE_API_TARGET'],local.BACKEND_URL)
         self.assertIn('5000',children[0].cmd)
         self.assertIn('5173',children[1].cmd)
         self.assertTrue(all(not child.alive for child in children))
+
+
+class RuntimePathTests(unittest.TestCase):
+    def test_windows_keeps_the_existing_layout_and_node_default(self):
+        python,node,vite=local.runtime_paths(Path('C:/repo'),'win32',{},which=lambda name: None)
+        self.assertEqual(python,Path('C:/repo')/'.venv'/'Scripts'/'python.exe')
+        self.assertEqual(node,Path(r'C:\Program Files\nodejs\node.exe'))
+        self.assertEqual(vite,Path('C:/repo')/'frontend'/'node_modules'/'vite'/'bin'/'vite.js')
+
+    def test_posix_uses_bin_and_node_on_path(self):
+        python,node,_=local.runtime_paths(Path('/repo'),'linux',{},which=lambda name: '/usr/bin/'+name)
+        self.assertEqual(python,Path('/repo')/'.venv'/'bin'/'python')
+        self.assertEqual(node,Path('/usr/bin/node'))
+
+    def test_explicit_node_overrides_path_lookup_on_every_platform(self):
+        for platform in ('win32','linux','darwin'):
+            _,node,_=local.runtime_paths(Path('/repo'),platform,{'TXB_NODE_EXE':'/opt/node/bin/node'},which=lambda name: '/usr/bin/node')
+            self.assertEqual(node,Path('/opt/node/bin/node'))
+
+    def test_default_scenario_package_is_m7_opr_2(self):
+        env=local.child_environment('m6-test',Path('x.sqlite'))
+        self.assertEqual(Path(env['TXB_SCENARIO_DIR']).name,'m7-opr-2')
 
 
 if __name__=='__main__':
