@@ -30,6 +30,7 @@ propose a plan, and wait for approval before editing.
 2. **Frozen champion is immutable.** The CatBoost baseline + sigmoid recalibration, its
    threshold, protocol hash and saved predictions/SHAP must never be retrained, rescored or
    have their policy changed. Use the saved full-precision flag; never recompute it.
+   *Exception (Milestone 7, owner-approved): the frozen champion may score shocked copies of saved features in the modelling environment for the OPR stress demonstration; its artifacts load read-only, saved predictions, SHAP and flags are never changed, and scenario scores live only in `artifacts/m7-scenarios/`, never in any predictions table or the Working DB.*
 3. **Databases.** Never write to the Working database (`backend/instance/churn.sqlite`).
    Use only the named Test sessions. For Milestone 6 that is `artifacts/m6-review.sqlite` via
    `scripts/local_session.py m6-test`. Never commit `.sqlite` files, keys or `artifacts/`.

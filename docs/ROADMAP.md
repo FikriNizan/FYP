@@ -135,9 +135,9 @@ Implementation, the live evaluations and remaining work are recorded in [MILESTO
 
 ## Milestone 7 — OPR demonstration, evaluation and release
 
-* [ ] Define OPR as a separate assumptions-based scenario rather than observed portfolio truth.
-* [ ] Source/justify pass-through, renewal/exit and competitor-response assumptions; expose adjustable assumptions clearly.
-* [ ] Show scenario changes and their limits without hardcoding a claimed loss of model accuracy.
+* [x] Define OPR as a separate assumptions-based scenario rather than observed portfolio truth: synthetic stress demonstration `m7-opr-1` (no shock / +25 bp / +125 bp hike), offline package in `artifacts/m7-scenarios/`, read-only `/research` view. See [handoff](handoffs/2026-11-21-milestone-7-opr-demo.md).
+* [x] Source/justify pass-through, renewal/exit and competitor-response assumptions; expose them clearly (versioned assumption register shown in the view; a change means a new register version, not an in-browser input).
+* [x] Show scenario changes and their limits: input drift (PSI/KS), prediction change and "Performance change: Not computed" kept separate; transaction response off, so the main drivers do not move by design.
 * [ ] Complete user testing and the final evidence-linked report, including accepted/rejected supervisor suggestions and their justification.
 * [ ] Select a deployment environment; add authentication, persistent storage, backups and production serving appropriate to the chosen scope.
 * [ ] Run actual deployment tests and only then add a release/CD workflow.
