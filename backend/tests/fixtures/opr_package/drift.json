@@ -1,0 +1,2535 @@
+{
+ "kind": "txb_scenario_drift",
+ "note": "Scenario output only: hypothetical, not saved predictions.",
+ "psi": {
+  "bins": 10,
+  "convention": [
+   0.1,
+   0.25
+  ],
+  "epsilon": 0.0001,
+  "value_bin_limit": 10
+ },
+ "scenarios": [
+  {
+   "april_fd_holders_among_assigned": 0,
+   "assigned_exit_customers": 0,
+   "cells_changed": 0,
+   "changed_features": [],
+   "cohort_size": 6,
+   "customers_score_changed": 0,
+   "eligible_exit_customers": 0,
+   "eligible_exit_fds": 0,
+   "exit_affected_customers": 0,
+   "exit_affected_fds": 0,
+   "fds_maturing_in_window": 5,
+   "fds_missing_post_maturity_snapshots": 0,
+   "fds_no_active_post_maturity": 1,
+   "fds_rate_missing": 0,
+   "id": "no_shock",
+   "input_drift": {
+    "active_account_count": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "active_fd_count": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "active_login_users_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "active_login_users_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "active_login_users_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "approver_session_share_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "bank_friction_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "catalog_effective_fee_mean_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "catalog_waiver_mean_pct": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "closed_fd_count": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_cv_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_zero_months_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "customer_type": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "estimated_fee_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "estimated_waiver_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_average_balance_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_mean_12m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_weighted_offer_rate": {
+     "changed_values": 0,
+     "current_available": 5,
+     "ks": 0.0,
+     "null_share_current": 0.375,
+     "null_share_reference": 0.375,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 5
+    },
+    "fd_maturing_30d_count": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "friction_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "friction_response_mean_3m_ms": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "friction_retries_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_count_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_cv_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_recency_months": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_share_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_zero_months_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_failure_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_success_count_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_success_count_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_success_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_success_recency_days": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "non_fd_balance_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_bank_failure_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_count_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_failure_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_failure_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_cv_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_processing_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_processing_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_submitted_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_success_recency_days": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_zero_months_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "passive_session_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "sector_code": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_completed_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_duration_mean_3m_sec": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_forced_drop_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_started_count_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_started_count_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_started_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_timeout_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_transactions_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "tier_id": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "untrusted_device_session_share_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    }
+   },
+   "label": "No shock",
+   "migrating_share": 0.0,
+   "performance_change": "Not computed: no outcomes exist under a hypothetical shock.",
+   "prediction_change": {
+    "crossed_into_review": 0,
+    "crossed_out_of_review": 0,
+    "flagged": 3,
+    "flagged_only": {
+     "customers": 3,
+     "risk": {
+      "changed_values": 0,
+      "current_available": 3,
+      "ks": 0.0,
+      "null_share_current": 0.0,
+      "null_share_reference": 0.0,
+      "psi": 0.0,
+      "reading": "No shift",
+      "reference_available": 3
+     },
+     "still_flagged": 3
+    },
+    "mean_risk": 0.24375,
+    "risk": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "saved_flagged": 3,
+    "saved_mean_risk": 0.24375
+   },
+   "repriced_customers": 0,
+   "repriced_fds": 0,
+   "shock_bp": 0
+  },
+  {
+   "april_fd_holders_among_assigned": 1,
+   "assigned_exit_customers": 1,
+   "cells_changed": 7,
+   "changed_features": [
+    "closed_fd_count",
+    "fd_balance_myr",
+    "fd_balance_weighted_offer_rate"
+   ],
+   "cohort_size": 6,
+   "customers_score_changed": 1,
+   "eligible_exit_customers": 1,
+   "eligible_exit_fds": 1,
+   "exit_affected_customers": 1,
+   "exit_affected_fds": 1,
+   "fds_maturing_in_window": 5,
+   "fds_missing_post_maturity_snapshots": 0,
+   "fds_no_active_post_maturity": 1,
+   "fds_rate_missing": 0,
+   "id": "mild",
+   "input_drift": {
+    "active_account_count": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "active_fd_count": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "active_login_users_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "active_login_users_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "active_login_users_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "approver_session_share_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "bank_friction_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "catalog_effective_fee_mean_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "catalog_waiver_mean_pct": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "closed_fd_count": {
+     "changed_values": 1,
+     "current_available": 8,
+     "ks": 0.125,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.9772926614740068,
+     "reading": "Large shift",
+     "reference_available": 8
+    },
+    "combined_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_cv_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_zero_months_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "customer_type": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "estimated_fee_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "estimated_waiver_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_average_balance_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_mean_12m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_myr": {
+     "changed_values": 1,
+     "current_available": 8,
+     "ks": 0.125,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.9266095229604863,
+     "reading": "Large shift",
+     "reference_available": 8
+    },
+    "fd_balance_weighted_offer_rate": {
+     "changed_values": 3,
+     "current_available": 4,
+     "ks": 0.35,
+     "null_share_current": 0.5,
+     "null_share_reference": 0.375,
+     "psi": 3.85913128254748,
+     "reading": "Large shift",
+     "reference_available": 5
+    },
+    "fd_maturing_30d_count": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "friction_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "friction_response_mean_3m_ms": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "friction_retries_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_count_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_cv_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_recency_months": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_share_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_zero_months_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_failure_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_success_count_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_success_count_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_success_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_success_recency_days": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "non_fd_balance_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_bank_failure_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_count_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_failure_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_failure_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_cv_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_processing_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_processing_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_submitted_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_success_recency_days": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_zero_months_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "passive_session_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "sector_code": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_completed_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_duration_mean_3m_sec": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_forced_drop_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_started_count_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_started_count_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_started_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_timeout_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_transactions_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "tier_id": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "untrusted_device_session_share_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    }
+   },
+   "label": "Mild",
+   "migrating_share": 0.05,
+   "performance_change": "Not computed: no outcomes exist under a hypothetical shock.",
+   "prediction_change": {
+    "crossed_into_review": 0,
+    "crossed_out_of_review": 0,
+    "flagged": 3,
+    "flagged_only": {
+     "customers": 3,
+     "risk": {
+      "changed_values": 1,
+      "current_available": 3,
+      "ks": 0.3333333333333333,
+      "null_share_current": 0.0,
+      "null_share_reference": 0.0,
+      "psi": 5.40619637658872,
+      "reading": "Large shift",
+      "reference_available": 3
+     },
+     "still_flagged": 3
+    },
+    "mean_risk": 0.2439,
+    "risk": {
+     "changed_values": 1,
+     "current_available": 8,
+     "ks": 0.125,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 1.7812985278080273,
+     "reading": "Large shift",
+     "reference_available": 8
+    },
+    "saved_flagged": 3,
+    "saved_mean_risk": 0.24375
+   },
+   "repriced_customers": 2,
+   "repriced_fds": 3,
+   "shock_bp": 25
+  },
+  {
+   "april_fd_holders_among_assigned": 3,
+   "assigned_exit_customers": 3,
+   "cells_changed": 12,
+   "changed_features": [
+    "closed_fd_count",
+    "fd_balance_myr",
+    "fd_balance_weighted_offer_rate"
+   ],
+   "cohort_size": 6,
+   "customers_score_changed": 2,
+   "eligible_exit_customers": 2,
+   "eligible_exit_fds": 3,
+   "exit_affected_customers": 2,
+   "exit_affected_fds": 2,
+   "fds_maturing_in_window": 5,
+   "fds_missing_post_maturity_snapshots": 0,
+   "fds_no_active_post_maturity": 1,
+   "fds_rate_missing": 0,
+   "id": "severe",
+   "input_drift": {
+    "active_account_count": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "active_fd_count": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "active_login_users_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "active_login_users_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "active_login_users_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "approver_session_share_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "bank_friction_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "catalog_effective_fee_mean_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "catalog_waiver_mean_pct": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "closed_fd_count": {
+     "changed_values": 2,
+     "current_available": 8,
+     "ks": 0.125,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 1.9545853229480137,
+     "reading": "Large shift",
+     "reference_available": 8
+    },
+    "combined_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_cv_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "combined_zero_months_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "customer_type": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "estimated_fee_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "estimated_waiver_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_average_balance_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_mean_12m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "fd_balance_myr": {
+     "changed_values": 2,
+     "current_available": 8,
+     "ks": 0.25,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 1.9090049337495252,
+     "reading": "Large shift",
+     "reference_available": 8
+    },
+    "fd_balance_weighted_offer_rate": {
+     "changed_values": 5,
+     "current_available": 3,
+     "ks": 1.0,
+     "null_share_current": 0.625,
+     "null_share_reference": 0.375,
+     "psi": 7.840127014266302,
+     "reading": "Large shift",
+     "reference_available": 5
+    },
+    "fd_maturing_30d_count": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "friction_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "friction_response_mean_3m_ms": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "friction_retries_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_count_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_cv_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_recency_months": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_share_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "inbound_zero_months_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_failure_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_success_count_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_success_count_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_success_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "login_success_recency_days": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "non_fd_balance_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_bank_failure_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_count_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_failure_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_failure_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_cv_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_processing_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_processing_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_submitted_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_success_recency_days": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "outbound_zero_months_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "passive_session_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "sector_code": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_completed_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_duration_mean_3m_sec": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_forced_drop_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_started_count_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_started_count_mean_12m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_started_count_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_timeout_rate_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "session_transactions_mean_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "tier_id": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    },
+    "untrusted_device_session_share_3m": {
+     "changed_values": 0,
+     "current_available": 8,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0,
+     "reading": "No shift",
+     "reference_available": 8
+    }
+   },
+   "label": "Severe",
+   "migrating_share": 0.2,
+   "performance_change": "Not computed: no outcomes exist under a hypothetical shock.",
+   "prediction_change": {
+    "crossed_into_review": 0,
+    "crossed_out_of_review": 0,
+    "flagged": 3,
+    "flagged_only": {
+     "customers": 3,
+     "risk": {
+      "changed_values": 1,
+      "current_available": 3,
+      "ks": 0.3333333333333333,
+      "null_share_current": 0.0,
+      "null_share_reference": 0.0,
+      "psi": 5.40619637658872,
+      "reading": "Large shift",
+      "reference_available": 3
+     },
+     "still_flagged": 3
+    },
+    "mean_risk": 0.2439875,
+    "risk": {
+     "changed_values": 2,
+     "current_available": 8,
+     "ks": 0.125,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 3.7365276259210147,
+     "reading": "Large shift",
+     "reference_available": 8
+    },
+    "saved_flagged": 3,
+    "saved_mean_risk": 0.24375
+   },
+   "repriced_customers": 3,
+   "repriced_fds": 3,
+   "shock_bp": 125
+  }
+ ],
+ "version": "fixture-opr"
+}

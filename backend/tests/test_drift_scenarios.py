@@ -2,6 +2,7 @@
 import hashlib
 import json
 import math
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -89,53 +90,110 @@ class KsTests(unittest.TestCase):
             self.assertAlmostEqual(drift.ks(reference, current), float(ks_2samp(first, second).statistic), places=12)
 
 
+FIXTURE = Path(__file__).resolve().parent / 'fixtures' / 'opr_package'
+FRONTEND_FIXTURE = Path(__file__).resolve().parents[2] / 'frontend' / 'tests' / 'fixtures' / 'opr-scenarios.json'
+
+
 class ScenarioPackageTests(unittest.TestCase):
+    """The shared representative fixture (built by make_opr_fixture.py) is the valid package; malformed copies are invalid."""
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         root = Path(self.temp.name)
         self.db = root / 'test.sqlite'
-        self.package = root / 'm7-opr-1'
-        self.package.mkdir()
+        self.package = root / 'package'
         self.app = create_app(dict(TESTING=True, DATABASE=str(self.db), TXB_SCENARIO_DIR=str(self.package)))
         with self.app.app_context():
             import_demo()
 
-    def write_package(self, flag_mismatches=0):
-        drift_payload = dict(kind='txb_scenario_drift', version='m7-opr-1', psi=dict(bins=10, epsilon=1e-4),
-                             scenarios=[dict(id='no_shock', label='No shock', input_drift={}, changed_features=[])])
-        (self.package / 'drift.json').write_text(json.dumps(drift_payload), encoding='utf-8')
-        (self.package / 'scores.csv').write_text('scenario,cus_id\n', encoding='utf-8')
-        files = {name: hashlib.sha256((self.package / name).read_bytes()).hexdigest() for name in ('scores.csv', 'drift.json')}
-        gates = dict(parity=dict(features=['fd_balance_myr'], mismatches=dict(fd_balance_myr=0)),
-                     reproduction=dict(max_abs_raw_difference=0.0, max_abs_risk_difference=0.0, flag_mismatches=flag_mismatches,
-                                       saved_flagged=1, tolerance=1e-12))
-        manifest = dict(kind='txb_scenario_package', version='m7-opr-1', register=dict(seed=20240430), reference='April',
-                        gates=gates, files=files)
-        (self.package / 'manifest.json').write_text(json.dumps(manifest), encoding='utf-8')
+    def copy_fixture(self):
+        shutil.copytree(FIXTURE, self.package)
+
+    def rewrite(self, name, change, rehash=True):
+        """Edit one package file and, by default, re-record its hash so only the contract check can reject it."""
+        path = self.package / name
+        if name.endswith('.json'):
+            data = json.loads(path.read_text(encoding='utf-8'))
+            result = change(data)
+            data = data if result is None else result
+            path.write_text(json.dumps(data), encoding='utf-8')
+        else:
+            path.write_text(change(path.read_text(encoding='utf-8')), encoding='utf-8')
+        if rehash and name in ('drift.json', 'scores.csv'):
+            manifest = json.loads((self.package / 'manifest.json').read_text(encoding='utf-8'))
+            manifest['files'][name] = hashlib.sha256(path.read_bytes()).hexdigest()
+            (self.package / 'manifest.json').write_text(json.dumps(manifest), encoding='utf-8')
 
     def get(self):
         before = hashlib.sha256(self.db.read_bytes()).hexdigest()
         response = self.app.test_client().get('/api/scenarios')
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(hashlib.sha256(self.db.read_bytes()).hexdigest(), before)  # The reader never writes the database.
         return response
 
     def test_missing_package_is_not_generated(self):
         self.assertEqual(self.get().json, dict(state='not_generated'))
 
-    def test_valid_package_is_served_with_the_deposit_only_note(self):
-        self.write_package()
+    def test_representative_package_is_ready_and_is_exactly_the_frontend_fixture(self):
+        self.copy_fixture()
         body = self.get().json
-        self.assertEqual((body['state'], body['version']), ('ready', 'm7-opr-1'))
-        self.assertIn('main drivers do not move', body['note'])
+        self.assertEqual(body['state'], 'ready')
+        self.assertEqual(body, json.loads(FRONTEND_FIXTURE.read_text(encoding='utf-8')))  # One shared renderable contract.
+        self.assertEqual(body['note'], 'This scenario changes deposit-related inputs only. Transaction activity, digital engagement '
+                                       'and service-friction input values are held constant. Scenario-specific SHAP explanations are not computed.')
+        self.assertNotIn('main drivers', json.dumps(body))
+        self.assertEqual([s['id'] for s in body['scenarios']], ['no_shock', 'mild', 'severe'])
         with self.app.app_context():
             self.assertEqual(get_db().execute("SELECT count(*) FROM sqlite_master WHERE name LIKE '%scenario%'").fetchone()[0], 0)
 
     def test_tampered_file_or_failed_gate_is_rejected(self):
-        self.write_package()
-        (self.package / 'scores.csv').write_text('scenario,cus_id\nmild,944\n', encoding='utf-8')
+        self.copy_fixture()
+        self.rewrite('scores.csv', lambda t: t + 'mild,F99,0.1,0.1,0\n', rehash=False)
         self.assertEqual(self.get().json, dict(state='invalid'))
-        self.write_package(flag_mismatches=1)
+        shutil.rmtree(self.package); self.copy_fixture()
+        self.rewrite('manifest.json', lambda m: m['gates']['reproduction'].update(flag_mismatches=1))
+        self.assertEqual(self.get().json, dict(state='invalid'))
+
+    def test_malformed_packages_are_invalid_never_an_error(self):
+        def drop_register_scenarios(m):
+            del m['register']['scenarios']
+        def drop_severe(d):
+            d['scenarios'] = d['scenarios'][:2]
+        def nan_psi(d):
+            d['scenarios'][1]['input_drift']['fd_balance_myr']['psi'] = float('nan')
+        def ks_out_of_range(d):
+            d['scenarios'][2]['input_drift']['fd_balance_myr']['ks'] = 1.5
+        def missing_predictor(d):
+            del d['scenarios'][1]['input_drift']['tier_id']
+        def inconsistent_counts(d):
+            d['scenarios'][2]['exit_affected_customers'] = d['scenarios'][2]['assigned_exit_customers'] + 1
+        def flagged_mismatch(d):
+            d['scenarios'][2]['prediction_change']['flagged'] += 1
+        def wrong_nested_type(d):
+            d['scenarios'][1]['prediction_change'] = []
+        def list_files(m):
+            m['files'] = []
+        cases = [
+            ('manifest.json', lambda m: []), ('drift.json', lambda d: []), ('manifest.json', list_files),
+            ('manifest.json', drop_register_scenarios), ('manifest.json', lambda m: m['gates'].update(parity=[])),
+            ('drift.json', drop_severe), ('drift.json', nan_psi), ('drift.json', ks_out_of_range),
+            ('drift.json', missing_predictor), ('drift.json', inconsistent_counts), ('drift.json', flagged_mismatch),
+            ('drift.json', wrong_nested_type),
+            ('scores.csv', lambda t: t.split('\n', 1)[0] + '\n'),            # Header only.
+            ('scores.csv', lambda t: t.rsplit('\n', 2)[0] + '\n'),           # One customer short.
+            ('scores.csv', lambda t: t.replace('scenario_review_alert', 'alert')),
+            ('scores.csv', lambda t: t.replace(',1\n', ',0\n', 1)),          # Flagged total no longer reconciles.
+        ]
+        for name, change in cases:
+            with self.subTest(file=name, case=getattr(change, '__name__', '')):
+                shutil.rmtree(self.package, ignore_errors=True)
+                self.copy_fixture()
+                self.rewrite(name, change)
+                self.assertEqual(self.get().json, dict(state='invalid'))
+
+    def test_malformed_json_text_is_invalid(self):
+        self.copy_fixture()
+        (self.package / 'manifest.json').write_text('{not json', encoding='utf-8')
         self.assertEqual(self.get().json, dict(state='invalid'))
 
 

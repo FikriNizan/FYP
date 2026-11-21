@@ -1,0 +1,95 @@
+{
+ "batch_id": "fixture-batch",
+ "files": {
+  "drift.json": "fe60e5aacdc4112d3ff133536016cb47dd0f7c8591b2668fb6114e9609d11cef",
+  "scores.csv": "a9e9be653f151a2a57f9f17e848b0b475ac37aed98788b10fa0fd419d08059ed"
+ },
+ "gates": {
+  "parity": {
+   "features": [
+    "active_account_count",
+    "active_fd_count",
+    "closed_fd_count",
+    "fd_maturing_30d_count",
+    "fd_balance_myr",
+    "fd_average_balance_myr",
+    "non_fd_balance_myr",
+    "fd_balance_mean_3m_myr",
+    "fd_balance_mean_12m_myr",
+    "fd_balance_change_3m_vs_previous_3m",
+    "fd_balance_weighted_offer_rate"
+   ],
+   "mismatches": {
+    "active_account_count": 0,
+    "active_fd_count": 0,
+    "closed_fd_count": 0,
+    "fd_average_balance_myr": 0,
+    "fd_balance_change_3m_vs_previous_3m": 0,
+    "fd_balance_mean_12m_myr": 0,
+    "fd_balance_mean_3m_myr": 0,
+    "fd_balance_myr": 0,
+    "fd_balance_weighted_offer_rate": 0,
+    "fd_maturing_30d_count": 0,
+    "non_fd_balance_myr": 0
+   }
+  },
+  "reproduction": {
+   "flag_mismatches": 0,
+   "max_abs_raw_difference": 0.0,
+   "max_abs_risk_difference": 0.0,
+   "saved_flagged": 3,
+   "tolerance": 1e-12
+  }
+ },
+ "kind": "txb_scenario_package",
+ "reference": "Synthetic fixture: unshocked features and saved scores of 8 customers",
+ "register": {
+  "cohort": "customers with an active FD in the 31 Jan 2024 snapshot (before the shock)",
+  "competitor_pass_through": 1.0,
+  "competitor_pass_through_use": "context only; not used in the transformation",
+  "cutoff": "2024-04-30",
+  "direction": "hike",
+  "effective_date": "2024-02-01",
+  "fees_and_waivers": "unchanged",
+  "lag_months": 1,
+  "migrant_rule": "each FD of a customer assigned to exit that matures in the window is closed from its maturity in the snapshots where the baseline shows it ACTIVE (status CLOSED, balances 0); an FD already closed, or without post-maturity snapshots, is left unchanged and is not counted as an exit",
+  "non_migrant_rule": "each FD of other customers that matures in the window and is still ACTIVE after maturity is repriced at its offer rate + own pass-through x shock; only FDs whose rate actually changes are counted",
+  "own_pass_through": 0.5,
+  "pass_through_note": "Own-bank pass-through affects the simulated FD offer rate. Competitor pass-through provides scenario context. Exit shares are separate illustrative assumptions, not estimated responses to the rate gap.",
+  "renewal_rule": "an FD changes only at a maturity date (shown in the Jan 2024 snapshot) between 1 Mar and 30 Apr 2024, and only in post-maturity snapshots where the baseline still shows it ACTIVE; baseline closures are preserved and no account is re-opened; a missing post-maturity snapshot is never created; no early withdrawal is assumed",
+  "repricing_from": "2024-03-01",
+  "scenarios": [
+   {
+    "id": "no_shock",
+    "label": "No shock",
+    "migrating_share": 0.0,
+    "shock_bp": 0
+   },
+   {
+    "id": "mild",
+    "label": "Mild",
+    "migrating_share": 0.05,
+    "shock_bp": 25
+   },
+   {
+    "id": "severe",
+    "label": "Severe",
+    "migrating_share": 0.2,
+    "shock_bp": 125
+   }
+  ],
+  "seed": 20240430,
+  "sources": {
+   "mps": [
+    "https://www.bnm.gov.my/-/monetary-policy-statement-05052020",
+    "https://www.bnm.gov.my/-/monetary-policy-statement-11052022",
+    "https://www.bnm.gov.my/-/monetary-policy-statement-03052023"
+   ],
+   "opr_decisions": "https://www.bnm.gov.my/monetary-stability/opr-decisions"
+  },
+  "transaction_response": "off: transaction activity, digital engagement and service-friction input values are held constant; scenario-specific SHAP explanations are not computed",
+  "version": "fixture-opr",
+  "window_end": "2024-04-30"
+ },
+ "version": "fixture-opr"
+}

@@ -2,14 +2,14 @@ import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import ResearchPreview, { DEPOSIT_ONLY, DRIFT_CAPTION } from '../src/pages/ResearchPreview.jsx';
+import ResearchPreview, { DEPOSIT_ONLY, DRIFT_CAPTION, KS_NOTE, PASS_THROUGH } from '../src/pages/ResearchPreview.jsx';
 import { api } from '../src/api.js';
 import pkg from './fixtures/opr-scenarios.json';
 
 vi.mock('../src/api.js', () => ({ api: { scenarios: vi.fn() } }));
 const source = import.meta.glob('../src/pages/ResearchPreview.jsx', { query:'?raw', import:'default', eager:true });
 // Banned claims (Milestone 7): no performance-change claims, no robustness claims, no "loss".
-const BANNED = [/\baccuracy\b/i, /\bF1\b/, /\bAP\b/, /\brecall\b/i, /\bprecision\b/i, /will fail/i, /\brobust/i, /\bresilient/i, /stable to OPR/i, /\bloss/i];
+const BANNED = [/\baccuracy\b/i, /\bF1\b/, /\bAP\b/, /\brecall\b/i, /\bprecision\b/i, /will fail/i, /\brobust/i, /\bresilient/i, /stable to OPR/i, /\bloss/i, /main drivers/i, /significant/i, /p-value(?!s, because)/i];
 
 async function show(payload) {
   api.scenarios.mockResolvedValue(payload);
@@ -24,10 +24,14 @@ describe('OPR stress demonstration', () => {
     for (const name of ['Assumption register', '1. Input drift', '2. Prediction change', '3. Performance change'])
       expect(await screen.findByRole('heading', { name })).toBeTruthy();
     const performance = screen.getByRole('region', { name:'3. Performance change' });
-    expect(performance.textContent).toMatch(/^3\. Performance changeNot computed\./);
+    expect(performance.textContent).toBe('3. Performance changeNot computed. Performance not evaluated: hypothetical outcomes are unavailable.');
     expect(performance.querySelector('table')).toBeNull();
     expect(container.textContent).toContain(DEPOSIT_ONLY);
     expect(container.textContent).toContain(DRIFT_CAPTION);
+    expect(container.textContent).toContain(PASS_THROUGH);
+    expect(container.textContent).toContain(KS_NOTE);
+    expect(DEPOSIT_ONLY).toBe('This scenario changes deposit-related inputs only. Transaction activity, digital engagement and service-friction input values are held constant. Scenario-specific SHAP explanations are not computed.');
+    expect(DEPOSIT_ONLY).toBe(pkg.note);
     expect(container.textContent).toContain('Scenario scores are hypothetical and are not saved predictions.');
   });
 
@@ -46,6 +50,24 @@ describe('OPR stress demonstration', () => {
     expect(rows.map(r => r.querySelector('th').textContent)).toEqual(pkg.scenarios.map(s => s.label));
     expect(rows[2].textContent).toContain(severe.prediction_change.risk.psi.toFixed(5));
     expect(within(prediction).getByText(`Flagged (saved: ${pkg.scenarios[0].prediction_change.saved_flagged})`)).toBeTruthy();
+  });
+
+  it('separates customers assigned to exit from those actually affected, with the coverage of the weighted rate', async () => {
+    await show(pkg);
+    const prediction = screen.getByRole('region', { name:'2. Prediction change' });
+    const severe = pkg.scenarios.find(s => s.id === 'severe');
+    expect(within(prediction).getByRole('columnheader', { name:'Customers assigned to exit at maturity' })).toBeTruthy();
+    expect(within(prediction).getByRole('columnheader', { name:'Actually affected in the window' })).toBeTruthy();
+    const row = [...prediction.querySelectorAll('tbody tr')][2];
+    expect(row.textContent).toContain(`${severe.assigned_exit_customers} of ${severe.cohort_size}`);
+    expect(row.textContent).toContain(`${severe.exit_affected_customers} customers · ${severe.exit_affected_fds} FDs closed`);
+    expect(row.textContent).toContain(`${severe.repriced_fds} FDs repriced for ${severe.repriced_customers} other customers`);
+    expect(prediction.textContent).toContain('Different denominators');
+    const input = screen.getByRole('region', { name:'1. Input drift' });
+    const rate = severe.input_drift.fd_balance_weighted_offer_rate;
+    expect(input.textContent).toContain(`compared on ${rate.reference_available} reference customers`);
+    expect(input.textContent).toContain(`${rate.current_available} (severe)`);
+    expect(input.textContent).toContain(rate.reading);
   });
 
   it('never invents figures when the package is missing or fails its checks', async () => {

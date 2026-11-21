@@ -7,3 +7,6 @@
 *.md text eol=lf
 *.yml text eol=lf
 *.ps1 text eol=crlf
+# Hash-checked fixture: keep the exact bytes on every platform.
+backend/tests/fixtures/opr_package/* -text
+frontend/tests/fixtures/opr-scenarios.json text eol=lf
