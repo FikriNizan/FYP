@@ -416,3 +416,33 @@ The old block/clause discussion contract and its rules were removed once nothing
 - **Cache identity:** the contract-version bump makes the stored draft containing Q3 stale, so it is no longer served as current.
 
 **Milestone 6 is closed.** The deterministic card is the comprehension layer. The LLM's role is narrowed to optional internal summary questions and on-demand client questions, under strict grounding and client-safe rules, with RM review. The full 206-customer summary batch remains on hold until Revenue at Risk / Fee Subsidy Leakage revise the Finance section.
+
+### Policy change: item-level acceptance for summary drafts (21 November 2026, commit `94ab0e7`, branch `summary-rejections`)
+**Why:** the full April summary batch (206 flagged customers; render-6, m6-narrative-8) accepted 120 drafts whole (58%) and fell back for 86 (42%).
+- **The link:** all 86 had written the optional link. 64 links cited only facts from one card section (`link_sections`), almost always two Operations facts.
+- **The Finance question:** 34 Finance questions mentioned payments without citing a payments fact (`question_relevance`).
+- **Rules and mapping were correct:** the fact-to-section map and the rules were correct for the facts supplied. Since before the finance branch, the only payload difference is the stake line taking one Finance slot.
+
+**What is dropped:** only the failing optional item, and its text is never stored, shown or logged.
+- **A link failing only fit rules** (`link_sections`, `link_list_only`, `link_length`) is replaced by an empty link. The card then has no link section, exactly as the deterministic card.
+- **A question failing only `question_relevance`** is removed. `render_summary` fills that audience with the deterministic template question.
+- **Recorded:** stored content keeps `dropped` with rule IDs only. API responses carry counts only (`item_drops`).
+
+**What still rejects the whole draft:**
+- any `prohibited_claim`, `protected_content`, `unprotected_comparison`, `evidence_references`, `placeholder_reference`, `unresolved_placeholder`, `question_audience`, schema or `model_word_limit` failure, on any item. The word limit counts the full output, link included;
+- a draft with nothing valid left after dropping.
+
+These fall back to the deterministic card and are never stored as Gemini drafts.
+
+**The contract version was deliberately not bumped** (it stays m6-narrative-8):
+- the prompt and the rules are unchanged; only the unit of fallback changed;
+- the 120 accepted drafts already satisfy the policy (none had a link or a dropped item), so they stay valid;
+- a re-run calls only the 86 customers without a stored draft.
+
+**Offline replay** of the stored rejected outputs (86-row pass): 54 accepted with the link dropped, 21 with a question dropped, 8 with both, and 3 still fall back.
+
+**Known and deferred (a future m6-narrative-9, not started):** two prompt problems found in the diagnosis.
+- **The "Good link" example is ambiguous:** failed logins and sessions without transactions are both Operations facts, and "payments" exists in both Operations and Finance.
+- **The "Good finance question" example conflicts with the competitor ban:** it asks about moving payments to another bank.
+
+Also undisclosed: the question-topic rule (a question that mentions payments, deposits, fees, balances or logins must cite a fact on that topic) is not stated to the model.
