@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 import hashlib
 import json
+import math
 from pathlib import Path
 from statistics import mean, median
 
@@ -144,8 +145,16 @@ def publish(batch_id, as_of, dry_run=True):
             elif not same_outcome_evidence(prior,row):
                 raise ConflictError('A different outcome is already published for this prediction')
         return dict(**result,changed=changed,dry_run=True)
+    changed, _present = insert_rows(rows, 'research_file')
+    return dict(**result,changed=changed,dry_run=False)
+
+
+def insert_rows(rows, source_kind, source_batches=None):
+    """All-or-nothing write. A row whose evidence equals an existing outcome is a no-op that keeps the
+    existing row ('already present'); a different outcome for the same prediction is a conflict that rolls
+    back every row of this call. Returns (newly inserted, already present)."""
     db = get_db()
-    changed = 0
+    changed = present = 0
     db.execute('BEGIN IMMEDIATE')
     try:
         for row in rows:
@@ -154,17 +163,149 @@ def publish(batch_id, as_of, dry_run=True):
             if prior:
                 if not same_outcome_evidence(prior,row):
                     raise ConflictError('A different outcome is already published for this prediction')
+                present += 1
                 continue
-            db.execute('INSERT INTO observed_outcomes VALUES (?,?,?,?,?,?,?,?,?)',
+            db.execute('INSERT INTO observed_outcomes (prediction_id,outcome_month,observed_through,baseline_sum_cents,'
+                       'future_sum_cents,target_churn,future_flows_json,source_sha256,imported_at,source_kind,'
+                       'source_batches_json) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
                 (row['prediction_id'],row['outcome_month'],row['observed_through'],
                  row['baseline_sum_cents'],row['future_sum_cents'],row['target_churn'],
-                 encode(row['future_flows']),row['source_sha256'],now()))
+                 encode(row['future_flows']),row['source_sha256'],now(),source_kind,
+                 encode(source_batches) if source_batches is not None else None))
             changed += 1
         db.commit()
     except Exception:
         db.rollback()
         raise
-    return dict(**result,changed=changed,dry_run=False)
+    return changed, present
+
+
+# ---------- Outcomes derived from later published monthly packages (no research files are read).
+#
+# The research label (audit_targets.py) is, in integer cents, 8 x (flows t+1..t+3) <= (flows t-11..t), with a
+# positive baseline and all three future months present. Every published package stores the predictors
+# "over N complete months ending at cutoff", so:
+#   baseline_sum_cents(t) = combined_flow_mean_12m_myr of the assessment at t   x 1200
+#   flow_cents(t+k)       = combined_flow_mean_1m_myr of the assessment at t+k  x 100   (k = 1, 2, 3)
+# and the t+3 package's combined_flow_mean_3m_myr x 300 must equal the future sum (cross-check).
+CENT_TOLERANCE = 0.01  # A value more than a hundredth of a cent from whole cents is not accepted.
+
+
+def whole_cents(value, scale):
+    if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+        return None
+    exact = value * scale
+    cents = round(exact)
+    return cents if abs(exact - cents) <= CENT_TOLERANCE else None
+
+
+def published_batch(cutoff, protocol):
+    """The one full published assessment for a cutoff under the protocol; None when absent or ambiguous."""
+    rows = get_db().execute("SELECT * FROM batches WHERE cutoff_month=? AND protocol_sha256=? "
+                            "AND source_kind<>'notebook_case_sample'", (cutoff, protocol)).fetchall()
+    return rows[0] if len(rows) == 1 else None
+
+
+def horizon_months(cutoff):
+    return [shift_month(cutoff, step) for step in (1, 2, 3)]
+
+
+def package_coverage(batch):
+    """Later published assessments for the three forecast months, and the first month still missing."""
+    sources = [published_batch(month, batch['protocol_sha256']) for month in horizon_months(batch['cutoff_month'])]
+    missing = next((month for month, source in zip(horizon_months(batch['cutoff_month']), sources) if source is None), None)
+    return sources, missing
+
+
+def derive(batch_id):
+    """Outcome rows for one assessment from the later published packages, computed in memory only."""
+    db = get_db()
+    batch = db.execute('SELECT * FROM batches WHERE batch_id=?', (batch_id,)).fetchone()
+    require(batch is not None, 'Assessment batch not found')
+    cutoff, end = batch['cutoff_month'], horizon_end(batch['cutoff_month'])
+    predictions = db.execute('SELECT prediction_id,cus_id,features_json FROM predictions WHERE batch_id=?', (batch_id,)).fetchall()
+    sources, missing = package_coverage(batch)
+    result = dict(batch_id=batch_id, cutoff_month=cutoff, outcome_month=end, window=horizon_months(cutoff),
+                  records=len(predictions), waiting_for_month=missing, mature=missing is None, rows=[], available=0,
+                  unavailable=len(predictions), unavailable_reasons={}, source_batches=[], source_sha256=None)
+    if missing:
+        return result
+    later = []
+    for source in sources:
+        later.append({row['cus_id']: json.loads(row['features_json']) for row in
+                      db.execute('SELECT cus_id,features_json FROM predictions WHERE batch_id=?', (source['batch_id'],))})
+    result['source_batches'] = [dict(batch_id=s['batch_id'], cutoff_month=s['cutoff_month'],
+                                     csv_sha256=json.loads(s['source_json']).get('csv_sha256')) for s in sources]
+    source_sha = hashlib.sha256(encode(dict(kind='published_packages', batch_id=batch_id,
+                                            sources=result['source_batches'])).encode()).hexdigest()
+    reasons = Counter()
+    for prediction in predictions:
+        features = json.loads(prediction['features_json'])
+        baseline = whole_cents(features.get('combined_flow_mean_12m_myr'), 1200)
+        if not baseline:  # None, or a zero baseline: not eligible under the research rule.
+            reasons['baseline_unavailable'] += 1
+            continue
+        if any(prediction['cus_id'] not in month for month in later):
+            reasons['customer_missing_from_later_package'] += 1
+            continue
+        flows = [whole_cents(month[prediction['cus_id']].get('combined_flow_mean_1m_myr'), 100) for month in later]
+        if any(flow is None for flow in flows):
+            reasons['monthly_flow_unavailable'] += 1
+            continue
+        check = whole_cents(later[2][prediction['cus_id']].get('combined_flow_mean_3m_myr'), 300)
+        if check is None or abs(check - sum(flows)) > 1:
+            reasons['three_month_cross_check_failed'] += 1
+            continue
+        result['rows'].append(dict(prediction_id=prediction['prediction_id'], outcome_month=end, observed_through=end,
+                                   baseline_sum_cents=baseline, future_sum_cents=sum(flows),
+                                   target_churn=int(8 * sum(flows) <= baseline),
+                                   future_flows=[dict(month=month, combined_flow_myr=flow / 100)
+                                                 for month, flow in zip(result['window'], flows)],
+                                   source_sha256=source_sha))
+    result.update(available=len(result['rows']), unavailable=len(predictions) - len(result['rows']),
+                  unavailable_reasons=dict(reasons), source_sha256=source_sha)
+    return result
+
+
+def publish_derived(batch_id):
+    """Derive and save one assessment's outcomes. Never raises on a conflict: that batch is rolled back
+    and reported, and existing outcomes stay as they are."""
+    derived = derive(batch_id)
+    rows = derived.pop('rows')
+    summary = {key: derived[key] for key in ('batch_id', 'cutoff_month', 'outcome_month', 'window', 'records',
+                                             'available', 'unavailable', 'unavailable_reasons', 'waiting_for_month')}
+    if not derived['mature']:
+        return dict(summary, status='waiting', inserted=0, already_present=0)
+    if not rows:
+        return dict(summary, status='not_available', inserted=0, already_present=0)
+    try:
+        inserted, present = insert_rows(rows, 'published_packages', derived['source_batches'])
+    except ConflictError as error:
+        return dict(summary, status='conflict', inserted=0, already_present=0, message=str(error))
+    return dict(summary, status='checked' if inserted else 'already_present', inserted=inserted, already_present=present)
+
+
+def derive_after_publish(new_batch):
+    """Run after a monthly package is published: every earlier assessment whose forecast window includes the
+    new month is checked. Idempotent; assessments still waiting for data are reported as waiting."""
+    db = get_db()
+    earlier = db.execute("SELECT * FROM batches WHERE protocol_sha256=? AND cutoff_month<? AND "
+                         "source_kind<>'notebook_case_sample' ORDER BY cutoff_month",
+                         (new_batch['protocol_sha256'], new_batch['cutoff_month'])).fetchall()
+    return [publish_derived(batch['batch_id']) for batch in earlier
+            if new_batch['cutoff_month'] in horizon_months(batch['cutoff_month'])]
+
+
+def outcome_check(batch):
+    """Data-based readiness of one assessment for the Monthly Assessments and Monitoring views."""
+    db = get_db()
+    records = db.execute('SELECT count(*) FROM predictions WHERE batch_id=?', (batch['batch_id'],)).fetchone()[0]
+    loaded = db.execute('SELECT count(*) FROM observed_outcomes o JOIN predictions p USING(prediction_id) '
+                        'WHERE p.batch_id=?', (batch['batch_id'],)).fetchone()[0]
+    _sources, missing = package_coverage(batch)
+    state = 'checked' if loaded else 'waiting' if missing else 'not_checked'
+    return dict(state=state, loaded=loaded, records=records, waiting_for_month=missing if not loaded else None,
+                window=horizon_months(batch['cutoff_month']))
 
 
 def delivered_by_customer():

@@ -48,7 +48,7 @@ def selected_database(mode):
         raise ValueError('Working schema is old. Exercise the migration on a copy first.')
     if mode == 'm6-test' and (target != M6_TEST.absolute() or os.path.samefile(target,WORKING) or os.path.samefile(target,TEST)):
         raise ValueError('Milestone 6 Test must be its own confirmed file')
-    if version > 5:
+    if version > 6:
         raise ValueError('Database schema is newer than this app')
     return target, version, months, counts
 
@@ -155,8 +155,8 @@ def launch(mode, backend_port=5000, frontend_port=5173):
         frontend_context=await_context(FRONTEND_URL,frontend,expected)
         if backend_context != frontend_context:
             raise RuntimeError('Frontend proxy and backend runtime contexts differ')
-        if mode == 'm6-test' and backend_context['schema_version'] != 5:
-            raise RuntimeError('Milestone 6 Test requires schema version 5')
+        if backend_context['schema_version'] != 6:
+            raise RuntimeError('This app requires schema version 6 (migrated automatically with a backup)')
         new_backups=sorted(set(database.parent.glob(database.name+'-pre-migration-*'))-before_backups)
         print('\nLOCAL SESSION',flush=True)
         print('Mode:',mode.title(),'| Database:',database,flush=True)

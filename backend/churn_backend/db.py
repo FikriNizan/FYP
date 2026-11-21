@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from flask import current_app, g
 
+LATEST = 6  # 006: observed-outcome provenance (package-derived outcomes).
+
 
 def get_db():
     if "db" not in g:
@@ -26,9 +28,9 @@ def initialise():
     existing = db.execute("SELECT 1 FROM sqlite_master WHERE name='predictions'").fetchone()
     versioned = db.execute("SELECT 1 FROM sqlite_master WHERE name='schema_migrations'").fetchone()
     version = db.execute("SELECT COALESCE(MAX(version),0) FROM schema_migrations").fetchone()[0] if versioned else 0
-    if version > 5:
+    if version > LATEST:
         raise RuntimeError("Database schema is newer than this application")
-    if version == 5:
+    if version == LATEST:
         return
     root = Path(__file__).resolve().parents[2]
     protected = [root / 'backend/instance/churn.sqlite', root / 'artifacts/m5-review-20261116-030542.sqlite']
@@ -48,7 +50,7 @@ def initialise():
         db.execute("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)")
         # A second process may have upgraded while this connection waited for the lock.
         version = db.execute("SELECT COALESCE(MAX(version),0) FROM schema_migrations").fetchone()[0]
-        if version == 5:
+        if version == LATEST:
             db.commit()
             return
         if version < 1:
@@ -71,10 +73,15 @@ def initialise():
                 if statement.strip():
                     db.execute(statement)
             db.execute("INSERT INTO schema_migrations VALUES (4,?)", (datetime.now(timezone.utc).isoformat(),))
-        for statement in (directory / 'migrations' / '005_ai_drafts.sql').read_text().split(';'):
+        if version < 5:
+            for statement in (directory / 'migrations' / '005_ai_drafts.sql').read_text().split(';'):
+                if statement.strip():
+                    db.execute(statement)
+            db.execute("INSERT INTO schema_migrations VALUES (5,?)", (datetime.now(timezone.utc).isoformat(),))
+        for statement in (directory / 'migrations' / '006_outcome_provenance.sql').read_text().split(';'):
             if statement.strip():
                 db.execute(statement)
-        db.execute("INSERT INTO schema_migrations VALUES (5,?)", (datetime.now(timezone.utc).isoformat(),))
+        db.execute("INSERT INTO schema_migrations VALUES (6,?)", (datetime.now(timezone.utc).isoformat(),))
         db.commit()
     except Exception:
         db.rollback()

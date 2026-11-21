@@ -97,7 +97,7 @@ class LocalSessionTests(unittest.TestCase):
         def spawn(cmd,**kwargs):
             child=Child(cmd,**kwargs);children.append(child);return child
         expected=local.expected_identity('m6-test',local.M6_TEST.resolve())
-        context={**expected,'schema_version':5,'assessment_months':[],'predictions':0}
+        context={**expected,'schema_version':6,'assessment_months':[],'predictions':0}
         with patch.object(local,'free_port'),patch.object(local.subprocess,'Popen',side_effect=spawn),\
              patch.object(local,'await_context',return_value=context),\
              patch.object(local.time,'sleep',side_effect=KeyboardInterrupt):

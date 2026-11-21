@@ -100,7 +100,7 @@ class DraftTests(unittest.TestCase):
         with self.app.app_context():
             db=get_db()
             # Simulates an unrelated later outcome write: no AI source query touches outcomes.
-            db.execute("INSERT INTO observed_outcomes VALUES (?,'2024-05-31','2024-05-31',120000,300,1,'[]','synthetic','now')",(self.id,))
+            db.execute("INSERT INTO observed_outcomes (prediction_id,outcome_month,observed_through,baseline_sum_cents,future_sum_cents,target_churn,future_flows_json,source_sha256,imported_at) VALUES (?,'2024-05-31','2024-05-31',120000,300,1,'[]','synthetic','now')",(self.id,))
             original=json.loads(repo.prediction_row(self.id)['evidence_json'])
             original['cutoff_month']='2024-03-31'
             repo.save_batch('2024-03-31','notebook_case_sample',original['protocol_sha256'],
@@ -260,7 +260,10 @@ class DraftTests(unittest.TestCase):
         import sqlite3
         with closing(sqlite3.connect(self.path)) as db:
             db.execute('DROP TABLE ai_reservations');db.execute('DROP TABLE ai_drafts')
-            db.execute('DELETE FROM schema_migrations WHERE version=5')
+            # Simulate a version-4 database: remove 005 (AI drafts) and 006 (outcome provenance).
+            db.execute('ALTER TABLE observed_outcomes DROP COLUMN source_batches_json')
+            db.execute('ALTER TABLE observed_outcomes DROP COLUMN source_kind')
+            db.execute('DELETE FROM schema_migrations WHERE version>=5')
             tables=[r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT IN ('schema_migrations','sqlite_sequence')")]
             before={name:db.execute('SELECT * FROM '+name).fetchall() for name in tables}
             db.commit()
@@ -268,7 +271,7 @@ class DraftTests(unittest.TestCase):
         create_app(dict(TESTING=True,DATABASE=self.path))
         with app.app_context():
             db=get_db()
-            self.assertEqual(db.execute('SELECT max(version) FROM schema_migrations').fetchone()[0],5)
+            self.assertEqual(db.execute('SELECT max(version) FROM schema_migrations').fetchone()[0],6)
             for name,rows in before.items():self.assertEqual([tuple(r) for r in db.execute('SELECT * FROM '+name)],rows)
             self.assertEqual(db.execute('SELECT count(*) FROM ai_drafts').fetchone()[0],0)
         self.assertEqual(len(list(Path(self.path).parent.glob('test.sqlite-pre-migration-*'))),1)
