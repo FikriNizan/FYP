@@ -392,7 +392,7 @@ def trend(batch_id):
             mean_risk_loaded=stats['mean_risk'],observed_rate=stats['observed_rate'],
             gap=stats['observed_rate']-stats['mean_risk'] if mature else None,
             brier=stats['brier'],reference_brier=stats['reference_brier'],
-            flagged_positive=stats['flagged_positive']))
+            flagged_positive=stats['flagged_positive'],outcome_check=outcome_check(batch)))
     return dict(protocol_sha256=selected['protocol_sha256'],batches=items)
 
 
@@ -453,5 +453,5 @@ def report(batch_id):
                 observed_all=performance(mature),documented_delivery=performance(exposed),
                 without_recorded_delivery=performance(unrecorded),
                 delivery_types=dict(Counter(item['type'] for row in exposed for item in row['delivered_actions'])),
-                drift=drift(batch,previous),
+                drift=drift(batch,previous),outcome_check=outcome_check(batch),
                 interpretation='Outcomes are observed volume-drop labels, not account closures. Delivery is based only on saved delivered follow-up events dated inside the prediction window. No recorded delivery does not prove no intervention. These are selected descriptive groups, not causal effects or an unbiased portfolio estimate.')

@@ -381,5 +381,177 @@ class OutcomeTests(unittest.TestCase):
             self.assertEqual(report['without_recorded_delivery']['reference_brier'],0)
 
 
+PROTOCOL = 'p' * 64
+
+
+class PackageOutcomeTests(unittest.TestCase):
+    """Phase B: outcomes derived from later published packages only (no research file is configured)."""
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.path = Path(self.temp.name) / 'test.sqlite'
+        self.app = create_app(dict(TESTING=True, DATABASE=str(self.path)))
+        # Customer A: baseline RM100 a month (120,000 cents over 12 months); B and C likewise.
+        # A drops (Mar-May 30 + 20 + 0 = RM50 -> 8 x 5,000 <= 120,000); B holds (60 x 3 = RM180);
+        # C sits exactly on the boundary (RM150 -> 8 x 15,000 = 120,000, counted as a drop).
+        self.flows = {'A': (30.0, 20.0, 0.0), 'B': (60.0, 60.0, 60.0), 'C': (50.0, 50.0, 50.0)}
+        self.feb = self.batch('2024-02-29', {c: dict(combined_flow_mean_12m_myr=100.0) for c in self.flows},
+                              flags={'A': 1, 'B': 1, 'C': 0})
+
+    def batch(self, cutoff, features, flags=None, kind='prepared_month_scored', protocol=PROTOCOL):
+        batch_id = (cutoff + kind + protocol)[:64].ljust(64, 'x')
+        with self.app.app_context():
+            db = get_db()
+            db.execute('INSERT INTO batches VALUES (?,?,?,?,?,?,?)', (batch_id, cutoff, kind, protocol, len(features),
+                       json.dumps(dict(csv_sha256='sha-' + cutoff)), '2026-11-22T00:00:00Z'))
+            for cus, values in features.items():
+                db.execute('INSERT INTO predictions VALUES (?,?,?,?,?,?,?,?,?)',
+                           (batch_id + ':' + cus, batch_id, cus, 0.2, (flags or {}).get(cus, 0), '{}', json.dumps(values), '{}', '[]'))
+            db.commit()
+        return batch_id
+
+    def later(self, months=('2024-03-31', '2024-04-30', '2024-05-31'), drop=None, bad_cross_check=False):
+        ids = []
+        for k, month in enumerate(months):
+            features = {}
+            for cus, flows in self.flows.items():
+                if drop == (cus, month):
+                    continue
+                values = dict(combined_flow_mean_1m_myr=flows[k], combined_flow_mean_12m_myr=100.0)
+                if k == 2:
+                    values['combined_flow_mean_3m_myr'] = sum(flows) / 3 + (5.0 if bad_cross_check and cus == 'B' else 0.0)
+                features[cus] = values
+            ids.append(self.batch(month, features))
+        return ids
+
+    def stored(self):
+        with self.app.app_context():
+            return {row['prediction_id'].split(':')[1]: dict(row) for row in
+                    get_db().execute('SELECT * FROM observed_outcomes').fetchall()}
+
+    def test_derivation_replicates_the_research_rule_including_the_boundary(self):
+        sources = self.later()
+        with self.app.app_context():
+            derived = outcomes.derive(self.feb)
+        self.assertTrue(derived['mature'])
+        self.assertEqual(derived['window'], ['2024-03-31', '2024-04-30', '2024-05-31'])
+        rows = {r['prediction_id'].split(':')[1]: r for r in derived['rows']}
+        self.assertEqual({c: (r['baseline_sum_cents'], r['future_sum_cents'], r['target_churn']) for c, r in rows.items()},
+                         {'A': (120000, 5000, 1), 'B': (120000, 18000, 0), 'C': (120000, 15000, 1)})
+        self.assertEqual(rows['A']['future_flows'], [dict(month='2024-03-31', combined_flow_myr=30.0),
+                                                     dict(month='2024-04-30', combined_flow_myr=20.0),
+                                                     dict(month='2024-05-31', combined_flow_myr=0.0)])
+        self.assertEqual([s['batch_id'] for s in derived['source_batches']], sources)
+        self.assertEqual(self.stored(), {})  # derive() never writes.
+
+    def test_missing_month_waits_and_missing_customer_or_bad_values_are_never_guessed(self):
+        self.later(months=('2024-03-31', '2024-04-30'))
+        with self.app.app_context():
+            waiting = outcomes.publish_derived(self.feb)
+            check = outcomes.outcome_check(get_db().execute('SELECT * FROM batches WHERE batch_id=?', (self.feb,)).fetchone())
+        self.assertEqual((waiting['status'], waiting['waiting_for_month'], waiting['inserted']), ('waiting', '2024-05-31', 0))
+        self.assertEqual((check['state'], check['waiting_for_month']), ('waiting', '2024-05-31'))
+        self.batch('2024-05-31', {'A': dict(combined_flow_mean_1m_myr=0.0, combined_flow_mean_3m_myr=50 / 3),
+                                  'B': dict(combined_flow_mean_1m_myr=None, combined_flow_mean_3m_myr=60.0)})
+        with self.app.app_context():
+            result = outcomes.publish_derived(self.feb)
+        self.assertEqual((result['status'], result['available'], result['unavailable']), ('checked', 1, 2))
+        self.assertEqual(result['unavailable_reasons'], {'monthly_flow_unavailable': 1, 'customer_missing_from_later_package': 1})
+        self.assertEqual(set(self.stored()), {'A'})  # B and C are not available, never counted as zero.
+
+    def test_three_month_cross_check_rejects_inconsistent_packages(self):
+        self.later(bad_cross_check=True)
+        with self.app.app_context():
+            derived = outcomes.derive(self.feb)
+        self.assertEqual((derived['available'], derived['unavailable_reasons']), (2, {'three_month_cross_check_failed': 1}))
+
+    def test_publish_records_provenance_and_is_idempotent(self):
+        sources = self.later()
+        with self.app.app_context():
+            first = outcomes.publish_derived(self.feb)
+            second = outcomes.publish_derived(self.feb)
+        self.assertEqual((first['status'], first['inserted'], first['already_present']), ('checked', 3, 0))
+        self.assertEqual((second['status'], second['inserted'], second['already_present']), ('already_present', 0, 3))
+        row = self.stored()['A']
+        self.assertEqual(row['source_kind'], 'published_packages')
+        self.assertEqual([s['batch_id'] for s in json.loads(row['source_batches_json'])], sources)
+        self.assertEqual((row['outcome_month'], row['observed_through'], row['target_churn']), ('2024-05-31', '2024-05-31', 1))
+
+    def existing_outcome(self, customer, target):
+        with self.app.app_context():
+            derived = outcomes.derive(self.feb)
+            row = next(r for r in derived['rows'] if r['prediction_id'].endswith(':' + customer))
+            if target != row['target_churn']:
+                row = dict(row, target_churn=target, future_sum_cents=row['baseline_sum_cents'])
+            outcomes.insert_rows([row], 'research_file')
+
+    def test_same_existing_outcome_is_kept_and_reported_as_already_present(self):
+        self.later()
+        self.existing_outcome('A', 1)  # E.g. the file-derived Feb-Apr rows already in the M6 Test database.
+        before = self.stored()['A']
+        with self.app.app_context():
+            result = outcomes.publish_derived(self.feb)
+        self.assertEqual((result['status'], result['inserted'], result['already_present']), ('checked', 2, 1))
+        self.assertEqual(self.stored()['A'], before)  # Existing row, provenance and time are unchanged.
+        self.assertEqual(before['source_kind'], 'research_file')
+
+    def test_different_existing_outcome_is_a_conflict_and_the_batch_rolls_back(self):
+        self.later()
+        self.existing_outcome('B', 1)  # The packages say B held (0); a stored label says it dropped.
+        before = self.stored()
+        with self.app.app_context():
+            result = outcomes.publish_derived(self.feb)
+        self.assertEqual((result['status'], result['inserted']), ('conflict', 0))
+        self.assertIn('different outcome', result['message'])
+        self.assertEqual(self.stored(), before)  # A and C were not inserted; B is not overwritten.
+
+    def test_after_publish_checks_only_assessments_completed_by_the_new_month(self):
+        ids = self.later()
+        self.batch('2024-01-31', {'A': dict(combined_flow_mean_12m_myr=100.0)})  # Its window ends in April.
+        self.batch('2024-02-29', {'A': dict(combined_flow_mean_12m_myr=100.0)}, kind='notebook_case_sample')
+        self.batch('2024-02-29', {'A': dict(combined_flow_mean_12m_myr=100.0)}, protocol='q' * 64)
+        with self.app.app_context():
+            may = get_db().execute('SELECT * FROM batches WHERE batch_id=?', (ids[2],)).fetchone()
+            checks = outcomes.derive_after_publish(may)
+            months = {item['cutoff_month']: item['outcome_check'] for item in self.app.test_client().get('/api/months').json['items']
+                      if item['protocol_sha256'] == PROTOCOL and item['source_kind'] != 'notebook_case_sample'}
+        # May completes February; March and April also include May but still wait for June and July.
+        self.assertEqual([(c['cutoff_month'], c['status'], c['waiting_for_month']) for c in checks],
+                         [('2024-02-29', 'checked', None), ('2024-03-31', 'waiting', '2024-06-30'), ('2024-04-30', 'waiting', '2024-06-30')])
+        self.assertEqual(months['2024-02-29']['state'], 'checked')
+        self.assertEqual(months['2024-01-31']['state'], 'not_checked')  # Data present for Feb-Apr, not checked by May.
+        self.assertEqual((months['2024-03-31']['state'], months['2024-03-31']['waiting_for_month']), ('waiting', '2024-06-30'))
+
+    def test_monitoring_uses_derived_outcomes_and_reports_readiness(self):
+        self.later()
+        with self.app.app_context():
+            outcomes.publish_derived(self.feb)
+            report = outcomes.report(self.feb)
+        self.assertEqual((report['outcome_coverage']['loaded'], report['observed_all']['positives']), (3, 2))
+        self.assertEqual((report['observed_all']['true_positives'], report['observed_all']['false_negatives']), (1, 1))
+        self.assertEqual(report['outcome_check']['state'], 'checked')
+
+    def test_migration_006_adds_provenance_and_preserves_existing_outcomes(self):
+        import sqlite3
+        from contextlib import closing
+        self.later()
+        with self.app.app_context():
+            outcomes.publish_derived(self.feb)
+        with closing(sqlite3.connect(self.path)) as db:
+            db.execute('ALTER TABLE observed_outcomes DROP COLUMN source_batches_json')
+            db.execute('ALTER TABLE observed_outcomes DROP COLUMN source_kind')
+            db.execute('DELETE FROM schema_migrations WHERE version=6')
+            before = db.execute('SELECT * FROM observed_outcomes ORDER BY prediction_id').fetchall()
+            db.commit()
+        app = create_app(dict(TESTING=True, DATABASE=str(self.path)))
+        with app.app_context():
+            db = get_db()
+            self.assertEqual(db.execute('SELECT max(version) FROM schema_migrations').fetchone()[0], 6)
+            after = db.execute('SELECT * FROM observed_outcomes ORDER BY prediction_id').fetchall()
+            self.assertEqual([tuple(r)[:9] for r in after], [tuple(r) for r in before])
+            self.assertEqual({(r['source_kind'], r['source_batches_json']) for r in after}, {(None, None)})
+        self.assertEqual(len(list(self.path.parent.glob('test.sqlite-pre-migration-*'))), 1)
+
+
 if __name__=='__main__':
     unittest.main()

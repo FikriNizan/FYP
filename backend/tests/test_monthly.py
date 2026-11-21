@@ -66,6 +66,39 @@ class MonthlyTests(unittest.TestCase):
             customer = self.client.get('/api/customers/944?batch_id='+first.json['batch_id']).json['customer']
             self.assertIsNone(customer['customer_name']); self.assertEqual(customer['flow_history'],[])
 
+    def test_publication_derives_outcomes_for_the_assessment_it_completes(self):
+        # Feb-Apr assessments already published for customer 944; publishing May completes February's window.
+        with self.app.app_context():
+            db = get_db()
+            for cutoff, values in [('2024-02-29', dict(combined_flow_mean_12m_myr=100.0)),
+                                   ('2024-03-31', dict(combined_flow_mean_1m_myr=10.0)),
+                                   ('2024-04-30', dict(combined_flow_mean_1m_myr=10.0))]:
+                batch_id = cutoff.replace('-', '') .ljust(64, 'b')
+                db.execute('INSERT INTO batches VALUES (?,?,?,?,?,?,?)',
+                           (batch_id, cutoff, 'prepared_month_scored', PROTOCOL_SHA256, 1, '{}', '2026-11-22T00:00:00Z'))
+                db.execute('INSERT INTO predictions VALUES (?,?,?,?,?,?,?,?,?)',
+                           (batch_id + ':944', batch_id, '944', 0.4, 1, '{}', json.dumps(values), '{}', '[]'))
+            db.commit()
+        self.row.update(cutoff_month='2024-05-31', combined_flow_mean_1m_myr=10.0, combined_flow_mean_3m_myr=10.0)
+        self.record['cutoff_month'] = '2024-05-31'
+        csv_data, manifest = self.package()
+        manifest = json.dumps({**json.loads(manifest), 'cutoff_month':'2024-05-31'}).encode()
+        output = dict(self.output(), csv_sha256=monthly.digest(csv_data))
+        with patch.object(monthly,'run_scorer',return_value=output):
+            first = self.post((csv_data, manifest))
+            again = self.post((csv_data, manifest))
+        self.assertEqual(first.status_code, 201, first.json)
+        check = first.json['outcome_checks']
+        self.assertEqual([(c['cutoff_month'], c['status'], c['available'], c['records'], c['window'])
+                          for c in check[:1]], [('2024-02-29', 'checked', 1, 1, ['2024-03-31', '2024-04-30', '2024-05-31'])])
+        self.assertEqual([(c['cutoff_month'], c['status'], c['waiting_for_month']) for c in check[1:]],
+                         [('2024-03-31', 'waiting', '2024-06-30'), ('2024-04-30', 'waiting', '2024-06-30')])
+        self.assertEqual(first.json['flagged'], int(self.record['review_alert']))
+        self.assertEqual(again.json['outcome_checks'][0]['status'], 'already_present')  # Idempotent resubmission.
+        with self.app.app_context():
+            stored = get_db().execute('SELECT target_churn, future_sum_cents FROM observed_outcomes').fetchall()
+        self.assertEqual([tuple(r) for r in stored], [(1, 3000)])  # 8 x 3,000 <= 120,000.
+
     def test_checksum_failure_never_scores(self):
         data, manifest = self.package()
         with patch.object(monthly,'run_scorer') as scorer:

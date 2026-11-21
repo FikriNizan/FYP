@@ -86,10 +86,11 @@ def batch_record(row):
     source['evidence_coverage'] = dict(records=coverage['records'],names_available=coverage['names'] or 0,histories_available=coverage['histories'] or 0)
     source['customer_names_loaded'] = bool(source.get('customer_names_loaded') or coverage['names'])
     source['flow_history_loaded'] = bool(source.get('flow_history_loaded') or coverage['histories'])
+    from . import outcomes  # Local import: outcomes imports this module.
     return dict(batch_id=row["batch_id"], cutoff_month=row["cutoff_month"],
                 source_kind=row["source_kind"], record_count=row["record_count"],
                 protocol_sha256=row["protocol_sha256"], imported_at=row["imported_at"],
-                source=source)
+                source=source, outcome_check=outcomes.outcome_check(row))
 
 
 def select_batch(month=None, batch_id=None):

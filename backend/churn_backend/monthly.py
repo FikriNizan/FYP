@@ -179,7 +179,9 @@ def process(csv_bytes, manifest_bytes):
     validation_seconds = time.perf_counter() - start
     prior = existing(package['cutoff_month'], package['identity'])
     if prior:
-        return dict(**prior, timings=dict(validation_seconds=validation_seconds, scoring_seconds=0, verification_seconds=0, publication_seconds=0))
+        # Idempotent resubmission: no new records; earlier outcomes are re-checked (already present rows are kept).
+        return dict(**prior, outcome_checks=check_earlier_outcomes(prior['batch_id']),
+                    timings=dict(validation_seconds=validation_seconds, scoring_seconds=0, verification_seconds=0, publication_seconds=0))
     score_start = time.perf_counter()
     output = run_scorer(csv_bytes)
     scoring_seconds = time.perf_counter() - score_start
@@ -211,5 +213,20 @@ def process(csv_bytes, manifest_bytes):
         enrichment_seconds=time.perf_counter()-enrichment_start
     else:
         enrichment_seconds=0
+    result['flagged'] = sum(int(entry['evidence']['review_alert']) for entry in entries)
+    result['outcome_checks'] = check_earlier_outcomes(result['batch_id'])
     return dict(**result, timings={**timings, 'publication_seconds':publication_seconds,
                                    'enrichment_seconds':enrichment_seconds})
+
+
+def check_earlier_outcomes(batch_id):
+    """Phase B: derive observed outcomes for every earlier assessment whose forecast window this month
+    completes, from the published packages only. The assessment stays published whatever happens here."""
+    from . import outcomes
+    try:
+        batch = repo.get_db().execute('SELECT * FROM batches WHERE batch_id=?', (batch_id,)).fetchone()
+        return outcomes.derive_after_publish(batch)
+    except (ValidationError, ValueError, KeyError, TypeError) as error:
+        current_app.logger.warning('Outcome derivation after publication was unavailable: %s', error)
+        return [dict(status='error', message='Outcomes could not be derived automatically. The assessment is published; '
+                                              'ask the administrator to inspect the local log.')]
