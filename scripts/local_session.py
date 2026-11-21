@@ -68,7 +68,7 @@ def child_environment(mode, database):
     env.update(CHURN_DB_PATH=str(database), VITE_API_TARGET=BACKEND_URL,
                TXB_LOCAL_SESSION='1', TXB_LOCAL_MODE=mode)
     # Milestone 7: read-only OPR scenario package (files only; never a database).
-    env.setdefault('TXB_SCENARIO_DIR', str(ROOT / 'artifacts' / 'm7-scenarios' / 'm7-opr-1'))
+    env.setdefault('TXB_SCENARIO_DIR', str(ROOT / 'artifacts' / 'm7-scenarios' / 'm7-opr-2'))
     return env
 
 

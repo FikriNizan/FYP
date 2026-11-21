@@ -56,6 +56,12 @@ class PsiTests(unittest.TestCase):
         self.assertAlmostEqual(result['psi'], term(.25, .5) + term(.5, .25), places=12)
         self.assertIsNone(result['ks'])
 
+    def test_compare_reports_non_missing_coverage_and_reading(self):
+        result = drift.compare([1.0, None, 3.0, 4.0], [1.0, None, None, 4.0])
+        self.assertEqual((result['reference_available'], result['current_available']), (3, 2))
+        self.assertEqual(result['reading'], drift.reading(result['psi']))
+        self.assertEqual(drift.compare([1.0, 2.0], [1.0, 2.0])['reading'], 'No shift')
+
     def test_reading_is_the_stated_convention(self):
         self.assertEqual(drift.PSI_CONVENTION, (0.10, 0.25))
         self.assertEqual([drift.reading(v) for v in (0.0999, 0.1, 0.2499, 0.25)],

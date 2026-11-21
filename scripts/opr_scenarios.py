@@ -2,7 +2,7 @@
 
 Run with the modelling Python (catboost, pandas, numpy), never the app .venv:
 
-    & $env:TXB_MODEL_PYTHON -I -B scripts\\opr_scenarios.py --research-root <R> --test-db artifacts\\m6-review.sqlite --out artifacts\\m7-scenarios\\m7-opr-1
+    & $env:TXB_MODEL_PYTHON -I -B scripts\\opr_scenarios.py --research-root <R> --test-db artifacts\\m6-review.sqlite --out artifacts\\m7-scenarios\\m7-opr-2
 
 What it does, in order (any failed gate stops the run and nothing is written):
 1. Records a listing (path, size, mtime) of the read-only research folder.
@@ -35,7 +35,7 @@ from pathlib import Path
 sys.dont_write_bytecode = True  # Never write __pycache__ into the read-only research folder.
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = 'm7-opr-1'
+VERSION = 'm7-opr-2'  # m7-opr-2: conservative maturity rule and event counts (review 21 Nov 2026).
 SEED = 20240430
 CUTOFF = '2024-04-30'
 CHAMPION_FILE = 'catboost_baseline_final.joblib'
@@ -50,12 +50,20 @@ REGISTER = dict(
     version=VERSION, seed=SEED, cutoff=CUTOFF, direction='hike',
     effective_date='2024-02-01', lag_months=1, repricing_from='2024-03-01', window_end=CUTOFF,
     own_pass_through=0.5, competitor_pass_through=1.0,
+    pass_through_note=('Own-bank pass-through affects the simulated FD offer rate. Competitor pass-through provides scenario '
+                       'context. Exit shares are separate illustrative assumptions, not estimated responses to the rate gap.'),
+    competitor_pass_through_use='context only; not used in the transformation',
     cohort='customers with an active FD in the 31 Jan 2024 snapshot (before the shock)',
-    renewal_rule='an FD reprices or closes only at a maturity date (shown in the Jan 2024 snapshot) between 1 Mar and 30 Apr 2024; '
-                 'no early withdrawal is assumed',
-    migrant_rule='each FD of a migrating customer that matures in the window is closed from its maturity (status CLOSED, balances 0)',
-    non_migrant_rule='each FD of other customers that matures in the window renews at its offer rate + own pass-through x shock',
-    transaction_response='off: collections, payments, digital and friction inputs are unchanged by assumption',
+    renewal_rule=('an FD changes only at a maturity date (shown in the Jan 2024 snapshot) between 1 Mar and 30 Apr 2024, and only '
+                  'in post-maturity snapshots where the baseline still shows it ACTIVE; baseline closures are preserved and no '
+                  'account is re-opened; a missing post-maturity snapshot is never created; no early withdrawal is assumed'),
+    migrant_rule=('each FD of a customer assigned to exit that matures in the window is closed from its maturity in the '
+                  'snapshots where the baseline shows it ACTIVE (status CLOSED, balances 0); an FD already closed, or without '
+                  'post-maturity snapshots, is left unchanged and is not counted as an exit'),
+    non_migrant_rule=('each FD of other customers that matures in the window and is still ACTIVE after maturity is repriced '
+                      'at its offer rate + own pass-through x shock; only FDs whose rate actually changes are counted'),
+    transaction_response=('off: transaction activity, digital engagement and service-friction input values are held constant; '
+                          'scenario-specific SHAP explanations are not computed'),
     fees_and_waivers='unchanged',
     sources=dict(opr_decisions=BNM_SOURCE,
                  mps=['https://www.bnm.gov.my/-/monetary-policy-statement-05052020',
@@ -241,28 +249,56 @@ def jan_maturities(accounts):
 
 
 def apply_scenario(accounts, scenario, migrants, maturities):
-    """In-memory copy with the register applied; returns the copy and counts. Rows outside Feb-Apr 2024 are untouched."""
+    """In-memory copy with the register applied; returns the copy and event counts.
+
+    Conservative rule (m7-opr-2): only FD rows dated on or after the FD's maturity (and no later than the cutoff)
+    that the baseline shows ACTIVE are transformed. Baseline closures are preserved, no row is created for a
+    missing snapshot, and an event is counted only when at least one cell really changes versus the baseline.
+    """
     import pandas as pd
     shocked = accounts.copy()
     shock = scenario['shock_bp'] / 10_000
     window = {acc: (cus, maturity) for acc, (cus, maturity) in maturities.items()
               if REGISTER['repricing_from'] <= maturity <= REGISTER['window_end']}
     snapshot = shocked.snapshot_month_clean.str[:10]
-    counts = dict(fds_maturing_in_window=len(window), fds_closed=0, fds_repriced=0, migrants_with_closures=0)
-    if shock == 0 and not migrants:
-        return shocked, counts
-    closers = set()
+    month_ends = [str(m.date()) for m in pd.date_range(REGISTER['repricing_from'], CUTOFF, freq='ME')]
+    counts = dict(fds_maturing_in_window=len(window), assigned_exit_customers=len(migrants),
+                  eligible_exit_customers=len({cus for cus, _ in window.values() if cus in migrants}),
+                  eligible_exit_fds=sum(1 for cus, _ in window.values() if cus in migrants),
+                  exit_affected_customers=0, exit_affected_fds=0, repriced_customers=0, repriced_fds=0,
+                  fds_no_active_post_maturity=0, fds_missing_post_maturity_snapshots=0, fds_rate_missing=0, cells_changed=0)
+    exits, repriced = set(), set()
     for acc, (cus, maturity) in sorted(window.items()):
-        rows = shocked.acc_no.eq(acc) & snapshot.ge(maturity) & snapshot.le(CUTOFF) & shocked.account_type.eq('FIXED_DEPOSIT')
+        post = shocked.acc_no.eq(acc) & snapshot.ge(maturity) & snapshot.le(CUTOFF) & shocked.account_type.eq('FIXED_DEPOSIT')
+        expected = {m for m in month_ends if m >= maturity}
+        if expected - set(snapshot[post]):
+            counts['fds_missing_post_maturity_snapshots'] += 1  # Explicit treatment: never synthesised.
+        active = post & shocked.account_status_id.eq('ACTIVE')
+        if not active.any():
+            counts['fds_no_active_post_maturity'] += 1  # Already closed (or absent) after maturity: preserved.
+            continue
         if cus in migrants:
-            shocked.loc[rows, ['account_status_id', 'ledger_amount', 'average_amount']] = ['CLOSED', '0', '0']
-            counts['fds_closed'] += 1
-            closers.add(cus)
+            columns = ['account_status_id', 'ledger_amount', 'average_amount']
+            before = shocked.loc[active, columns]
+            target = pd.DataFrame([['CLOSED', '0', '0']] * len(before), index=before.index, columns=columns)
+            changed = int((before != target).to_numpy().sum())
+            if changed:
+                shocked.loc[active, columns] = target
+                counts['exit_affected_fds'] += 1
+                counts['cells_changed'] += changed
+                exits.add(cus)
         elif shock:
-            rates = pd.to_numeric(shocked.loc[rows, 'rate_offer'])
-            shocked.loc[rows, 'rate_offer'] = (rates + REGISTER['own_pass_through'] * shock).map(repr)
-            counts['fds_repriced'] += 1
-    counts['migrants_with_closures'] = len(closers)
+            rates = pd.to_numeric(shocked.loc[active, 'rate_offer'])
+            usable = rates.notna()
+            if not usable.all():
+                counts['fds_rate_missing'] += 1
+            if usable.any():
+                index = rates[usable].index
+                shocked.loc[index, 'rate_offer'] = (rates[usable] + REGISTER['own_pass_through'] * shock).map(repr)
+                counts['repriced_fds'] += 1
+                counts['cells_changed'] += len(index)
+                repriced.add(cus)
+    counts['exit_affected_customers'], counts['repriced_customers'] = len(exits), len(repriced)
     return shocked, counts
 
 
@@ -331,9 +367,10 @@ def run(research_root, test_db, out):
         flagged_saved = [i for i, f in enumerate(saved_flags) if f]
         results.append(dict(
             id=scenario['id'], label=scenario['label'], shock_bp=scenario['shock_bp'], migrating_share=scenario['migrating_share'],
-            cohort_size=len(cohort), migrants=len(migrants),
-            april_fd_holders_among_migrants=sum(1 for c in migrants if (features.loc[c, 'fd_balance_myr'] or 0) > 0),
+            cohort_size=len(cohort),
+            april_fd_holders_among_assigned=sum(1 for c in migrants if (features.loc[c, 'fd_balance_myr'] or 0) > 0),
             **counts,
+            customers_score_changed=sum(1 for a, b in zip(saved_risk, s_risk) if a != b),
             input_drift=feature_drift,
             changed_features=sorted(n for n, d in feature_drift.items() if d['changed_values']),
             prediction_change=dict(
@@ -375,7 +412,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--research-root', required=True)
     parser.add_argument('--test-db', required=True, help='Test-session database (opened read-only)')
-    parser.add_argument('--out', required=True, help='New folder, e.g. artifacts/m7-scenarios/m7-opr-1')
+    parser.add_argument('--out', required=True, help='New folder, e.g. artifacts/m7-scenarios/m7-opr-2')
     args = parser.parse_args(argv)
     manifest, results = run(args.research_root, args.test_db, args.out)
     gates = manifest['gates']
@@ -383,7 +420,11 @@ def main(argv=None):
     print('Reproduction gate:', json.dumps(gates['reproduction']))
     for r in results:
         p = r['prediction_change']
-        print(f"{r['label']}: migrants {r['migrants']}/{r['cohort_size']} | FDs closed {r['fds_closed']} | repriced {r['fds_repriced']} | "
+        print(f"{r['label']}: assigned {r['assigned_exit_customers']}/{r['cohort_size']} | eligible {r['eligible_exit_customers']} "
+              f"({r['eligible_exit_fds']} FDs) | affected {r['exit_affected_customers']} ({r['exit_affected_fds']} FDs) | "
+              f"repriced {r['repriced_fds']} FDs / {r['repriced_customers']} customers | no active post-maturity "
+              f"{r['fds_no_active_post_maturity']} | missing snapshots {r['fds_missing_post_maturity_snapshots']} | "
+              f"score changed {r['customers_score_changed']} | "
               f"changed inputs {len(r['changed_features'])} | score PSI {p['risk']['psi']:.6f} KS {p['risk']['ks']:.6f} | "
               f"into review {p['crossed_into_review']} out {p['crossed_out_of_review']} | flagged {p['flagged']} vs {p['saved_flagged']}")
     print('Package written:', args.out)

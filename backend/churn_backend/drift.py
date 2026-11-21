@@ -10,8 +10,10 @@ PSI = sum((a - e) * ln(a / e)) over bins, where e is the reference share and a t
 * A zero share is replaced by EPSILON on both sides so the logarithm is defined.
 * Reading 0.10 / 0.25 is a convention (Siddiqi 2006; Yurdakul 2018), not a statistical test.
 
-KS = max |F_ref(x) - F_cur(x)| over the non-missing values (the statistic only; no p-value is
-reported, because at n = 1,000 tiny shifts look "significant" and ties make p-values unreliable).
+KS = max |F_ref(x) - F_cur(x)| over the non-missing values. Only the distance is reported, with no
+p-value: in the OPR scenarios each shocked copy is a paired copy of the same customers, not an
+independent sample, so the two-sample test's assumptions do not hold. KS uses non-missing values
+only; the available counts on each side are reported alongside it.
 """
 import bisect
 import math
@@ -90,9 +92,12 @@ def null_share(values):
 
 
 def compare(reference, current, categorical=False):
-    """PSI, KS (numeric only) and the change in missing share for one variable."""
-    return dict(psi=psi(reference, current, categorical=categorical), ks=None if categorical else ks(reference, current),
+    """PSI, KS (numeric only), the change in missing share and the non-missing counts for one variable."""
+    value = psi(reference, current, categorical=categorical)
+    return dict(psi=value, ks=None if categorical else ks(reference, current), reading=reading(value),
                 null_share_reference=null_share(reference), null_share_current=null_share(current),
+                reference_available=sum(1 for v in reference if not missing(v)),
+                current_available=sum(1 for v in current if not missing(v)),
                 changed_values=sum(1 for r, c in zip(reference, current) if not (missing(r) and missing(c)) and r != c))
 
 
@@ -100,5 +105,7 @@ def reading(value):
     """Plain wording for a PSI value under the conventional cut-offs (not a test)."""
     if value is None:
         return 'Not available'
+    if value == 0:
+        return 'No shift'
     low, high = PSI_CONVENTION
     return 'Little shift' if value < low else 'Moderate shift' if value < high else 'Large shift'
