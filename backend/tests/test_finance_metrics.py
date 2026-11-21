@@ -159,6 +159,7 @@ class PortfolioAndCardTests(unittest.TestCase):
         self.assertEqual(set(report['by_tier']), {'SME_S', 'CORP_XL', 'unknown'})
         self.assertEqual({k: v['customers'] for k, v in report['by_flag'].items()}, {'flagged': 2, 'not_flagged': 2})
         self.assertIn('must not be added', report['note'])
+        self.assertNotRegex(report['note'], r'(?i)loss')
         # Cost-ratio and liquidity-premium sensitivities; the base case equals the headline totals.
         self.assertEqual(report['cost_ratios'], [1.0, 0.75, 0.5])
         self.assertAlmostEqual(totals['cost_sensitivity']['1.0']['rar_3m'], totals['rar_3m'])
@@ -186,19 +187,38 @@ class PortfolioAndCardTests(unittest.TestCase):
         # Check B ignores operating-balance earnings by definition, so a large operating balance can still flag B.
         self.assertTrue(expected['fsl_a']['flagged'] and expected['fsl_b']['flagged'])
         self.assertEqual(stake, f"Contribution at stake over {forecast(data['identity']['cutoff'])}: {money(expected['rar_3m'])} "
-                                '(estimated relationship contribution; not a loss forecast; fee waiver condition not met; '
-                                'waiver cost exceeds deposit earnings).')
+                                "(estimated relationship contribution; fee waiver condition not met; "
+                                "deposits don't cover waived transaction cost).")
+        for item in (i for s in card['sections'] for i in s['items']):
+            self.assertNotRegex(item['text'], r'(?i)loss')
         self.assertNotIn('Contribution at stake', payload)  # Deterministic only: never sent to Gemini.
         self.assertLessEqual(render.card_words(card), 240)
         self.assertEqual(data['finance_metrics']['rar_3m'], expected['rar_3m'])
 
     def test_card_wording_for_negative_contribution_and_policy_exemption(self):
+        from churn_backend.briefings import forecast, money
         with self.app.app_context():
             data = evidence.build('summary', self.id)
-        negative = dict(data, finance_metrics=dict(contribution_monthly=-12.5, rar_3m=-37.5, fsl_a=dict(flagged=False),
-                                                   fsl_b=dict(flagged=True, policy=True)))
-        [text] = render.stake_line(negative)
-        self.assertEqual(text['text'], 'Estimated relationship contribution is negative: -RM 12.50 a month (an estimate, not a loss forecast).')
+        sentence = 'Estimated relationship contribution is negative at the assumed cost; see cost sensitivity.'
+        b_label = "deposits don't cover waived transaction cost"
+        def stake(contribution, a, b, policy=False):
+            metrics = dict(contribution_monthly=contribution, rar_3m=3 * contribution, fsl_a=dict(flagged=a),
+                           fsl_b=dict(flagged=b, policy=policy))
+            [text] = render.stake_line(dict(data, finance_metrics=metrics))
+            self.assertFalse(text['external'])
+            self.assertNotRegex(text['text'], r'(?i)loss')
+            return text['text']
+        # Negative contribution with check B false (e.g. negative FD earnings): figure only, no B label.
+        self.assertEqual(stake(-12.5, False, False), sentence + f' ({money(-12.5)} a month).')
+        # Negative with check B true: the B label sits beside the figure.
+        self.assertEqual(stake(-12.5, False, True), sentence + f' ({money(-12.5)} a month; {b_label}).')
+        # Policy-exempt B results are not flagged on the card.
+        self.assertEqual(stake(-12.5, False, True, policy=True), sentence + f' ({money(-12.5)} a month).')
+        prefix = f"Contribution at stake over {forecast(data['identity']['cutoff'])}: {money(30.0)} (estimated relationship contribution"
+        # Positive: only the checks that are true.
+        self.assertEqual(stake(10.0, True, False), prefix + '; fee waiver condition not met).')
+        self.assertEqual(stake(10.0, False, True), prefix + f'; {b_label}).')
+        self.assertEqual(stake(10.0, False, False), prefix + ').')
         self.assertEqual(render.stake_line(dict(data, finance_metrics=dict(contribution_monthly=None))), [])
 
 

@@ -6,14 +6,14 @@ from . import repository as repo, cases, briefings
 from .validation import validate_record, require
 from .db import get_db
 
-VERSION = 'm6-evidence-4'  # m6-evidence-3: collections/payments terms; m6-evidence-4: 'Login failure rate'.
+VERSION = 'm6-evidence-5'  # m6-evidence-3: collections/payments terms; m6-evidence-4: 'Login failure rate'; m6-evidence-5: 'Transaction value'.
 # Definitions intentionally cover only verified existing UI/export concepts.
 # Unknown predictors are excluded, even if the export provides a plausible label.
 DICTIONARY = {
  'combined_flow_mean_1m_myr': ('Combined transaction flow', 'Activity', 'MYR/month', 1, 'Recorded monthly combined transaction flow'),
  'combined_flow_mean_3m_myr': ('Recent transaction flow', 'Activity', 'MYR/month', 3, 'Mean combined transaction flow'),
  'combined_flow_mean_12m_myr': ('Trailing transaction flow', 'Activity', 'MYR/month', 12, 'Mean combined transaction flow'),
- 'combined_flow_ratio_3m_to_12m': ('Transaction activity', 'Activity', 'baseline ratio', 3, 'Recent mean as a proportion of the trailing mean; not a reduction'),
+ 'combined_flow_ratio_3m_to_12m': ('Transaction value', 'Activity', 'baseline ratio', 3, 'Recent mean as a proportion of the trailing mean; not a reduction'),
  'inbound_flow_ratio_3m_to_12m': ('Collections', 'Activity', 'baseline ratio', 3, 'Recent collections mean as a proportion of trailing mean; not a reduction'),
  'outbound_flow_ratio_3m_to_12m': ('Payments', 'Activity', 'baseline ratio', 3, 'Recent payments mean as a proportion of trailing mean; not a reduction'),
  'login_failure_rate_3m': ('Login failure rate', 'Operations', 'rate', 3, 'Recorded login failure rate; cause and customer experience unknown'),

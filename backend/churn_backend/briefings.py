@@ -55,9 +55,9 @@ def forecast(cutoff):
 
 
 LABELS = {
-    'combined_flow_ratio_3m_to_12m': 'Transaction activity',
-    'inbound_flow_ratio_3m_to_12m': 'Incoming payments',
-    'outbound_flow_ratio_3m_to_12m': 'Outgoing payments',
+    'combined_flow_ratio_3m_to_12m': 'Transaction value',
+    'inbound_flow_ratio_3m_to_12m': 'Collections',
+    'outbound_flow_ratio_3m_to_12m': 'Payments',
     'outbound_failure_rate_3m': 'Payment failures',
     'outbound_bank_failure_rate_3m': 'Bank-attributed payment failures',
     'login_failure_rate_3m': 'Login difficulties',

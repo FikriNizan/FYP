@@ -211,5 +211,5 @@ def portfolio(batch_id):
     return dict(cutoff=cutoff, liquidity_premium=BASE_PREMIUM, cost_ratio=BASE_COST_RATIO, cost_ratios=list(COST_RATIOS),
                 liquidity_premiums=list(LIQUIDITY_PREMIUMS), window_months=WINDOW_MONTHS, totals=total,
                 by_basis=dict(sorted(bases.items())), by_tier=dict(sorted(tiers.items())), by_flag=dict(sorted(flags.items())),
-                note='Contribution at stake is an estimate, not expected loss or audited profit. '
+                note='Contribution at stake is an estimate of relationship contribution, not audited profit. '
                      'Fee subsidy leakage checks A and B overlap; their totals must not be added.')

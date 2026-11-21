@@ -10,7 +10,7 @@ from datetime import date
 from . import briefings
 from .ai_evidence import DICTIONARY
 
-VERSION = 'render-5'  # render-5: Finance 'contribution at stake' sentence (RaR/FSL).
+VERSION = 'render-6'  # render-5: Finance 'contribution at stake' sentence (RaR/FSL); render-6: stage-2 wording.
 TOKEN = re.compile(r'\{\{([a-zA-Z0-9_.]+)\}\}')
 CARD_SECTIONS = ('bottom_line', 'operations', 'finance', 'weighed')
 AUDIENCE_ORDER = ('operations', 'finance')
@@ -244,6 +244,11 @@ def finance(evidence, w):
     return (trend + stake_line(evidence) + notable + rest)[:6]
 
 
+FSL_A_TEXT = 'fee waiver condition not met'
+FSL_B_TEXT = "deposits don't cover waived transaction cost"
+NEGATIVE_TEXT = 'Estimated relationship contribution is negative at the assumed cost; see cost sensitivity.'
+
+
 def stake_line(evidence):
     """Revenue at Risk next to (never multiplied by) the risk %: 3 months of estimated relationship
     contribution, plus any fee subsidy leakage flag. Deterministic; not sent to the provider."""
@@ -251,19 +256,19 @@ def stake_line(evidence):
     contribution, rar = metrics.get('contribution_monthly'), metrics.get('rar_3m')
     if contribution is None:
         return []
-    if contribution >= 0:
-        text = (f'Contribution at stake over {briefings.forecast(evidence["identity"]["cutoff"])}: {briefings.money(rar)} '
-                '(estimated relationship contribution; not a loss forecast')
-    else:
-        text = f'Estimated relationship contribution is negative: {briefings.money(contribution)} a month ('
-        text += 'an estimate, not a loss forecast'
+    # Check A and B wording follows each flag only: a negative contribution does not imply either check.
     flags = []
     if (metrics.get('fsl_a') or {}).get('flagged'):
-        flags.append('fee waiver condition not met')
+        flags.append(FSL_A_TEXT)
     fsl_b = metrics.get('fsl_b') or {}
     if fsl_b.get('flagged') and not fsl_b.get('policy'):
-        flags.append('waiver cost exceeds deposit earnings')
-    text += ''.join('; ' + flag for flag in flags) + ').'
+        flags.append(FSL_B_TEXT)
+    if contribution >= 0:
+        text = (f'Contribution at stake over {briefings.forecast(evidence["identity"]["cutoff"])}: {briefings.money(rar)} '
+                '(estimated relationship contribution' + ''.join('; ' + flag for flag in flags) + ').')
+    else:
+        text = (NEGATIVE_TEXT + f' ({briefings.money(contribution)} a month'
+                + ''.join('; ' + flag for flag in flags) + ').')
     return [line(text, [], external=False)]
 
 

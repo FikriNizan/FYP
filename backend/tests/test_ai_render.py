@@ -219,8 +219,9 @@ class RenderTests(unittest.TestCase):
         self.assertIsNone(re.search(r'\b(?:incoming|outgoing|inbound|outbound)\b', text, re.I))
         self.assertIn('Collections in Dec 2023–Feb 2024 averaged 84.98% below their 12-month average.', text)
         self.assertIn('Payments in Dec 2023–Feb 2024 averaged 98% below their 12-month average.', text)
-        # The supporting-evidence panel on the same screen uses the same terms (m6-evidence-4).
-        self.assertEqual(evidence.VERSION, 'm6-evidence-4')
+        # The supporting-evidence panel on the same screen uses the same terms (m6-evidence-5).
+        self.assertEqual(evidence.VERSION, 'm6-evidence-5')
+        self.assertEqual(self.evidence['facts']['feature.combined_flow_ratio_3m_to_12m']['label'], 'Transaction value')
         self.assertEqual(self.evidence['facts']['feature.login_failure_rate_3m']['label'], 'Login failure rate')
         for fact in self.evidence['facts'].values():
             with self.subTest(fact=fact['id']):
