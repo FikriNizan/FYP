@@ -1,6 +1,6 @@
 # Finance metrics: Revenue at Risk and Fee Subsidy Leakage (IR Objective 3)
 
-Implemented in `backend/churn_backend/finance_metrics.py`. All values are **deterministic monthly MYR estimates at the assessment cutoff**, computed from each prediction's saved features. They are estimates of **relationship contribution**, not audited profit and not expected loss. There is no GenAI involvement: the card sentence is server-written and is never sent to the provider.
+Implemented in `backend/churn_backend/finance_metrics.py`. All values are **deterministic monthly MYR estimates at the assessment cutoff**, computed from each prediction's saved features. They are estimates of **relationship contribution**, not audited profit and not a forecast of money the bank will give up. There is no GenAI involvement: the card sentence is server-written and is never sent to the provider.
 
 ## Business logic
 
@@ -93,7 +93,7 @@ Two assumptions are uncertain, so both are shown, as customer-level variants and
 | Customers flagged by FSL check B (non-policy) | 314 / 275 / 196 | — |
 
 **How to read it:**
-- **Total RaR:** the cost-ratio range spans about RM12.8m and the premium range about RM7.1m. The headline sign therefore depends on assumptions the data cannot settle. The UI shows both sensitivities, and a negative figure must never be read as a "loss".
+- **Total RaR:** the cost-ratio range spans about RM12.8m and the premium range about RM7.1m. The headline sign therefore depends on assumptions the data cannot settle. The UI shows both sensitivities with equal weight; a negative figure means the estimated contribution is negative at the assumed cost, nothing more.
 - **Worked example** (customer 604, no FD): contribution is +RM26.64 / +RM31.27 / +RM35.90 a month at cost ratio 1.0 / 0.75 / 0.5, and FSL B is RM18.23 / RM13.60 / RM8.97. The premium has no effect, because there is no FD.
 
 ## Sources and citation status
@@ -116,13 +116,32 @@ Two assumptions are uncertain, so both are shown, as customer-level variants and
 - **Costs left out:** no operating, staff, credit or capital costs.
 - **Basis by tier:** this is an observed property of the synthetic source, not a documented generator rule. Re-verify the hashes and `TIER_TERMS` if the source changes.
 - **OPR table range:** the table is deliberately limited to verified dates. Later cutoffs show as unavailable until a verified row is added.
-- **What the numbers are not:** an estimate of relationship contribution, not audited profit, expected loss or a retention saving.
+- **What the numbers are not:** an estimate of relationship contribution, not audited profit, a forecast of money given up, or a retention saving.
 
-## Where it appears (stage 1)
+## Where it appears
 
-- **API:** the customer detail record has `finance_metrics` (components, contribution, RaR, FSL A/B, sensitivity, unavailable reasons, sources). `/api/summary` has `finance_metrics` portfolio totals by tier and by flagged / not flagged, with coverage, plus a separate policy bucket.
-- **Summary card (Finance section):**
-  - one server-written sentence, e.g. "Contribution at stake over May–Jul 2024: RM79.92 (estimated relationship contribution; not a loss forecast; fee waiver condition not met; waiver cost exceeds deposit earnings).";
-  - a negative contribution reads "Estimated relationship contribution is negative: −RM X a month (an estimate, not a loss forecast).";
-  - POLICY_EXEMPT check-B results are not flagged on the card.
-- **Not yet in the UI:** the Finance tab and the portfolio table are stage 2.
+- **API:** the customer detail record has `finance_metrics` (components, contribution, RaR, FSL A/B, both sensitivities, unavailable reasons, sources). `/api/summary` has `finance_metrics` portfolio totals by basis, by tier and by flagged / not flagged, with coverage and a separate policy bucket. Sensitivity keys are strings ("1.0", "0.005"); the UI orders columns by the `cost_ratios` and `liquidity_premiums` lists, never by key order.
+- **Finance tab (customer):** "Relationship contribution (estimate)" shows:
+  - predicted risk and contribution at stake (3 months) side by side, never multiplied;
+  - the monthly contribution with, only when each check is true, "Fee waiver condition not met" and "Deposits don't cover waived transaction cost" beside it;
+  - for a negative contribution, the sentence "Estimated relationship contribution is negative at the assumed cost; see cost sensitivity.";
+  - the four components;
+  - check A and check B as separate cards (policy exemptions labelled), never added;
+  - the cost-ratio and liquidity-premium tables, one shared component, side by side, always open.
+- **Overview:** "Revenue at Risk and fee subsidy leakage", between the flagged financial context and the queue:
+  - FD-threshold tiers (SME_S, SME_M, CORP_L) and policy-exempt tiers (CORP_XL, GOV) as separate panels by default;
+  - checks A and B in separate rows;
+  - "The sign of these totals depends on both assumptions; both matter equally.";
+  - both sensitivity tables, equally sized, with "All customers combined" as a secondary last row;
+  - a secondary combined line, and a collapsed by-tier table.
+- **Summary card (Finance section, render-6):** one server-written sentence, never sent to the provider, built from the flags:
+  - positive: "Contribution at stake over May–Jul 2024: RM79.92 (estimated relationship contribution; waiver condition not met; deposits don't cover waived transaction cost)." Only the checks that are true are listed;
+  - negative: "Estimated relationship contribution is negative at the assumed cost; see cost sensitivity. (−RM X a month)." Each true check is appended inside the bracket;
+  - POLICY_EXEMPT check-B results are not flagged on the card;
+  - on the card, check A reads "waiver condition not met" (one word shorter, for the word budget); the UI keeps "Fee waiver condition not met".
+
+## Card length
+
+- 240 words is a **design target**, not a rejection rule. The count covers the deterministic card sections plus the template questions; AI link text and AI questions are excluded (they have their own limits).
+- April 2024 (M6 Test): max **240** words on all 206 flagged cards and on all 1,000 cards (customer 72 is the only card at exactly 240).
+- The theoretical worst case is **263** words. It needs a combination not present in the data: a year-spanning period, flagged, every Operations and Finance fact present and notable, a negative contribution with checks A and B both true, the three longest driver labels and a friction driver. The same combination was 262 under the stage-1 sentence. It is pinned by a ceiling guard at 270 (`test_longest_theoretical_card_stays_under_its_ceiling_guard`).

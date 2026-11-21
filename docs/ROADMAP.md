@@ -128,9 +128,10 @@ Implementation, the live evaluations and remaining work are recorded in [MILESTO
 ## IR Objective 3 — Revenue at Risk and Fee Subsidy Leakage (branch `finance-metrics`)
 
 * [x] Stage 1: deterministic RaR (3 x monthly relationship contribution, shown next to the risk %) and FSL checks A ("deal broken") and B ("deal not paying") from saved features; verified BNM OPR/SRR tables; API fields; one Finance sentence on the summary card (kept out of the Gemini payload). See [FINANCE_METRICS.md](FINANCE_METRICS.md).
-* [ ] Stage 2: Finance tab breakdown with sensitivity, and portfolio table by tier and flag in the Overview.
-* [ ] Primary sources for the owner-cited references (AFP earnings credit, FTP, FCA cash savings, BNM 2013 pricing reform).
-* [ ] Resume the full summary batch once the Finance section is final.
+* [x] Stage 2: Finance tab breakdown with both sensitivities, and the Overview section (FD-threshold and policy-exempt tiers separately, combined secondary, by-tier detail). Card sentence render-6 and driver labels Transaction value / Collections / Payments (m6-evidence-5). See [handoff](handoffs/2026-11-21-finance-metrics-stage-2.md).
+* [x] Primary sources for the owner-cited references: AFP earnings credit, FCA FTP/liquidity premium and BNM 2013 pricing reform verified (see FINANCE_METRICS.md).
+* [ ] PayNet business IBG charges page still not verified (HTTP 403).
+* [ ] Resume the full summary batch now that the Finance section is final (owner, live; render-6 and m6-evidence-5 change the cache keys).
 
 ## Milestone 7 — OPR demonstration, evaluation and release
 
