@@ -5,6 +5,8 @@ import time
 import uuid
 from datetime import datetime, timezone
 
+import math
+from flask import current_app
 from .constants import DECISIONS, FINANCE_FIELDS, OPS_FIELDS
 from .db import get_db
 from . import finance_metrics
@@ -165,8 +167,42 @@ def customer_record(row, detail=False):
                       observed_outcome=outcome,
                       finance_note="Fee and waiver figures are historical three-month monthly estimates; "
                                    "balances are exposures. These are not verified profit or retention savings.",
-                      finance_metrics=finance_metrics.customer_metrics(features, evidence["cutoff_month"]))
+                      finance_metrics=finance_metrics.customer_metrics(features, evidence["cutoff_month"]),
+                      service_levels=service_levels(row['batch_id'], features))
     return record
+
+
+# Service experience levels (Operations tab). Data-based, per saved assessment: a measure is "high" when it is
+# above the nearest-rank 75th percentile of that assessment's customers with a value (and above zero), i.e.
+# higher than about 3 in 4 customers. Saved predictions never change, so the thresholds are cached per batch.
+SERVICE_FIELDS = ('login_failure_rate_3m', 'passive_session_rate_3m', 'outbound_failure_rate_3m', 'outbound_bank_failure_rate_3m')
+_SERVICE_THRESHOLDS = {}
+
+
+def service_thresholds(batch_id):
+    key = (str(current_app.config['DATABASE']), batch_id)
+    if key not in _SERVICE_THRESHOLDS:
+        rows = [json.loads(r['features_json']) for r in
+                get_db().execute('SELECT features_json FROM predictions WHERE batch_id=?', (batch_id,))]
+        thresholds = {}
+        for field in SERVICE_FIELDS:
+            values = sorted(v for v in (row.get(field) for row in rows)
+                            if isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v))
+            thresholds[field] = dict(p75=values[math.ceil(0.75 * len(values)) - 1] if values else None, customers=len(values))
+        _SERVICE_THRESHOLDS[key] = thresholds
+    return _SERVICE_THRESHOLDS[key]
+
+
+def service_levels(batch_id, features):
+    thresholds, levels = service_thresholds(batch_id), {}
+    for field in SERVICE_FIELDS:
+        value, p75 = features.get(field), thresholds[field]['p75']
+        if not isinstance(value, (int, float)) or isinstance(value, bool) or p75 is None:
+            level = 'not_provided'
+        else:
+            level = 'high' if value > p75 and value > 0 else 'usual'
+        levels[field] = dict(value=value, level=level, p75=p75, customers=thresholds[field]['customers'])
+    return levels
 
 
 def workflow_context(row, review, flagged, cutoff_month):
@@ -223,7 +259,12 @@ def summary(batch):
             values = [c["finance"][field] for c in records if c["finance"][field] is not None]
             finance[f"{scope}_{field}"] = dict(total=sum(values) if values else None,
                                                 records_with_value=len(values), records=len(records))
+    deposit, operating = finance['flagged_fd_balance_myr'], finance['flagged_non_fd_balance_myr']
+    parts = [part['total'] for part in (deposit, operating) if part['total'] is not None]
+    flagged_balances = dict(total=sum(parts) if parts else None, fixed_deposits=deposit['total'], operating=operating['total'],
+                            records=len(flagged))
     return dict(batch=batch_record(batch), population=len(customers), flagged=len(flagged),
+                flagged_share=len(flagged) / len(customers) if customers else None, flagged_balances=flagged_balances,
                 workflow_counts={state:sum(c['workflow']['state']==state for c in customers) for state in
                                  ('reviewed','existing_case','case_conflict','below_threshold','needs_reassessment','needs_first_review')},
                 needs_committee_review=sum(c['workflow']['state'] in ('needs_first_review','needs_reassessment') for c in flagged),

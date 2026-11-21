@@ -553,5 +553,32 @@ class PackageOutcomeTests(unittest.TestCase):
         self.assertEqual(len(list(self.path.parent.glob('test.sqlite-pre-migration-*'))), 1)
 
 
+class PhaseCFieldTests(unittest.TestCase):
+    setUp, batch, later = PackageOutcomeTests.setUp, PackageOutcomeTests.batch, PackageOutcomeTests.later
+    """Phase C presentation fields come from the backend (the UI never computes them)."""
+    def test_service_level_is_above_the_assessments_75th_percentile(self):
+        rates = {'A': 0.0, 'B': 0.1, 'C': 0.2, 'D': 0.5, 'E': None}
+        batch = self.batch('2024-06-30', {c: dict(login_failure_rate_3m=v) for c, v in rates.items()})
+        from churn_backend import repository
+        with self.app.app_context():
+            levels = {c: repository.service_levels(batch, dict(login_failure_rate_3m=v))['login_failure_rate_3m'] for c, v in rates.items()}
+        self.assertEqual({c: l['level'] for c, l in levels.items()},
+                         {'A': 'usual', 'B': 'usual', 'C': 'usual', 'D': 'high', 'E': 'not_provided'})
+        self.assertEqual((levels['D']['p75'], levels['D']['customers']), (0.2, 4))  # Nearest rank: 3rd of 4 values.
+        with self.app.app_context():
+            zero = self.batch('2024-07-31', {c: dict(login_failure_rate_3m=0.0) for c in 'ABCD'})
+            self.assertEqual(repository.service_levels(zero, dict(login_failure_rate_3m=0.0))['login_failure_rate_3m']['level'], 'usual')
+
+    def test_monitoring_fields_expected_drops_and_ready_after_the_last_window_month(self):
+        self.later(months=('2024-03-31',))
+        with self.app.app_context():
+            feb = get_db().execute('SELECT * FROM batches WHERE batch_id=?', (self.feb,)).fetchone()
+            check = outcomes.outcome_check(feb)
+            self.assertEqual((check['state'], check['waiting_for_month'], check['ready_after_month']), ('waiting', '2024-04-30', '2024-05-31'))
+            stats = outcomes.performance([dict(risk=.25, target_churn=1, review_alert=1), dict(risk=.5, target_churn=0, review_alert=0)])
+        self.assertEqual((stats['expected_positives'], stats['positives'], stats['negatives']), (.75, 1, 1))
+        self.assertIsNone(outcomes.performance([])['expected_positives'])
+
+
 if __name__=='__main__':
     unittest.main()

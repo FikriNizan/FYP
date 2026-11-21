@@ -136,6 +136,7 @@ def customer_metrics(features, cutoff, premium=BASE_PREMIUM, with_sensitivity=Tr
                      monthly=gap - covered if flagged else None, shortfall=max(0.0, gap), policy=policy)
 
     result = dict(cutoff=str(cutoff)[:10], tier_id=tier_id, waiver_basis=basis, active_waiver=active,
+                  fd_threshold_myr=tier['fd_threshold_myr'] if tier and basis == 'FD_THRESHOLD' else None,
                   opr=opr, srr=srr, liquidity_premium=premium, cost_ratio=cost_ratio, window_months=WINDOW_MONTHS,
                   components=dict(fee_income=fee_income, transaction_cost=cost, fd_earnings=fd_value,
                                   operating_earnings=operating_value),
@@ -216,7 +217,10 @@ def portfolio(batch_id):
         for group in (total, tiers[metrics['tier_id'] or 'unknown'], flags['flagged' if row['review_alert'] else 'not_flagged'],
                       bases[metrics['waiver_basis'] or 'unknown']):
             _add(group, metrics)
+    bases_tiers = {basis: [tier for tier, terms in TIER_TERMS.items() if terms['basis'] == basis]
+                   for basis in ('FD_THRESHOLD', 'POLICY_EXEMPT')}
     return dict(cutoff=cutoff, liquidity_premium=BASE_PREMIUM, cost_ratio=BASE_COST_RATIO, cost_ratios=list(COST_RATIOS),
+                bases_tiers=bases_tiers,
                 liquidity_premiums=list(LIQUIDITY_PREMIUMS), window_months=WINDOW_MONTHS, totals=total,
                 by_basis=dict(sorted(bases.items())), by_tier=dict(sorted(tiers.items())), by_flag=dict(sorted(flags.items())),
                 note='Contribution at stake is an estimate of relationship contribution, not audited profit. '

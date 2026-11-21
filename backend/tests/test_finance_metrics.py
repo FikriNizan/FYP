@@ -143,6 +143,11 @@ class FormulaTests(unittest.TestCase):
                 for variant in m['cost_sensitivity']:
                     self.assertAlmostEqual(variant['rar_3m'], 3 * (c['fee_income'] - variant['transaction_cost'] + c['fd_earnings'] + c['operating_earnings']))
 
+    def test_tier_threshold_is_exposed_only_for_deposit_condition_tiers(self):
+        self.assertEqual(fm.customer_metrics(WORKED, APRIL)['fd_threshold_myr'], 100000.0)
+        self.assertIsNone(fm.customer_metrics(features(tier_id='GOV'), APRIL)['fd_threshold_myr'])
+        self.assertIsNone(fm.customer_metrics(features(tier_id='NEW_TIER'), APRIL)['fd_threshold_myr'])
+
     def test_unknown_tier_or_unverified_cutoff_makes_measures_unavailable(self):
         unknown = fm.customer_metrics(features(tier_id='NEW_TIER'), APRIL)
         self.assertIn('unknown tier', unknown['unavailable'])
@@ -211,6 +216,13 @@ class PortfolioAndCardTests(unittest.TestCase):
         self.assertEqual(report['by_basis']['POLICY_EXEMPT']['customers'], 1)
         summary = self.app.test_client().get('/api/summary').json
         self.assertEqual(summary['finance_metrics']['totals']['customers'], 4)
+        self.assertEqual(summary['finance_metrics']['bases_tiers'],
+                         {'FD_THRESHOLD': ['SME_S', 'SME_M', 'CORP_L'], 'POLICY_EXEMPT': ['CORP_XL', 'GOV']})
+        balances, finance = summary['flagged_balances'], summary['finance']
+        self.assertEqual((balances['fixed_deposits'], balances['operating']),
+                         (finance['flagged_fd_balance_myr']['total'], finance['flagged_non_fd_balance_myr']['total']))
+        self.assertAlmostEqual(balances['total'], sum(v for v in (balances['fixed_deposits'], balances['operating']) if v is not None))
+        self.assertEqual((balances['records'], summary['flagged_share']), (summary['flagged'], summary['flagged'] / summary['population']))
         detail = self.app.test_client().get('/api/customers/944').json['customer']['finance_metrics']
         self.assertAlmostEqual(detail['rar_3m'], metrics[0]['rar_3m'])
         self.assertEqual([s['liquidity_premium'] for s in detail['sensitivity']], [0.0, 0.005, 0.01])

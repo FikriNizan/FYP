@@ -304,8 +304,10 @@ def outcome_check(batch):
                         'WHERE p.batch_id=?', (batch['batch_id'],)).fetchone()[0]
     _sources, missing = package_coverage(batch)
     state = 'checked' if loaded else 'waiting' if missing else 'not_checked'
+    # Owner decision: a waiting assessment is labelled by the LAST month of its forecast window
+    # ("Ready after July 2024 data" for April 2024); waiting_for_month is the first month still missing.
     return dict(state=state, loaded=loaded, records=records, waiting_for_month=missing if not loaded else None,
-                window=horizon_months(batch['cutoff_month']))
+                ready_after_month=horizon_end(batch['cutoff_month']), window=horizon_months(batch['cutoff_month']))
 
 
 def delivered_by_customer():
@@ -322,7 +324,7 @@ def delivered_by_customer():
 
 def performance(rows):
     if not rows:
-        return dict(records=0,positives=0,observed_rate=None,mean_risk=None,brier=None,
+        return dict(records=0,positives=0,negatives=0,expected_positives=None,observed_rate=None,mean_risk=None,brier=None,
                     reference_brier=None,flagged=0,flagged_positives=0,flagged_positive=None,
                     true_positives=0,false_positives=0,false_negatives=0,true_negatives=0,
                     precision=None,recall=None,f1=None)
@@ -334,6 +336,8 @@ def performance(rows):
     true_negatives = len(rows) - flagged_positives - false_positives - false_negatives
     f1_denominator = 2*flagged_positives + false_positives + false_negatives
     return dict(records=len(rows),positives=sum(row['target_churn'] for row in rows),
+                negatives=len(rows)-sum(row['target_churn'] for row in rows),
+                expected_positives=sum(row['risk'] for row in rows),
                 observed_rate=observed_rate,reference_brier=observed_rate*(1-observed_rate),
                 mean_risk=mean(row['risk'] for row in rows),
                 brier=mean((row['risk']-row['target_churn'])**2 for row in rows),
@@ -392,7 +396,9 @@ def trend(batch_id):
             mean_risk_loaded=stats['mean_risk'],observed_rate=stats['observed_rate'],
             gap=stats['observed_rate']-stats['mean_risk'] if mature else None,
             brier=stats['brier'],reference_brier=stats['reference_brier'],
-            flagged_positive=stats['flagged_positive'],outcome_check=outcome_check(batch)))
+            flagged_positive=stats['flagged_positive'],positives=stats['positives'] if mature else None,
+            expected_positives=stats['expected_positives'],precision=stats['precision'],recall=stats['recall'],
+            outcome_check=outcome_check(batch)))
     return dict(protocol_sha256=selected['protocol_sha256'],batches=items)
 
 
@@ -430,6 +436,7 @@ def drift(current, previous):
                 previous_mean_risk=mean(x['risk'] for x in before),
                 current_mean_risk=mean(x['risk'] for x in after),
                 previous_flagged_rate=mean(x['review_alert'] for x in before),
+                previous_flagged=sum(x['review_alert'] for x in before),current_flagged=sum(x['review_alert'] for x in after),
                 current_flagged_rate=mean(x['review_alert'] for x in after),features=features)
 
 
