@@ -5,7 +5,14 @@ import { observedMonths } from '../flows.js';
 const WIDTH = 780, HEIGHT = 280, PLOT_LEFT = 75, PLOT_RIGHT = 640;
 const compact = value => value >= 1e6 ? 'RM ' + (value / 1e6).toFixed(2) + 'm' : value >= 1e3 ? 'RM ' + Math.round(value / 1e3) + 'k' : 'RM ' + Math.round(value);
 
-export default function FlowHistory({ history = [], baseline, cutoff }) {
+// Lead sentence for combined flow, from the saved 3-month mean and the saved 3m/12m ratio (never recomputed).
+export function recentVsUsual(recent, ratio) {
+  if (!isNumber(recent) || !isNumber(ratio)) return null;
+  const position = ratio === 1 ? 'in line with' : Math.abs((1 - ratio) * 100).toFixed(1) + '% ' + (ratio < 1 ? 'below' : 'above');
+  return `Last 3 months averaged ${money(recent)} a month, ${position} the 12-month average.`;
+}
+
+export default function FlowHistory({ history = [], baseline, cutoff, recent, ratio }) {
   const [measure,setMeasure] = useState('combined_flow_myr');
   const [active,setActive] = useState(null);
   const rows = observedMonths(history,cutoff);
@@ -22,6 +29,7 @@ export default function FlowHistory({ history = [], baseline, cutoff }) {
   const latest = rows.at(-1), previous = rows.at(-2);
   const takeaway = isNumber(latest[measure]) ? `${monthLabel(latest.snapshot_month)}: ${money(latest[measure])}.`
     : `${monthLabel(latest.snapshot_month)}: this measure was not provided.`;
+  const lead = measure === 'combined_flow_myr' ? recentVsUsual(recent, ratio) : null;
   const averageY = average === null ? 0 : y(average);
   const attritionY = attrition === null ? 0 : y(attrition);
   const attritionLabelY = Math.min(Math.max(attritionY, averageY + 34), 232);
@@ -30,7 +38,8 @@ export default function FlowHistory({ history = [], baseline, cutoff }) {
   const tipLeft = hovered ? Math.min(Math.max((x(active) + barWidth / 2) / WIDTH * 100, 15), 80) : 0;
   const tipTop = hovered ? (hoveredValue === null ? 150 : y(hoveredValue)) / HEIGHT * 100 : 0;
   return <section className="panel"><div className="section-heading"><div><h2>Recorded transaction activity</h2><p className="muted">How has activity changed? · {monthLabel(rows[0].snapshot_month)}–{monthLabel(latest.snapshot_month)}</p></div><label className="chart-control">Measure<select value={measure} onChange={e=>{setMeasure(e.target.value);setActive(null);}}>{Object.entries(labels).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label></div>
-    <p className="chart-takeaway">{takeaway}{isNumber(latest[measure]) && isNumber(previous?.[measure]) && previous[measure]>0 && <> {Math.abs((latest[measure]/previous[measure]-1)*100).toFixed(1)}% {latest[measure]>=previous[measure] ? 'higher' : 'lower'} than the previous recorded month.</>}</p>
+    {lead && <p className="chart-takeaway">{lead}</p>}
+    <p className={lead ? 'muted' : 'chart-takeaway'}>{takeaway}{isNumber(latest[measure]) && isNumber(previous?.[measure]) && previous[measure]>0 && <> {Math.abs((latest[measure]/previous[measure]-1)*100).toFixed(1)}% {latest[measure]>=previous[measure] ? 'higher' : 'lower'} than the previous recorded month.</>}</p>
     <div className="chart-wrap" style={{position:'relative'}}>
     <svg className="chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={`${labels[measure]} by observed month in MYR. Missing months are gaps.${average !== null ? ' Two reference lines show the trailing twelve-month average and the attrition reference, which is half of that average.' : ''} Exact amounts are in the table below.`}>
       <text x="4" y="22">MYR</text>

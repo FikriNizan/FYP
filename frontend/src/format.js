@@ -84,10 +84,35 @@ const labels = {
   approver_session_share_3m: 'Sessions involving approvers',
 };
 export const driverLabel = driver => labels[driver.feature] || driver.label || driver.feature.replaceAll('_', ' ');
+
+// Units for count-type predictors (display only; the value itself comes from the saved features).
+const COUNT_UNITS = [
+  [/^inbound_count_mean/, 'collections a month'], [/^outbound_count_mean/, 'successful payments a month'],
+  [/^outbound_submitted_count_mean/, 'payments submitted a month'], [/^outbound_failure_count_mean/, 'failed payments a month'],
+  [/^outbound_processing_count_mean/, 'payments still processing a month'], [/^session_started_count_mean/, 'sessions a month'],
+  [/^session_completed_count_mean/, 'completed sessions a month'], [/^login_success_count_mean/, 'successful logins a month'],
+  [/^active_login_users_mean/, 'active users'], [/^session_transactions_mean/, 'per session'],
+  [/^bank_friction_count_mean/, 'bank-side friction events a month'], [/^friction_count_mean/, 'friction events a month'],
+  [/^friction_retries_mean/, 'retries'], [/^active_account_count$/, 'active accounts'], [/^active_fd_count$/, 'active fixed deposits'],
+  [/^closed_fd_count$/, 'closed fixed deposits'], [/^fd_maturing_30d_count$/, 'maturing within 30 days'],
+  [/_zero_months_3m$/, 'of the last 3 months with none'],
+];
+const whole = value => new Intl.NumberFormat('en-MY', { maximumFractionDigits: 0 }).format(value);
+const plural = (value, one, many) => whole(value) + ' ' + (Math.round(value) === 1 ? one : many);
+
 export function driverValue(driver) {
-  if (driver.value === null || driver.value === undefined) return 'Not provided';
-  if (driver.feature.includes('_ratio_')) return percent(driver.value, 2) + ' of the twelve-month average';
-  if (/_rate_|_share_/.test(driver.feature)) return percent(driver.value);
-  if (driver.feature.endsWith('_myr')) return money(driver.value);
-  return isNumber(driver.value) ? new Intl.NumberFormat('en-MY', { maximumFractionDigits: 2 }).format(driver.value) : String(driver.value);
+  const value = driver.value, feature = driver.feature;
+  if (value === null || value === undefined) return 'Not provided';
+  if (!isNumber(value)) return feature === 'tier_id' ? tierLabel(value) : String(value);
+  if (feature.includes('_ratio_')) return percent(value, 2) + ' of the 12-month average';
+  if (feature.includes('_change_3m_vs_previous_3m')) return Math.abs(value * 100).toFixed(1) + '% ' + (value < 0 ? 'lower' : 'higher') + ' than the previous 3 months';
+  if (feature.includes('_cv_')) return 'variation ' + value.toFixed(2) + ' (0 = steady)';
+  if (/_rate(?:_|$)|_share_|_pct$/.test(feature)) return percent(value);
+  if (feature.endsWith('_myr')) return money(value) + (/_flow_mean_|_fee_mean_|_waiver_mean_/.test(feature) ? ' a month' : '');
+  if (feature.endsWith('_recency_days')) return plural(value, 'day ago', 'days ago');
+  if (feature.endsWith('_recency_months')) return plural(value, 'month ago', 'months ago');
+  if (feature.endsWith('_sec')) return plural(value, 'second', 'seconds');
+  if (feature.endsWith('_ms')) return whole(value) + ' ms';
+  const unit = COUNT_UNITS.find(([pattern]) => pattern.test(feature));
+  return whole(value) + (unit ? ' ' + unit[1] : '');
 }

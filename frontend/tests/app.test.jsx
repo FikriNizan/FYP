@@ -50,6 +50,7 @@ describe('React full-stack foundation', () => {
     expect(screen.getByText('84.4%')).toBeTruthy();
     expect(screen.getByText('99.1% lower')).toBeTruthy();
     expect(screen.getByText('At or above the review threshold (25.9%)')).toBeTruthy();
+    expect(screen.getByText('a month, last 3 months').previousElementSibling.textContent).toMatch(/214,333\.04/);
     expect(screen.getByText(/^CIF 944 · /)).toBeTruthy();
     expect(screen.getByText('Awaiting review',{selector:'.badge'})).toBeTruthy();
     expect(screen.getByRole('heading',{name:'Signals to investigate'})).toBeTruthy();
