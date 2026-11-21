@@ -1,0 +1,1892 @@
+{
+ "gates": {
+  "parity": {
+   "features": [
+    "active_account_count",
+    "active_fd_count",
+    "closed_fd_count",
+    "fd_maturing_30d_count",
+    "fd_balance_myr",
+    "fd_average_balance_myr",
+    "non_fd_balance_myr",
+    "fd_balance_mean_3m_myr",
+    "fd_balance_mean_12m_myr",
+    "fd_balance_change_3m_vs_previous_3m",
+    "fd_balance_weighted_offer_rate"
+   ],
+   "mismatches": {
+    "active_account_count": 0,
+    "active_fd_count": 0,
+    "closed_fd_count": 0,
+    "fd_average_balance_myr": 0,
+    "fd_balance_change_3m_vs_previous_3m": 0,
+    "fd_balance_mean_12m_myr": 0,
+    "fd_balance_mean_3m_myr": 0,
+    "fd_balance_myr": 0,
+    "fd_balance_weighted_offer_rate": 0,
+    "fd_maturing_30d_count": 0,
+    "non_fd_balance_myr": 0
+   }
+  },
+  "reproduction": {
+   "flag_mismatches": 0,
+   "max_abs_raw_difference": 0.0,
+   "max_abs_risk_difference": 0.0,
+   "saved_flagged": 206,
+   "tolerance": 1e-12
+  }
+ },
+ "note": "This scenario changes deposit-related inputs only. Collections, payments, digital and friction inputs are unchanged by assumption, so the model's main drivers do not move.",
+ "package_sha256": {
+  "drift.json": "48240579dbf590981eb1b97c6b36582d444feb2bf548d64fc4d011c28f6d33e8",
+  "manifest": "b73c2b51f0e6e614cbe5248df9a6caafee511e69c17d5fdf405a4c6061e20c86",
+  "scores.csv": "1459a492351645b9d6b82076fedadc70e51225014d992ab2b9e2f667eefde6b8"
+ },
+ "psi": {
+  "bins": 10,
+  "convention": [
+   0.1,
+   0.25
+  ],
+  "epsilon": 0.0001,
+  "value_bin_limit": 10
+ },
+ "reference": "Unshocked April 2024 features and the saved April scores",
+ "register": {
+  "cohort": "customers with an active FD in the 31 Jan 2024 snapshot (before the shock)",
+  "competitor_pass_through": 1.0,
+  "cutoff": "2024-04-30",
+  "direction": "hike",
+  "effective_date": "2024-02-01",
+  "fees_and_waivers": "unchanged",
+  "lag_months": 1,
+  "migrant_rule": "each FD of a migrating customer that matures in the window is closed from its maturity (status CLOSED, balances 0)",
+  "non_migrant_rule": "each FD of other customers that matures in the window renews at its offer rate + own pass-through x shock",
+  "own_pass_through": 0.5,
+  "renewal_rule": "an FD reprices or closes only at a maturity date (shown in the Jan 2024 snapshot) between 1 Mar and 30 Apr 2024; no early withdrawal is assumed",
+  "repricing_from": "2024-03-01",
+  "scenarios": [
+   {
+    "id": "no_shock",
+    "label": "No shock",
+    "migrating_share": 0.0,
+    "shock_bp": 0
+   },
+   {
+    "id": "mild",
+    "label": "Mild",
+    "migrating_share": 0.05,
+    "shock_bp": 25
+   },
+   {
+    "id": "severe",
+    "label": "Severe",
+    "migrating_share": 0.2,
+    "shock_bp": 125
+   }
+  ],
+  "seed": 20240430,
+  "sources": {
+   "mps": [
+    "https://www.bnm.gov.my/-/monetary-policy-statement-05052020",
+    "https://www.bnm.gov.my/-/monetary-policy-statement-11052022",
+    "https://www.bnm.gov.my/-/monetary-policy-statement-03052023"
+   ],
+   "opr_decisions": "https://www.bnm.gov.my/monetary-stability/opr-decisions"
+  },
+  "transaction_response": "off: collections, payments, digital and friction inputs are unchanged by assumption",
+  "version": "m7-opr-1",
+  "window_end": "2024-04-30"
+ },
+ "scenarios": [
+  {
+   "april_fd_holders_among_migrants": 0,
+   "changed_features": [],
+   "cohort_size": 398,
+   "fds_closed": 0,
+   "fds_maturing_in_window": 339,
+   "fds_repriced": 0,
+   "id": "no_shock",
+   "input_drift": {
+    "active_account_count": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "active_fd_count": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "active_login_users_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "active_login_users_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "active_login_users_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "approver_session_share_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "bank_friction_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "catalog_effective_fee_mean_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "catalog_waiver_mean_pct": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "closed_fd_count": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_cv_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_zero_months_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "customer_type": {
+     "changed_values": 0,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "estimated_fee_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "estimated_waiver_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "fd_average_balance_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "fd_balance_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.592,
+     "null_share_reference": 0.592,
+     "psi": 0.0
+    },
+    "fd_balance_mean_12m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "fd_balance_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "fd_balance_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "fd_balance_weighted_offer_rate": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.616,
+     "null_share_reference": 0.616,
+     "psi": 0.0
+    },
+    "fd_maturing_30d_count": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "friction_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "friction_response_mean_3m_ms": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.283,
+     "null_share_reference": 0.283,
+     "psi": 0.0
+    },
+    "friction_retries_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.283,
+     "null_share_reference": 0.283,
+     "psi": 0.0
+    },
+    "inbound_count_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_cv_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_recency_months": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_share_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_zero_months_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_failure_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_success_count_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_success_count_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_success_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_success_recency_days": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "non_fd_balance_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_bank_failure_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_count_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_failure_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_failure_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.001,
+     "null_share_reference": 0.001,
+     "psi": 0.0
+    },
+    "outbound_flow_cv_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_processing_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_processing_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_submitted_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_success_recency_days": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_zero_months_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "passive_session_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "sector_code": {
+     "changed_values": 0,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_completed_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_duration_mean_3m_sec": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_forced_drop_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_started_count_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_started_count_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_started_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_timeout_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_transactions_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "tier_id": {
+     "changed_values": 0,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "untrusted_device_session_share_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    }
+   },
+   "label": "No shock",
+   "migrants": 0,
+   "migrants_with_closures": 0,
+   "migrating_share": 0.0,
+   "performance_change": "Not computed: no outcomes exist under a hypothetical shock.",
+   "prediction_change": {
+    "crossed_into_review": 0,
+    "crossed_out_of_review": 0,
+    "flagged": 206,
+    "flagged_only": {
+     "customers": 206,
+     "risk": {
+      "changed_values": 0,
+      "ks": 0.0,
+      "null_share_current": 0.0,
+      "null_share_reference": 0.0,
+      "psi": 0.0
+     },
+     "still_flagged": 206
+    },
+    "mean_risk": 0.16097792239446798,
+    "risk": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "saved_flagged": 206,
+    "saved_mean_risk": 0.16097792239446798
+   },
+   "shock_bp": 0
+  },
+  {
+   "april_fd_holders_among_migrants": 18,
+   "changed_features": [
+    "active_account_count",
+    "active_fd_count",
+    "closed_fd_count",
+    "fd_average_balance_myr",
+    "fd_balance_change_3m_vs_previous_3m",
+    "fd_balance_mean_12m_myr",
+    "fd_balance_mean_3m_myr",
+    "fd_balance_myr",
+    "fd_balance_weighted_offer_rate"
+   ],
+   "cohort_size": 398,
+   "fds_closed": 11,
+   "fds_maturing_in_window": 339,
+   "fds_repriced": 328,
+   "id": "mild",
+   "input_drift": {
+    "active_account_count": {
+     "changed_values": 8,
+     "ks": 0.0030000000000000027,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 8.207551854226973e-05
+    },
+    "active_fd_count": {
+     "changed_values": 8,
+     "ks": 0.008000000000000007,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0003290477731058286
+    },
+    "active_login_users_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "active_login_users_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "active_login_users_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "approver_session_share_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "bank_friction_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "catalog_effective_fee_mean_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "catalog_waiver_mean_pct": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "closed_fd_count": {
+     "changed_values": 8,
+     "ks": 0.008000000000000007,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0004634193283918128
+    },
+    "combined_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_cv_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_zero_months_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "customer_type": {
+     "changed_values": 0,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "estimated_fee_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "estimated_waiver_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "fd_average_balance_myr": {
+     "changed_values": 8,
+     "ks": 0.008000000000000007,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.000328947158303541
+    },
+    "fd_balance_change_3m_vs_previous_3m": {
+     "changed_values": 8,
+     "ks": 0.019607843137254916,
+     "null_share_current": 0.592,
+     "null_share_reference": 0.592,
+     "psi": 0.0017254231793046007
+    },
+    "fd_balance_mean_12m_myr": {
+     "changed_values": 8,
+     "ks": 0.0020000000000000018,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "fd_balance_mean_3m_myr": {
+     "changed_values": 8,
+     "ks": 0.0030000000000000027,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 2.074562497024942e-05
+    },
+    "fd_balance_myr": {
+     "changed_values": 8,
+     "ks": 0.008000000000000007,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.000328947158303541
+    },
+    "fd_balance_weighted_offer_rate": {
+     "changed_values": 226,
+     "ks": 0.11447251773049638,
+     "null_share_current": 0.624,
+     "null_share_reference": 0.616,
+     "psi": 0.02420116088150737
+    },
+    "fd_maturing_30d_count": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "friction_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "friction_response_mean_3m_ms": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.283,
+     "null_share_reference": 0.283,
+     "psi": 0.0
+    },
+    "friction_retries_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.283,
+     "null_share_reference": 0.283,
+     "psi": 0.0
+    },
+    "inbound_count_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_cv_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_recency_months": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_share_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_zero_months_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_failure_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_success_count_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_success_count_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_success_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_success_recency_days": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "non_fd_balance_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_bank_failure_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_count_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_failure_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_failure_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.001,
+     "null_share_reference": 0.001,
+     "psi": 0.0
+    },
+    "outbound_flow_cv_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_processing_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_processing_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_submitted_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_success_recency_days": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_zero_months_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "passive_session_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "sector_code": {
+     "changed_values": 0,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_completed_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_duration_mean_3m_sec": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_forced_drop_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_started_count_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_started_count_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_started_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_timeout_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_transactions_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "tier_id": {
+     "changed_values": 0,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "untrusted_device_session_share_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    }
+   },
+   "label": "Mild",
+   "migrants": 20,
+   "migrants_with_closures": 9,
+   "migrating_share": 0.05,
+   "performance_change": "Not computed: no outcomes exist under a hypothetical shock.",
+   "prediction_change": {
+    "crossed_into_review": 0,
+    "crossed_out_of_review": 0,
+    "flagged": 206,
+    "flagged_only": {
+     "customers": 206,
+     "risk": {
+      "changed_values": 1,
+      "ks": 0.0048543689320388606,
+      "null_share_current": 0.0,
+      "null_share_reference": 0.0,
+      "psi": 0.0004736909142663298
+     },
+     "still_flagged": 206
+    },
+    "mean_risk": 0.16098270206418916,
+    "risk": {
+     "changed_values": 11,
+     "ks": 0.0010000000000000009,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 7.970659300603127e-05
+    },
+    "saved_flagged": 206,
+    "saved_mean_risk": 0.16097792239446798
+   },
+   "shock_bp": 25
+  },
+  {
+   "april_fd_holders_among_migrants": 75,
+   "changed_features": [
+    "active_account_count",
+    "active_fd_count",
+    "closed_fd_count",
+    "fd_average_balance_myr",
+    "fd_balance_change_3m_vs_previous_3m",
+    "fd_balance_mean_12m_myr",
+    "fd_balance_mean_3m_myr",
+    "fd_balance_myr",
+    "fd_balance_weighted_offer_rate"
+   ],
+   "cohort_size": 398,
+   "fds_closed": 59,
+   "fds_maturing_in_window": 339,
+   "fds_repriced": 280,
+   "id": "severe",
+   "input_drift": {
+    "active_account_count": {
+     "changed_values": 40,
+     "ks": 0.02100000000000002,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.00265501694076366
+    },
+    "active_fd_count": {
+     "changed_values": 40,
+     "ks": 0.040000000000000036,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.006997237825177956
+    },
+    "active_login_users_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "active_login_users_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "active_login_users_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "approver_session_share_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "bank_friction_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "catalog_effective_fee_mean_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "catalog_waiver_mean_pct": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "closed_fd_count": {
+     "changed_values": 40,
+     "ks": 0.040000000000000036,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.009054626099278044
+    },
+    "combined_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_cv_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "combined_zero_months_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "customer_type": {
+     "changed_values": 0,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "estimated_fee_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "estimated_waiver_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "fd_average_balance_myr": {
+     "changed_values": 40,
+     "ks": 0.040000000000000036,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.00694905125705792
+    },
+    "fd_balance_change_3m_vs_previous_3m": {
+     "changed_values": 41,
+     "ks": 0.09803921568627452,
+     "null_share_current": 0.592,
+     "null_share_reference": 0.592,
+     "psi": 0.03215866314646274
+    },
+    "fd_balance_mean_12m_myr": {
+     "changed_values": 41,
+     "ks": 0.0040000000000000036,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.00028925152582951873
+    },
+    "fd_balance_mean_3m_myr": {
+     "changed_values": 41,
+     "ks": 0.008000000000000007,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0006819443593139654
+    },
+    "fd_balance_myr": {
+     "changed_values": 40,
+     "ks": 0.040000000000000036,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.006972912914123868
+    },
+    "fd_balance_weighted_offer_rate": {
+     "changed_values": 226,
+     "ks": 0.4043725775193799,
+     "null_share_current": 0.656,
+     "null_share_reference": 0.616,
+     "psi": 0.325845012648828
+    },
+    "fd_maturing_30d_count": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "friction_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "friction_response_mean_3m_ms": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.283,
+     "null_share_reference": 0.283,
+     "psi": 0.0
+    },
+    "friction_retries_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.283,
+     "null_share_reference": 0.283,
+     "psi": 0.0
+    },
+    "inbound_count_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_cv_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_recency_months": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_share_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "inbound_zero_months_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_failure_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_success_count_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_success_count_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_success_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "login_success_recency_days": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "non_fd_balance_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_bank_failure_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_count_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_failure_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_failure_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.001,
+     "null_share_reference": 0.001,
+     "psi": 0.0
+    },
+    "outbound_flow_cv_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_mean_12m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_mean_1m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_mean_3m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_mean_6m_myr": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_flow_ratio_3m_to_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_processing_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_processing_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_submitted_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_success_recency_days": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "outbound_zero_months_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "passive_session_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "sector_code": {
+     "changed_values": 0,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_completed_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_duration_mean_3m_sec": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_forced_drop_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_started_count_change_3m_vs_previous_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_started_count_mean_12m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_started_count_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_timeout_rate_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "session_transactions_mean_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "tier_id": {
+     "changed_values": 0,
+     "ks": null,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    },
+    "untrusted_device_session_share_3m": {
+     "changed_values": 0,
+     "ks": 0.0,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.0
+    }
+   },
+   "label": "Severe",
+   "migrants": 80,
+   "migrants_with_closures": 42,
+   "migrating_share": 0.2,
+   "performance_change": "Not computed: no outcomes exist under a hypothetical shock.",
+   "prediction_change": {
+    "crossed_into_review": 0,
+    "crossed_out_of_review": 0,
+    "flagged": 206,
+    "flagged_only": {
+     "customers": 206,
+     "risk": {
+      "changed_values": 2,
+      "ks": 0.004854368932038944,
+      "null_share_current": 0.0,
+      "null_share_reference": 0.0,
+      "psi": 0.0009363616900154794
+     },
+     "still_flagged": 206
+    },
+    "mean_risk": 0.16091526021573874,
+    "risk": {
+     "changed_values": 49,
+     "ks": 0.007000000000000006,
+     "null_share_current": 0.0,
+     "null_share_reference": 0.0,
+     "psi": 0.00018002200516146506
+    },
+    "saved_flagged": 206,
+    "saved_mean_risk": 0.16097792239446798
+   },
+   "shock_bp": 125
+  }
+ ],
+ "state": "ready",
+ "version": "m7-opr-1"
+}

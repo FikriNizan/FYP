@@ -1,7 +1,13 @@
 """Milestone 7: PSI/KS on hand-checkable fixtures and the read-only scenario package. No network, no model."""
+import hashlib
+import json
 import math
+import tempfile
 import unittest
-from churn_backend import drift
+from pathlib import Path
+from churn_backend import create_app, drift
+from churn_backend.db import get_db
+from churn_backend.importer import import_demo
 
 try:
     from scipy.stats import ks_2samp
@@ -75,6 +81,56 @@ class KsTests(unittest.TestCase):
             first = [v for v in reference if v is not None]
             second = [v for v in current if v is not None]
             self.assertAlmostEqual(drift.ks(reference, current), float(ks_2samp(first, second).statistic), places=12)
+
+
+class ScenarioPackageTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        root = Path(self.temp.name)
+        self.db = root / 'test.sqlite'
+        self.package = root / 'm7-opr-1'
+        self.package.mkdir()
+        self.app = create_app(dict(TESTING=True, DATABASE=str(self.db), TXB_SCENARIO_DIR=str(self.package)))
+        with self.app.app_context():
+            import_demo()
+
+    def write_package(self, flag_mismatches=0):
+        drift_payload = dict(kind='txb_scenario_drift', version='m7-opr-1', psi=dict(bins=10, epsilon=1e-4),
+                             scenarios=[dict(id='no_shock', label='No shock', input_drift={}, changed_features=[])])
+        (self.package / 'drift.json').write_text(json.dumps(drift_payload), encoding='utf-8')
+        (self.package / 'scores.csv').write_text('scenario,cus_id\n', encoding='utf-8')
+        files = {name: hashlib.sha256((self.package / name).read_bytes()).hexdigest() for name in ('scores.csv', 'drift.json')}
+        gates = dict(parity=dict(features=['fd_balance_myr'], mismatches=dict(fd_balance_myr=0)),
+                     reproduction=dict(max_abs_raw_difference=0.0, max_abs_risk_difference=0.0, flag_mismatches=flag_mismatches,
+                                       saved_flagged=1, tolerance=1e-12))
+        manifest = dict(kind='txb_scenario_package', version='m7-opr-1', register=dict(seed=20240430), reference='April',
+                        gates=gates, files=files)
+        (self.package / 'manifest.json').write_text(json.dumps(manifest), encoding='utf-8')
+
+    def get(self):
+        before = hashlib.sha256(self.db.read_bytes()).hexdigest()
+        response = self.app.test_client().get('/api/scenarios')
+        self.assertEqual(hashlib.sha256(self.db.read_bytes()).hexdigest(), before)  # The reader never writes the database.
+        return response
+
+    def test_missing_package_is_not_generated(self):
+        self.assertEqual(self.get().json, dict(state='not_generated'))
+
+    def test_valid_package_is_served_with_the_deposit_only_note(self):
+        self.write_package()
+        body = self.get().json
+        self.assertEqual((body['state'], body['version']), ('ready', 'm7-opr-1'))
+        self.assertIn('main drivers do not move', body['note'])
+        with self.app.app_context():
+            self.assertEqual(get_db().execute("SELECT count(*) FROM sqlite_master WHERE name LIKE '%scenario%'").fetchone()[0], 0)
+
+    def test_tampered_file_or_failed_gate_is_rejected(self):
+        self.write_package()
+        (self.package / 'scores.csv').write_text('scenario,cus_id\nmild,944\n', encoding='utf-8')
+        self.assertEqual(self.get().json, dict(state='invalid'))
+        self.write_package(flag_mismatches=1)
+        self.assertEqual(self.get().json, dict(state='invalid'))
 
 
 if __name__ == '__main__':

@@ -103,6 +103,13 @@ def monitoring():
     return jsonify(outcomes.report(batch['batch_id']))
 
 
+@api.get('/scenarios')
+def opr_scenarios():
+    """Milestone 7 OPR stress demonstration: read-only scenario package, never a database."""
+    from . import scenarios
+    return jsonify(scenarios.safe_load())
+
+
 @api.get('/monitoring/trend')
 def monitoring_trend():
     from . import outcomes

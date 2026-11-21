@@ -25,6 +25,7 @@ def create_app(test_config=None):
         app.config.update(test_config)
     app.config.setdefault('TXB_RESEARCH_ROOT', os.environ.get('TXB_RESEARCH_ROOT'))
     app.config.setdefault('TXB_MODEL_PYTHON', os.environ.get('TXB_MODEL_PYTHON'))
+    app.config.setdefault('TXB_SCENARIO_DIR', os.environ.get('TXB_SCENARIO_DIR'))  # Milestone 7 package (read-only)
     app.config.setdefault('TXB_SCORING_TIMEOUT_SECONDS', float(os.environ.get('TXB_SCORING_TIMEOUT_SECONDS', '120')))
     app.config.setdefault('TXB_MONTHLY_POPULATION', int(os.environ.get('TXB_MONTHLY_POPULATION', '1000')))
     if not 1 <= app.config['TXB_SCORING_TIMEOUT_SECONDS'] <= 600:

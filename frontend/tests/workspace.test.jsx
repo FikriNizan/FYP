@@ -9,7 +9,7 @@ import { observedMonths } from '../src/flows.js';
 import briefingPayload from './fixtures/briefing.json';
 import demo from '../../backend/demo/notebook_case.json';
 
-vi.mock('../src/api.js',async original=>({...await original(),api:{runtimeContext:vi.fn(),uploadAssessment:vi.fn(),months:vi.fn(),summary:vi.fn(),customers:vi.fn(),customer:vi.fn(),saveReview:vi.fn(),case:vi.fn(),cases:vi.fn(),briefing:vi.fn(),downloadBriefing:vi.fn()}}));
+vi.mock('../src/api.js',async original=>({...await original(),api:{runtimeContext:vi.fn(),uploadAssessment:vi.fn(),months:vi.fn(),summary:vi.fn(),customers:vi.fn(),customer:vi.fn(),saveReview:vi.fn(),case:vi.fn(),cases:vi.fn(),briefing:vi.fn(),downloadBriefing:vi.fn(),scenarios:vi.fn()}}));
 const batch={batch_id:'enriched',cutoff_month:'2024-02-29',record_count:1000,source_kind:'saved_shap_export',imported_at:'2026-11-01T18:00:00Z',source:{customer_names_loaded:true,flow_history_loaded:true}};
 let customer,reviewed;
 function start(path) { render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>); }
@@ -122,14 +122,17 @@ describe('Work-focused frontend',()=>{
     expect(screen.getByRole('button',{name:'Prepare RM briefing'}).disabled).toBe(true);
   });
 
-  it('changes only hypothetical OPR inputs and never invents a calculated output',async()=>{
+  it('opens the OPR stress demonstration read-only and never invents a calculated output',async()=>{
+    // Replaces the disabled assumption form (Milestone 7 replaced the preview with a read-only scenario view).
     const fetchSpy=vi.spyOn(globalThis,'fetch');
+    api.scenarios.mockResolvedValue({state:'not_generated'});
     start('/research');
-    await screen.findByLabelText('Deposit renewal assumption (%)');
-    fireEvent.change(screen.getByLabelText('Deposit renewal assumption (%)'),{target:{value:'65'}});
-    expect(screen.getByText(/Deposit exit assumption: 35%/)).toBeTruthy();
-    expect(screen.getAllByText('Not calculated').length).toBeGreaterThan(0);
-    expect(screen.getByRole('button',{name:'Calculate scenario · unavailable'}).disabled).toBe(true);
+    await screen.findByRole('heading',{name:'OPR stress demonstration'});
+    expect(await screen.findByText(/Not calculated\./)).toBeTruthy();
+    expect(api.scenarios).toHaveBeenCalledTimes(1);
+    expect(screen.queryAllByRole('spinbutton')).toHaveLength(0);
+    expect(screen.queryByRole('button',{name:/Calculate scenario/})).toBeNull();
+    expect(document.querySelector('main table')).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled(); fetchSpy.mockRestore();
   });
 
