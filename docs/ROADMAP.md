@@ -153,7 +153,7 @@ Implementation, the live evaluations and remaining work are recorded in [MILESTO
 * [x] Stage 2: Finance tab breakdown with both sensitivities, and the Overview section (FD-threshold and policy-exempt tiers separately, combined secondary, by-tier detail). Card sentence render-6 and driver labels Transaction value / Collections / Payments (m6-evidence-5). See [handoff](handoffs/2026-11-21-finance-metrics-stage-2.md).
 * [x] Primary sources for the owner-cited references: AFP earnings credit, FCA FTP/liquidity premium and BNM 2013 pricing reform verified (see FINANCE_METRICS.md).
 * [ ] PayNet business IBG charges page still not verified (HTTP 403).
-* [ ] Resume the full summary batch now that the Finance section is final (owner, live; render-7 and m6-evidence-6 change the cache keys).
+* [ ] Resume the full summary batch now that the Finance section is final (owner, live; render-8 (SRR-net FD earnings, 23 Nov 2026) and m6-evidence-6 change the cache keys).
 
 ## Milestone 7 — OPR demonstration, evaluation and release
 

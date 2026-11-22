@@ -10,8 +10,9 @@ from datetime import date
 from . import briefings
 from .ai_evidence import DICTIONARY
 
-VERSION = 'render-7'  # render-5: Finance 'contribution at stake' sentence (RaR/FSL); render-6: stage-2 wording;
-                      # render-7: check B owner rule (2026-11-22) and 'Combined flow' terminology.
+VERSION = 'render-8'  # render-5: Finance 'contribution at stake' sentence (RaR/FSL); render-6: stage-2 wording;
+                      # render-7: check B owner rule (2026-11-22) and 'Combined flow' terminology;
+                      # render-8: FD earnings net of SRR (2026-11-23) and check B 'fixed deposits' wording.
 TOKEN = re.compile(r'\{\{([a-zA-Z0-9_.]+)\}\}')
 CARD_SECTIONS = ('bottom_line', 'operations', 'finance', 'weighed')
 AUDIENCE_ORDER = ('operations', 'finance')
@@ -246,7 +247,7 @@ def finance(evidence, w):
 
 
 FSL_A_TEXT = 'waiver condition not met'  # Card only (word budget); the UI says 'Fee waiver condition not met'.
-FSL_B_TEXT = "deposits don't cover waived transaction cost"
+FSL_B_TEXT = "fixed deposits don't cover waived transaction cost"
 NEGATIVE_TEXT = 'Estimated relationship contribution is negative at the assumed cost; see cost sensitivity.'
 
 

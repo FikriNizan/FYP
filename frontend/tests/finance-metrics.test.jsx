@@ -8,7 +8,7 @@ import { millions } from '../src/format.js';
 import april from './fixtures/finance-april.json';
 
 const NEGATIVE = 'Estimated relationship contribution is negative at the assumed cost; see cost sensitivity.';
-const B_TEXT = "Deposits don't cover waived transaction cost.";
+const B_TEXT = "Fixed deposits don't cover waived transaction cost.";
 const A_LABEL = 'Fee waiver condition not met';
 const SIGN = 'The sign of these totals depends on both assumptions; both matter equally.';
 const banned = [/loss/i, /minor/i, /positive under all|always positive/i, /\brobust/i, /\bresilient/i];
@@ -33,9 +33,9 @@ describe('Customer finance (Finance tab)', () => {
     // Worked example: A and B both true; their texts sit in their own rows inside the contribution card.
     expect(within(row('Fee waiver deal kept?')).getByText('No')).toBeTruthy();
     expect(row('Fee waiver deal kept?').textContent).toContain(A_LABEL);
-    expect(within(row('Do deposits pay for the waived fees?')).getByText(B_TEXT)).toBeTruthy();
-    expect(within(row('Do deposits pay for the waived fees?')).getByText(/^Uncovered: RM\s?18\.23 a month\.$/)).toBeTruthy();
-    expect(block.contains(row('Do deposits pay for the waived fees?'))).toBe(true);
+    expect(within(row('Do fixed deposit earnings cover the waived cost?')).getByText(B_TEXT)).toBeTruthy();
+    expect(within(row('Do fixed deposit earnings cover the waived cost?')).getByText(/^Uncovered: RM\s?18\.23 a month\.$/)).toBeTruthy();
+    expect(block.contains(row('Do fixed deposit earnings cover the waived cost?'))).toBe(true);
     // A and B are separate checks with their own amounts; no combined (25.64 + 18.23) figure.
     expect(row('Fee waiver deal kept?').textContent).toMatch(/25\.64/);
     expect(container.textContent).not.toMatch(/43\.87/);
@@ -72,7 +72,7 @@ describe('Customer finance (Finance tab)', () => {
     expect(container.textContent).not.toContain(B_TEXT);
     expect(container.textContent).not.toContain('Uncovered');
     expect(container.textContent).not.toContain(A_LABEL);
-    expect(within(row('Do deposits pay for the waived fees?')).getByText('Yes')).toBeTruthy();
+    expect(within(row('Do fixed deposit earnings cover the waived cost?')).getByText('Yes')).toBeTruthy();
     for (const pattern of banned) expect(container.textContent).not.toMatch(pattern);
   });
 
@@ -101,7 +101,7 @@ describe('Customer finance (Finance tab)', () => {
       fsl_b:{ status:'policy', flagged:true, monthly:500, shortfall:500, policy:true } });
     const { container } = show(metrics);
     expect(within(row('Fee waiver deal kept?')).getByText('Policy exemption')).toBeTruthy();
-    expect(within(row('Do deposits pay for the waived fees?')).getByText('Policy exemption')).toBeTruthy();
+    expect(within(row('Do fixed deposit earnings cover the waived cost?')).getByText('Policy exemption')).toBeTruthy();
     expect(container.textContent).not.toContain(B_TEXT);
     expect(container.textContent).not.toContain('Uncovered');
     expect(screen.getByText('Fee waiver by policy exemption')).toBeTruthy();

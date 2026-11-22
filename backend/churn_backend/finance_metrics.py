@@ -38,6 +38,7 @@ SRR_TABLE = [
 # Fail closed after the last verified OPR date: later cutoffs show Finance contribution as unavailable.
 OPR_VERIFIED_THROUGH = max(row['end'] for row in OPR_TABLE)
 _through = date.fromisoformat(OPR_VERIFIED_THROUGH)
+SRR_UNVERIFIED = 'SRR not verified for this cutoff'
 OPR_UNVERIFIED = f'OPR not verified for this cutoff (verified rates end {_through.day} {_through:%b %Y})'
 BASE_PREMIUM = 0.005
 LIQUIDITY_PREMIUMS = (0.0, 0.005, 0.01)
@@ -60,9 +61,10 @@ def rate_on(table, cutoff):
     return None
 
 
-def fd_earnings(fd_balance, offer_rate, opr, premium):
-    """FD value to the bank: balance x (OPR + liquidity premium - rate paid) / 12. Can be negative
-    when the rate paid exceeds OPR + premium; never clipped. A genuine zero balance earns zero."""
+def fd_earnings(fd_balance, offer_rate, opr, premium, srr):
+    """FD value to the bank: balance x ((1 - SRR) x (OPR + liquidity premium) - rate paid) / 12. The SRR share of
+    the deposit is held at BNM and earns nothing; the rate paid is on the full balance. Can be negative when the
+    rate paid exceeds the funding value; never clipped. A genuine zero balance earns zero."""
     if not number(fd_balance):
         return None, 'fixed deposit balance missing'
     if fd_balance == 0:
@@ -71,7 +73,9 @@ def fd_earnings(fd_balance, offer_rate, opr, premium):
         return None, 'fixed deposit offer rate missing'
     if opr is None:
         return None, OPR_UNVERIFIED
-    return fd_balance * (opr + premium - offer_rate) / 12, None
+    if srr is None:
+        return None, SRR_UNVERIFIED
+    return fd_balance * ((1 - srr) * (opr + premium) - offer_rate) / 12, None
 
 
 def customer_metrics(features, cutoff, premium=BASE_PREMIUM, with_sensitivity=True, cost_ratio=BASE_COST_RATIO):
@@ -87,7 +91,7 @@ def customer_metrics(features, cutoff, premium=BASE_PREMIUM, with_sensitivity=Tr
     if opr is None:
         reasons.append(OPR_UNVERIFIED)
     if srr is None:
-        reasons.append('SRR not verified for this cutoff')
+        reasons.append(SRR_UNVERIFIED)
     fee, waiver = features.get('estimated_fee_mean_3m_myr'), features.get('estimated_waiver_mean_3m_myr')
     operating, fd = features.get('non_fd_balance_myr'), features.get('fd_balance_myr')
     fee_income = fee if number(fee) else None
@@ -96,7 +100,7 @@ def customer_metrics(features, cutoff, premium=BASE_PREMIUM, with_sensitivity=Tr
     cost = (fee + waiver) / (1 + tier['markup']) * cost_ratio if tier and number(fee) and number(waiver) else None
     if cost is None and tier and not number(waiver):
         reasons.append('estimated waivers missing')
-    fd_value, fd_reason = fd_earnings(fd, features.get('fd_balance_weighted_offer_rate'), opr, premium)
+    fd_value, fd_reason = fd_earnings(fd, features.get('fd_balance_weighted_offer_rate'), opr, premium, srr)
     if fd_reason and fd_reason not in reasons:
         reasons.append(fd_reason)
     if not number(operating):
@@ -121,7 +125,7 @@ def customer_metrics(features, cutoff, premium=BASE_PREMIUM, with_sensitivity=Tr
         fsl_a = dict(status='deal_kept', flagged=False, monthly=None)
 
     # FSL B ("deal not paying", owner rule 2026-11-22): the assumed transaction cost exceeds fee income
-    # (a positive shortfall) and positive deposit earnings do not cover it. Uncovered = shortfall - max(FD, 0).
+    # (a positive shortfall) and positive fixed deposit earnings do not cover it. Uncovered = shortfall - max(FD, 0).
     # Negative FD earnings are not folded into B; they stay visible as their own component.
     policy = basis == 'POLICY_EXEMPT'
     if active is None or cost is None or fee_income is None or fd_value is None:

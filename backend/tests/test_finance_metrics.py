@@ -55,17 +55,49 @@ class FormulaTests(unittest.TestCase):
 
     def test_negative_fd_earnings_are_shown_not_clipped(self):
         m = fm.customer_metrics(features(fd_balance_myr=1200000.0, fd_balance_weighted_offer_rate=0.04), APRIL)
-        self.assertAlmostEqual(m['components']['fd_earnings'], 1200000.0 * (0.03 + 0.005 - 0.04) / 12)   # -500.00
+        self.assertAlmostEqual(m['components']['fd_earnings'], 1200000.0 * ((1 - 0.02) * (0.03 + 0.005) - 0.04) / 12)   # -570.00
+        self.assertAlmostEqual(m['components']['fd_earnings'], -570.0)
         self.assertLess(m['components']['fd_earnings'], 0)
+
+    def test_fd_earnings_formula_nets_srr(self):
+        # Owner formula (2026-11-23): fd x ((1 - SRR) x (OPR + premium) - offer rate) / 12.
+        value, reason = fm.fd_earnings(1200000.0, 0.025, 0.03, 0.005, 0.02)
+        self.assertIsNone(reason)
+        self.assertAlmostEqual(value, 1200000.0 * (0.98 * 0.035 - 0.025) / 12)   # 930.00
+        self.assertAlmostEqual(value, 930.0)
+        self.assertLess(value, 1200000.0 * (0.035 - 0.025) / 12)                 # Below the old formula (1,000.00).
+        # Signed, never clipped.
+        self.assertAlmostEqual(fm.fd_earnings(1200000.0, 0.04, 0.03, 0.005, 0.02)[0], -570.0)
+        # SRR unavailable: FD earnings unavailable with a clear reason, like OPR.
+        self.assertEqual(fm.fd_earnings(1200000.0, 0.025, 0.03, 0.005, None), (None, 'SRR not verified for this cutoff'))
+        self.assertEqual(fm.fd_earnings(1200000.0, 0.025, None, 0.005, 0.02), (None, fm.OPR_UNVERIFIED))
+        # A genuine zero balance earns zero, whatever the rates.
+        self.assertEqual(fm.fd_earnings(0.0, None, None, 0.005, None), (0.0, None))
+        self.assertEqual(fm.fd_earnings(0.0, 0.03, 0.03, 0.005, 0.02), (0.0, None))
+        # In customer_metrics, a cutoff with OPR but no SRR row makes FD earnings and the contribution unavailable.
+        original = fm.SRR_TABLE[:]
+        try:
+            fm.SRR_TABLE[:] = []
+            m = fm.customer_metrics(features(fd_balance_myr=1200000.0, fd_balance_weighted_offer_rate=0.025), APRIL)
+        finally:
+            fm.SRR_TABLE[:] = original
+        self.assertIsNone(m['components']['fd_earnings'])
+        self.assertIsNone(m['contribution_monthly'])
+        self.assertEqual(m['unavailable'].count('SRR not verified for this cutoff'), 1)
+        self.assertEqual(m['fsl_b']['status'], 'unavailable')
+        # Every sensitivity variant uses the new formula.
+        m = fm.customer_metrics(features(fd_balance_myr=1200000.0, fd_balance_weighted_offer_rate=0.025), APRIL)
+        for variant in m['sensitivity']:
+            self.assertAlmostEqual(variant['fd_earnings'], 1200000.0 * (0.98 * (0.03 + variant['liquidity_premium']) - 0.025) / 12)
 
     def test_liquidity_premium_sensitivity(self):
         m = fm.customer_metrics(features(fd_balance_myr=1200000.0, fd_balance_weighted_offer_rate=0.03), APRIL)
         earnings = [round(s['fd_earnings'], 6) for s in m['sensitivity']]
         self.assertEqual([s['liquidity_premium'] for s in m['sensitivity']], [0.0, 0.005, 0.01])
-        self.assertEqual(earnings, [0.0, 500.0, 1000.0])
+        self.assertEqual(earnings, [-60.0, 430.0, 920.0])
         base = next(s for s in m['sensitivity'] if s['liquidity_premium'] == 0.005)
         self.assertAlmostEqual(base['contribution_monthly'], m['contribution_monthly'])
-        self.assertAlmostEqual(m['sensitivity'][2]['contribution_monthly'] - m['sensitivity'][0]['contribution_monthly'], 1000.0)
+        self.assertAlmostEqual(m['sensitivity'][2]['contribution_monthly'] - m['sensitivity'][0]['contribution_monthly'], 980.0)
 
     def test_cost_ratio_sensitivity_scales_transaction_cost_only(self):
         m = fm.customer_metrics(WORKED, APRIL)
@@ -106,7 +138,7 @@ class FormulaTests(unittest.TestCase):
     def test_check_b_review_probe_negative_fd_does_not_create_a_transaction_shortfall(self):
         # Review probe: fee income RM100, assumed transaction cost RM72.14, FD earnings -RM20 -> not flagged.
         m = fm.customer_metrics(features(estimated_fee_mean_3m_myr=100.0, estimated_waiver_mean_3m_myr=0.996,
-                                         fd_balance_myr=48000.0, fd_balance_weighted_offer_rate=0.04), APRIL)
+                                         fd_balance_myr=48000.0, fd_balance_weighted_offer_rate=0.0393), APRIL)
         self.assertAlmostEqual(m['components']['transaction_cost'], 72.14)
         self.assertAlmostEqual(m['components']['fd_earnings'], -20.0)
         self.assertEqual((m['fsl_b']['status'], m['fsl_b']['flagged'], m['fsl_b']['monthly'], m['fsl_b']['shortfall']),
@@ -114,7 +146,7 @@ class FormulaTests(unittest.TestCase):
         self.assertLess(m['components']['fd_earnings'], 0)  # Still visible as its own component.
 
     def test_check_b_shortfall_with_non_positive_fd_is_uncovered_in_full(self):
-        for rate, expected_fd in [(0.04, -20.0), (0.035, 0.0)]:
+        for rate, expected_fd in [(0.0393, -20.0), (0.0343, 0.0)]:
             with self.subTest(fd=expected_fd):
                 m = fm.customer_metrics(features(fd_balance_myr=48000.0, fd_balance_weighted_offer_rate=rate), APRIL)
                 self.assertAlmostEqual(m['components']['fd_earnings'], expected_fd)
@@ -124,10 +156,10 @@ class FormulaTests(unittest.TestCase):
                 self.assertEqual(round(m['fsl_b']['monthly'], 2), 18.23)
 
     def test_check_b_positive_fd_covers_or_partly_covers_the_shortfall(self):
-        covered = fm.customer_metrics(features(fd_balance_myr=48000.0, fd_balance_weighted_offer_rate=0.02), APRIL)
+        covered = fm.customer_metrics(features(fd_balance_myr=48000.0, fd_balance_weighted_offer_rate=0.0193), APRIL)
         self.assertAlmostEqual(covered['components']['fd_earnings'], 60.0)
         self.assertEqual((covered['fsl_b']['status'], covered['fsl_b']['flagged']), ('covered', False))
-        partly = fm.customer_metrics(features(fd_balance_myr=48000.0, fd_balance_weighted_offer_rate=0.033), APRIL)
+        partly = fm.customer_metrics(features(fd_balance_myr=48000.0, fd_balance_weighted_offer_rate=0.0323), APRIL)
         self.assertAlmostEqual(partly['components']['fd_earnings'], 8.0)
         self.assertTrue(partly['fsl_b']['flagged'])
         self.assertEqual(round(partly['fsl_b']['monthly'], 2), 10.23)
@@ -240,7 +272,7 @@ class PortfolioAndCardTests(unittest.TestCase):
         self.assertTrue(expected['fsl_a']['flagged'] and expected['fsl_b']['flagged'])
         self.assertEqual(stake, f"Contribution at stake over {forecast(data['identity']['cutoff'])}: {money(expected['rar_3m'])} "
                                 "(estimated relationship contribution; waiver condition not met; "
-                                "deposits don't cover waived transaction cost).")
+                                "fixed deposits don't cover waived transaction cost).")
         for item in (i for s in card['sections'] for i in s['items']):
             self.assertNotRegex(item['text'], r'(?i)loss')
         self.assertNotIn('Contribution at stake', payload)  # Deterministic only: never sent to Gemini.
@@ -252,7 +284,7 @@ class PortfolioAndCardTests(unittest.TestCase):
         with self.app.app_context():
             data = evidence.build('summary', self.id)
         sentence = 'Estimated relationship contribution is negative at the assumed cost; see cost sensitivity.'
-        b_label = "deposits don't cover waived transaction cost"
+        b_label = "fixed deposits don't cover waived transaction cost"
         def stake(contribution, a, b, policy=False):
             metrics = dict(contribution_monthly=contribution, rar_3m=3 * contribution, fsl_a=dict(flagged=a),
                            fsl_b=dict(flagged=b, policy=policy))

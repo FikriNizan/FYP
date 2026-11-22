@@ -5,7 +5,7 @@ import Icon from './Icon.jsx';
 // Every figure comes from the backend finance_metrics payload; nothing here is recalculated.
 export const NEGATIVE_TEXT = 'Estimated relationship contribution is negative at the assumed cost; see cost sensitivity.';
 export const FSL_A_TEXT = 'Fee waiver condition not met';
-export const FSL_B_TEXT = "Deposits don't cover waived transaction cost.";
+export const FSL_B_TEXT = "Fixed deposits don't cover waived transaction cost.";
 export const SIGN_TEXT = 'The sign of these totals depends on both assumptions; both matter equally.';
 export const DEFINITION = 'Contribution at stake = three months of estimated fees, minus assumed transaction cost, plus deposit earnings. An estimate, not audited profit.';
 
@@ -41,7 +41,7 @@ function GroupCard({ title, tiers, group, policy, icon, tone }) {
     {group.rar_3m < 0 && <p className="finance-negative">{NEGATIVE_TEXT}</p>}
     <dl className="finance-group-checks">
       <dt>{FSL_A_TEXT}</dt><dd>{policy ? 'Policy exemption: not checked' : pair(group.fsl_a_customers, group.fsl_a_monthly)}</dd>
-      <dt>{policy ? 'Waived transaction cost not covered by deposits (policy exemption)' : "Deposits don't cover waived transaction cost"}</dt><dd>{policy ? pair(group.policy_fsl_b_customers, group.policy_fsl_b_monthly) : pair(group.fsl_b_customers, group.fsl_b_monthly)}</dd>
+      <dt>{policy ? 'Waived transaction cost not covered by fixed deposits (policy exemption)' : "Fixed deposits don't cover waived transaction cost"}</dt><dd>{policy ? pair(group.policy_fsl_b_customers, group.policy_fsl_b_monthly) : pair(group.fsl_b_customers, group.fsl_b_monthly)}</dd>
     </dl>
   </article>;
 }

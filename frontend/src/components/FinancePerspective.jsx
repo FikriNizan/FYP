@@ -57,7 +57,7 @@ export default function FinancePerspective({ finance, metrics, batch, cutoff }) 
         {isNumber(contribution) && contribution < 0 && <p className="finance-negative">{NEGATIVE_TEXT}</p>}
         {metrics.unavailable.length > 0 && <ul className="finance-unavailable" aria-label="Unavailable inputs">{metrics.unavailable.map(reason => <li key={reason}>Not provided: {reason}</li>)}</ul>}
         <YesNo question="Fee waiver deal kept?" answer={aAnswer} tone={aTone} detail={aDetail} />
-        <YesNo question="Do deposits pay for the waived fees?" answer={bAnswer} tone={bTone} detail={bDetail} />
+        <YesNo question="Do fixed deposit earnings cover the waived cost?" answer={bAnswer} tone={bTone} detail={bDetail} />
       </div> : <div className="finance-card"><p>Relationship contribution is not provided for this assessment.</p></div>}
       <div className="finance-card estimate" role="group" aria-label="Where the money sits">
         <div className="finance-top"><span className="round teal"><Icon name="bank" /></span><div><h3>Where the money sits</h3><p className="muted">Balances on {dateLabel(cutoff)} · exposure, not income</p></div></div>
