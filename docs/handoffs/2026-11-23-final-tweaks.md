@@ -50,8 +50,8 @@ Owner's estimates: threshold tiers +RM0.88m → about +RM0.63m is **confirmed** 
 
 | | Before | After |
 |---|---|---|
-| Deposit-condition tiers | +0.88m / +2.84m / +4.79m | +0.63m / +2.59m / +4.54m |
-| Policy-exempt tiers | −6.84m / −2.42m / +2.00m | −7.09m / −2.67m / +1.76m |
+| Deposit-condition tiers | +0.88m / +2.84m / +4.79m | +0.63m / +2.58m / +4.54m |
+| Policy-exempt tiers | −6.84m / −2.42m / +2.00m | −7.09m / −2.66m / +1.76m |
 | All customers | −5.96m / +0.42m / +6.80m | −6.46m / −0.08m / +6.30m |
 | Customers with negative RaR | 242 / 160 / 65 | 259 / 173 / 68 |
 
@@ -75,6 +75,8 @@ Owner's estimates: threshold tiers +RM0.88m → about +RM0.63m is **confirmed** 
 | **Check A** | 165 · RM335,436.84 | **165 · RM335,436.84 (unchanged)** |
 | A and B both (non-policy) | 164 | 164 |
 | Customers with negative FD earnings | 8 | 15 |
+
+**Correction (23 Nov 2026, docs only).** The first version of this handoff and of `FINANCE_METRICS.md` gave the cost-ratio 0.75 "after" figures as +2.59m (deposit-condition tiers) and −2.67m (policy-exempt tiers). The exact values are **+RM2,584,513.29** and **−RM2,664,594.11**, which round to **+RM2.58m** and **−RM2.66m**, as the app shows; they had been rounded twice (to three decimals, then two). Every "after" figure in these tables and in `FINANCE_METRICS.md` was recomputed from the code at `3e6fb14` on a fresh read-only copy of `artifacts/m6-review.sqlite`, rounded once from the exact value. These two were the only ones that differed. The "before" column, check A and B counts and amounts, negative-RaR counts, and the RM6.9m / RM12.8m ranges were re-checked and are unchanged. No code or tests changed.
 
 ## Summary batch dry run (zero API calls)
 

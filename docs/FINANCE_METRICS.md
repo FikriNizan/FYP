@@ -89,8 +89,8 @@ Two assumptions are uncertain, so both are shown, as customer-level variants and
 
 | Group | Cost ratio 1.0 / 0.75 / 0.5 (premium 0.5%) | Premium 0% / 0.5% / 1.0% (cost ratio 1.0) |
 |---|---|---|
-| FD-threshold tiers (SME_S, SME_M, CORP_L) | **+RM0.63m / +RM2.59m / +RM4.54m** | −RM1.14m / +RM0.63m / +RM2.39m |
-| Policy-exempt tiers (CORP_XL, GOV) | **−RM7.09m / −RM2.67m / +RM1.76m** | −RM8.80m / −RM7.09m / −RM5.38m |
+| FD-threshold tiers (SME_S, SME_M, CORP_L) | **+RM0.63m / +RM2.58m / +RM4.54m** | −RM1.14m / +RM0.63m / +RM2.39m |
+| Policy-exempt tiers (CORP_XL, GOV) | **−RM7.09m / −RM2.66m / +RM1.76m** | −RM8.80m / −RM7.09m / −RM5.38m |
 | All customers | −RM6.46m / −RM0.08m / +RM6.30m | −RM9.93m / −RM6.46m / −RM2.99m |
 | Customers with negative RaR | **259 / 173 / 68** | — |
 | Customers flagged by FSL check B (non-policy) | 329 / 291 / 205 | — |
@@ -105,8 +105,8 @@ Check B policy-exempt at base: 96 customers, RM3,865,735.39 a month. Check A: 16
 | RaR, FD-threshold tiers (cost 1.0, premium 0.5%) | +RM878,485.68 | +RM626,596.11 |
 | RaR, policy-exempt tiers | −RM6,842,915.33 | −RM7,087,215.15 |
 | RaR, all customers | −RM5,964,429.65 | −RM6,460,619.04 |
-| Cost ratio 1.0 / 0.75 / 0.5, FD-threshold | +0.88m / +2.84m / +4.79m | +0.63m / +2.59m / +4.54m |
-| Cost ratio 1.0 / 0.75 / 0.5, policy-exempt | −6.84m / −2.42m / +2.00m | −7.09m / −2.67m / +1.76m |
+| Cost ratio 1.0 / 0.75 / 0.5, FD-threshold | +0.88m / +2.84m / +4.79m | +0.63m / +2.58m / +4.54m |
+| Cost ratio 1.0 / 0.75 / 0.5, policy-exempt | −6.84m / −2.42m / +2.00m | −7.09m / −2.66m / +1.76m |
 | Cost ratio 1.0 / 0.75 / 0.5, all | −5.96m / +0.42m / +6.80m | −6.46m / −0.08m / +6.30m |
 | Premium 0% / 0.5% / 1.0%, FD-threshold | −0.92m / +0.88m / +2.68m | −1.14m / +0.63m / +2.39m |
 | Premium 0% / 0.5% / 1.0%, policy-exempt | −8.59m / −6.84m / −5.10m | −8.80m / −7.09m / −5.38m |
