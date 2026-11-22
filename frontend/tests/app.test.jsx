@@ -74,6 +74,27 @@ describe('React full-stack foundation', () => {
     await screen.findByText('Saved decision · version 1');
     expect(screen.getByLabelText('Decision').value).toBe('prioritise');
   });
+  it('shows the save notice on the saving page only, and again after a second save',async()=>{
+    const {container}=start('/customer/944?batch_id=enriched');
+    const notice=()=>container.querySelector('#notification');
+    expect(notice().getAttribute('role')).toBe('status');
+    expect(notice().getAttribute('aria-live')).toBe('polite');
+    await screen.findByLabelText('Decision'); editDecision();
+    fireEvent.click(screen.getByRole('button',{name:'Save decision'}));
+    await screen.findByText('Saved decision · version 1');              // The post-save refresh has run on this page.
+    expect(notice().textContent).toBe('Decision saved for customer 944, February 2024. The original prediction and transaction history are preserved.');
+    fireEvent.click(screen.getByRole('link',{name:'Overview'}));
+    await screen.findByRole('heading',{name:'Overview'});
+    expect(notice().textContent).toBe('');
+    fireEvent.click(await screen.findByRole('link',{name:/Acceptance test company/}));
+    await screen.findByText('Saved decision · version 1');
+    expect(notice().textContent).toBe('');
+    fireEvent.change(screen.getByLabelText('Decision'),{target:{value:'monitor'}});
+    fireEvent.change(screen.getByLabelText('Decision reason'),{target:{value:'Second committee test'}});
+    fireEvent.click(screen.getByRole('button',{name:'Save decision'}));
+    await waitFor(()=>expect(api.saveReview).toHaveBeenCalledTimes(2));
+    await waitFor(()=>expect(notice().textContent).toMatch(/^Decision saved for customer 944, February 2024\./));
+  });
   it('retains a draft across navigation until the user saves',async()=>{
     start('/customer/944?batch_id=enriched');
     await screen.findByLabelText('Decision'); editDecision();

@@ -63,6 +63,8 @@ export default function App() {
   useEffect(()=>{if(validBatch) setSelectedBatch(validBatch.batch_id);},[validBatch]);
   useEffect(()=>{if(['/', '/overview'].includes(location.pathname)) setOverviewSearch(location.search);},[location.pathname,location.search]);
   useEffect(()=>{if(location.pathname==='/reviewed')setReviewedSearch(location.search);},[location.pathname,location.search]);
+  // The save notice belongs to the page where the save happened: clear it when the user moves to another page.
+  useEffect(()=>{setNotice('');},[location.pathname]);
   useEffect(() => {
     const warn = event => { if (saving || Object.keys(drafts).length) { event.preventDefault(); event.returnValue = ''; } };
     window.addEventListener('beforeunload', warn);

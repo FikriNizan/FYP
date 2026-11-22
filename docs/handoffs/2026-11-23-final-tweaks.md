@@ -184,3 +184,25 @@ Because of `render-8`, the Summary tab shows the standard summary text until the
 - **Card length.** The April maximum is 241 words, over the 240 design target (accepted).
 - **Frontend finance fixture.** `frontend/tests/fixtures/finance-april.json` is a static test fixture and still holds the older April figures. The tests only check that the UI renders what the API sends, so the screenshots, not the fixture, show the new figures.
 - **Rate-shock month.** If a future package names a batch that is not loaded, the tab shows the "not in this database" note and everything else still works.
+
+## Follow-up fix: save notice no longer persists across pages
+
+**Bug.** The "Decision saved for customer …" notice (`#notification`, set by `saved` in `App.jsx`) was never cleared, so it stayed visible on every page after navigating away, until a full reload.
+
+**Change (`frontend/src/App.jsx`, one effect).** `useEffect(() => { setNotice(''); }, [location.pathname]);` The notice now clears when the user moves to a different page. The post-save refresh doesn't change the path, so the notice stays on the page where the save happened. Query-string changes on the same page (e.g. switching the assessment month) don't clear it. `role="status"` and `aria-live="polite"` are unchanged. No code navigates after a save (the only caller is `ReviewForm`), so a successful save always keeps its notice.
+
+**Test (`frontend/tests/app.test.jsx`, one new test).** "shows the save notice on the saving page only, and again after a second save":
+- the notice is a polite status region;
+- after a save and the reload ("Saved decision · version 1"), the full notice text is shown;
+- after navigating to Overview, it is empty;
+- back on the customer, it is still empty;
+- a second save shows it again.
+
+I confirmed the test fails without the fix: it expected `''` and received the old notice. No existing assertion changed.
+
+**`scripts\check.py` (normal terminal, saved user env present, exit 0):**
+- backend 217 tests OK (1 skipped);
+- utility 35 tests OK (11 skipped);
+- Node 10 pass / 0 fail;
+- React 15 files / **135** tests passed (was 134);
+- build OK (`✓ built in 240ms`).
