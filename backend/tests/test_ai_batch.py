@@ -16,6 +16,7 @@ from churn_backend.importer import import_demo
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts'))
 import generate_summaries as batch  # noqa: E402
+from tests.hermetic import unconfigured
 
 PF = ai.ProviderFailure
 
@@ -42,6 +43,7 @@ def quota_error(quota_id):
 
 class Base(unittest.TestCase):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path = str(Path(self.temp.name) / 'test.sqlite')
@@ -129,6 +131,7 @@ class RetryPolicyTests(Base):
 
 class OnDemandDiscussionTests(Base):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         super().setUp()
         review = dict(decision='prioritise', reason='Synthetic', reviewer='Synthetic', expected_version=0)
         self.assertEqual(self.client.put('/api/predictions/'+self.id+'/review', json=review).status_code, 200)

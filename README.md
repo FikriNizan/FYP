@@ -142,6 +142,7 @@ Follow [Development](docs/DEVELOPMENT.md) for Git branches, commits, pull reques
 * [Roadmap](docs/ROADMAP.md) — overall progression.
 * [Verification](docs/VERIFICATION.md) — evidence and test limits.
 * [UI design](docs/UI_DESIGN.md) — Architect theme and workflow layout decisions.
+* [User guide](docs/USER_GUIDE.md) — workspace and monitoring notes behind the in-app Guide.
 * [API contract](backend/API_CONTRACT.md) — retained request/response contracts.
 
 `docs/backend-v1-reference.md` is an archived original backend reference. Follow this README for current paths and frontend startup.

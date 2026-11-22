@@ -7,6 +7,7 @@ from churn_backend import create_app, ai_drafts as ai, ai_evidence as evidence, 
 from churn_backend import finance_metrics as fm
 from churn_backend.db import get_db
 from churn_backend.importer import import_demo
+from tests.hermetic import unconfigured
 
 APRIL = '2024-04-30'
 # Owner's worked example: April 2024 prediction 36d5187951d9..., customer 604 (saved feature values).
@@ -200,6 +201,7 @@ class FormulaTests(unittest.TestCase):
 
 class PortfolioAndCardTests(unittest.TestCase):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.app = create_app(dict(TESTING=True, DATABASE=str(Path(self.temp.name) / 'test.sqlite')))

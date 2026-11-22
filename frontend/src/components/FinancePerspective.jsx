@@ -29,7 +29,7 @@ function checkB(b) {
 function Breakdown({ metrics }) {
   const c = metrics.components;
   const rows = [['Fee income', c.fee_income], ['Assumed transaction cost', isNumber(c.transaction_cost) ? -c.transaction_cost : null],
-    ['Deposit earnings', c.fd_earnings], ['Operating-balance earnings', c.operating_earnings], ['Contribution a month', metrics.contribution_monthly]];
+    ['Fixed deposit earnings', c.fd_earnings], ['Operating-balance earnings', c.operating_earnings], ['Contribution a month', metrics.contribution_monthly]];
   const largest = Math.max(0, ...rows.map(([, v]) => isNumber(v) ? Math.abs(v) : 0));
   return <section className="panel" aria-labelledby="breakdown-title"><h2 id="breakdown-title">Where the monthly figure comes from</h2>
     <p className="muted">Estimated, per month</p>

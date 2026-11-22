@@ -12,10 +12,12 @@ from churn_backend.db import get_db
 from churn_backend.importer import import_demo
 from churn_backend.validation import sigmoid
 import math
+from tests.hermetic import unconfigured
 
 
 class ContinuityTests(unittest.TestCase):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)

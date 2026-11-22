@@ -10,6 +10,7 @@ from churn_backend import create_app, ai_drafts as ai, ai_evidence as evidence, 
 from churn_backend.db import get_db
 from churn_backend.importer import import_demo
 from churn_backend.validation import ValidationError
+from tests.hermetic import unconfigured
 
 # Full synthetic feature values for the demo customer (driver values are left unchanged).
 EXTRA = dict(combined_flow_mean_12m_myr=1250000.0, combined_flow_mean_3m_myr=10881.0, outbound_flow_ratio_3m_to_12m=0.02,
@@ -28,6 +29,7 @@ def section(card, key):
 
 class RenderTests(unittest.TestCase):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.app = create_app(dict(TESTING=True, DATABASE=str(Path(self.temp.name) / 'test.sqlite')))

@@ -11,7 +11,7 @@ const serviceMetrics = [
   ['outbound_failure_rate_3m','Outgoing payment failures','payment-failed','Outgoing payments often fail: check beneficiary details, limits and cut-off times.'],
   ['outbound_bank_failure_rate_3m','Payment failures on our side','bank','Payments are failing on the bank’s side: raise it with payment operations before the call.'],
 ];
-const levelWord = { high:'High', usual:'Usual', not_provided:'Not provided' };
+const levelWord = { high:'High', usual:'Typical', not_provided:'Not provided' };
 
 export default function OperationsPerspective({ operations:ops, levels = {}, cutoff }) {
   const average=ops.combined_flow_mean_12m_myr, recent=ops.combined_flow_mean_3m_myr;

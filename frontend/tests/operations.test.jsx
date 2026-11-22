@@ -43,7 +43,7 @@ describe('Operations evidence',()=>{
     const headings=[...container.querySelectorAll('h2:not(.sr-only)')].map(h=>h.textContent);
     expect(headings).toEqual(['Service experience','Activity level']);
     expect([...container.querySelectorAll('.service-label')].map(n=>n.textContent)).toEqual(['Sign-in failures','Sessions without transactions','Outgoing payment failures','Payment failures on our side']);
-    expect([...container.querySelectorAll('.level')].map(n=>n.textContent)).toEqual(['High','Usual','Usual','Not provided']);
+    expect([...container.querySelectorAll('.level')].map(n=>n.textContent)).toEqual(['High','Typical','Typical','Not provided']);
     expect(container.querySelectorAll('.hint')).toHaveLength(1);
     expect(container.querySelector('.hint').textContent).toMatch(/^Sign-in failures are high/);
     expect(screen.getByText(new RegExp(LEVEL_RULE.replace(/\./g,'\\.')))).toBeTruthy();

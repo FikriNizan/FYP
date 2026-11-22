@@ -11,10 +11,12 @@ from churn_backend import create_app, outcomes
 from churn_backend.db import get_db
 from churn_backend.importer import import_demo
 from churn_backend.validation import ConflictError, ValidationError
+from tests.hermetic import unconfigured
 
 
 class OutcomeTests(unittest.TestCase):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -387,6 +389,7 @@ PROTOCOL = 'p' * 64
 class PackageOutcomeTests(unittest.TestCase):
     """Phase B: outcomes derived from later published packages only (no research file is configured)."""
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name) / 'test.sqlite'

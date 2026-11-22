@@ -93,3 +93,27 @@ describe('Rate-shock what-if (m7-opr-2 package)', () => {
     for (const text of texts) for (const pattern of BANNED) expect(text).not.toMatch(pattern);
   });
 });
+
+describe('Rate-shock scope note (final tweaks, item 6)', () => {
+  const customers = pkg.scenarios[0].prediction_change.risk.reference_available;
+  it('names the stressed assessment from the package, first on the tab', async () => {
+    const { container } = await show({ ...pkg, assessment:{ cutoff_month:'2024-04-30' } });
+    const note = container.querySelector('.scope-note');
+    expect(note.textContent).toBe(`Stress test on the April 2024 assessment · ${customers} customers. The month comes from the scenario package, so it does not follow the month you select.`);
+    expect(container.firstElementChild).toBe(note);
+    expect(customers).toBeGreaterThan(0);
+  });
+
+  it('says when the stressed batch is not in this database and keeps everything else', async () => {
+    expect(pkg.assessment).toBeNull();
+    const { container } = await show(pkg);
+    expect(container.querySelector('.scope-note').textContent).toBe('Stress test on a saved assessment that is not in this database.');
+    expect([...container.querySelectorAll('h2')].map(h => h.textContent))
+      .toEqual(['What was assumed?', 'What changed in deposits?', 'What changed in model output and workload?', 'Which inputs moved?']);
+  });
+
+  it('never hard-codes the month or the customer count', () => {
+    const text = Object.values(source)[0];
+    expect(text).not.toMatch(/April 2024|1,000 customers|Stress test on the [A-Z]/);
+  });
+});

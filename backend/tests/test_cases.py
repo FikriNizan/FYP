@@ -12,12 +12,14 @@ from churn_backend import create_app
 from churn_backend import repository as repo
 from churn_backend.db import get_db
 from churn_backend.importer import import_demo
+from tests.hermetic import unconfigured
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class CaseTests(unittest.TestCase):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name)/'test.sqlite'
@@ -153,6 +155,7 @@ class CaseTests(unittest.TestCase):
 
 class MigrationTests(unittest.TestCase):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name)/'legacy.sqlite'

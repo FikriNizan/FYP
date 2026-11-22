@@ -2,6 +2,7 @@ import React from 'react';
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import FlowHistory, { recentVsUsual } from '../src/components/FlowHistory.jsx';
+import Signals from '../src/components/Signals.jsx';
 import { driverValue } from '../src/format.js';
 
 const nb = text => text.replace(/ /g, ' ');
@@ -48,5 +49,28 @@ describe('Chart takeaway', () => {
     const { container } = render(<FlowHistory history={history} baseline={507767.16} cutoff="2024-04-30" />);
     expect(nb(container.querySelector('.chart-takeaway').textContent)).toMatch(/^April 2024: RM 69,150\.12\./);
     expect(container.textContent).not.toContain('Last 3 months averaged');
+  });
+});
+
+describe('Final tweaks: Signals subtitle and the flow-chart reading note', () => {
+  it('adds the relative-influence sentence to the Signals subtitle (item 12)', () => {
+    const { container } = render(<Signals customer={{ explanation:{ higher_risk_drivers:[], lower_risk_drivers:[] } }} />);
+    expect(container.querySelector('h2 + p.muted').textContent)
+      .toBe('What pushed this estimate up or down. Not proof of cause. Bar length shows relative influence among the signals shown.');
+  });
+
+  it('puts "How to read the lines" in a closed details element with the same text; legend and lines stay visible (item 13)', () => {
+    const { container } = render(<FlowHistory history={[{ snapshot_month:'2024-03-31', combined_flow_myr:150 }]} baseline={200} />);
+    const note = container.querySelector('details.chart-reference-note');
+    expect(note.open).toBe(false);
+    expect(note.querySelector('summary').textContent).toBe('How to read the lines');
+    expect(note.querySelector('p').textContent).toBe('The dotted line is the trailing twelve-month average of combined flow. The red dashed line is the attrition reference: half of that average. The defined drop is a next-three-month average at or below this reference. Those months are not yet observed, so the line shows the reference level, not an outcome.');
+    expect(container.querySelector('.baseline')).toBeTruthy();
+    expect(container.querySelector('.reference-line')).toBeTruthy();
+    for (const visible of [container.querySelector('svg.chart'), container.querySelector('.line-label.average'),
+      container.querySelector('.line-label.attrition'), container.querySelector('.legend')]) {
+      expect(visible).toBeTruthy();
+      expect(note.contains(visible)).toBe(false);
+    }
   });
 });

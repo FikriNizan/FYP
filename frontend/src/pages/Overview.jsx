@@ -6,12 +6,14 @@ import { assessmentLink } from '../navigation.js';
 import { ErrorNotice, RiskBadge } from '../components/Common.jsx';
 
 const limit = 50;
+const DECISION_OPTIONS = ['prioritise','monitor','no_immediate_action'];
 // Every figure comes from /api/summary and /api/customers; nothing here is calculated.
 export default function Overview({ batch, revision }) {
   const [params,setParams] = useSearchParams();
   const location = useLocation();
   const filter = ['flagged','awaiting','all'].includes(params.get('filter')) ? params.get('filter') : 'flagged';
-  const decision = params.get('decision') || '';
+  // Only listed decisions filter; a legacy decision=awaiting_review link shows All decisions (the awaiting tab covers it).
+  const decision = DECISION_OPTIONS.includes(params.get('decision')) ? params.get('decision') : '';
   const query = params.get('q') || '';
   const [searchText, setSearchText] = useState(query);
   useEffect(()=>setSearchText(query),[query]);
@@ -52,7 +54,7 @@ export default function Overview({ batch, revision }) {
       <div className="toolbar"><div className="filters" role="group" aria-label="Customer filter">
         {[['flagged','Flagged'],['awaiting','Flagged · awaiting review'],['all','All customers']].map(([key,label]) => <button key={key} aria-pressed={filter === key} onClick={() => chooseFilter(key)}>{label}</button>)}
       </div><form className="search" onSubmit={event => { event.preventDefault(); update({q:searchText.trim(),offset:0}); }}><label htmlFor="query" className="muted">Find customer</label><input id="query" type="search" placeholder="Company name or ID" value={searchText} onChange={event => setSearchText(event.target.value)} /><button type="submit">Search</button></form></div>
-      <div className="queue-options"><label htmlFor="queue-decision">This assessment decision</label><select id="queue-decision" value={filter==='awaiting' ? '' : decision} onChange={event=>update({decision:event.target.value,filter:filter==='awaiting' ? 'flagged' : filter,offset:0})}><option value="">All decisions</option>{['awaiting_review','prioritise','monitor','no_immediate_action'].map(d=><option key={d} value={d}>{decisionLabel(d)}</option>)}</select><span className="muted">{count(list.total)} matching {list.total===1 ? 'customer' : 'customers'}</span></div>
+      <div className="queue-options"><label htmlFor="queue-decision">This assessment decision</label><select id="queue-decision" value={filter==='awaiting' ? '' : decision} onChange={event=>update({decision:event.target.value,filter:filter==='awaiting' ? 'flagged' : filter,offset:0})}><option value="">All decisions</option>{DECISION_OPTIONS.map(d=><option key={d} value={d}>{decisionLabel(d)}</option>)}</select><span className="muted">{count(list.total)} matching {list.total===1 ? 'customer' : 'customers'}</span></div>
       <div className="table-wrap"><table><thead><tr><th scope="col">Customer</th><th scope="col">Predicted risk</th><th scope="col">This assessment decision</th><th scope="col">Workflow</th></tr></thead><tbody>
         {list.items.map(c => <tr key={c.prediction_id}><td><Link className="customer-name" to={customerLink(c.cus_id)}>{c.customer_name || 'Customer ' + c.cus_id}</Link><div className="muted">ID {c.cus_id}</div></td><td><strong>{percent(c.calibrated_risk)}</strong><br /><RiskBadge flagged={c.review_alert} /></td><td>{decisionLabel(c.review.decision)}</td><td><strong>{workflowLabel(c.workflow?.state,c.workflow?.origin_month===c.cutoff_month)}</strong>{c.workflow?.case_status && <div className="muted">Case: {c.workflow?.case_status}</div>}<div><Link className="button" to={c.workflow?.case_id ? '/cases/'+c.workflow?.case_id : customerLink(c.cus_id)}>{c.workflow?.case_id ? 'Open case' : 'Open review'}</Link></div></td></tr>)}
         {!list.items.length && <tr><td colSpan="4">No customers match these filters.</td></tr>}

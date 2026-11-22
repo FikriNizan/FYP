@@ -52,7 +52,7 @@ describe('Finance picture page', () => {
     api.summary.mockResolvedValue(summary());
     render(<MemoryRouter><FinancePicture batch="saved" revision={0} /></MemoryRouter>);
     expect(await screen.findByRole('heading', { name:'Finance picture' })).toBeTruthy();
-    expect(screen.getByText(/Contribution at stake = three months of estimated fees, minus assumed transaction cost, plus deposit earnings\. An estimate, not audited profit\./)).toBeTruthy();
+    expect(screen.getByText(/Contribution at stake is our Revenue at Risk \(RaR\): three months of estimated fees, minus assumed transaction cost, plus fixed deposit and operating-balance earnings\. An estimate, not audited profit\./)).toBeTruthy();
     expect(screen.getByRole('article', { name:'Tiers with a deposit condition' })).toBeTruthy();
     expect(screen.getByRole('article', { name:'Policy-exempt tiers' })).toBeTruthy();
     expect(screen.getByText('The sign of these totals depends on both assumptions; both matter equally.')).toBeTruthy();
@@ -63,5 +63,35 @@ describe('Finance picture page', () => {
     api.summary.mockResolvedValue(summary({ batch:{ batch_id:'saved', cutoff_month:'2024-07-31' }, finance_metrics:{ ...april.portfolio, opr_verified:false } }));
     render(<MemoryRouter><FinancePicture batch="saved" revision={0} /></MemoryRouter>);
     expect(await screen.findByText('Finance contribution is unavailable for this assessment: verified OPR rates end 10 Jul 2024.')).toBeTruthy();
+  });
+});
+
+describe('Review queue decision filter (final tweaks, item 1)', () => {
+  it('offers only saved decisions and keeps the awaiting tab', async () => {
+    api.summary.mockResolvedValue(summary());
+    api.customers.mockResolvedValue({ total:0, items:[] });
+    render(<MemoryRouter><Overview batch="saved" revision={0} /></MemoryRouter>);
+    const select = await screen.findByLabelText('This assessment decision');
+    expect([...select.options].map(o => o.value)).toEqual(['', 'prioritise', 'monitor', 'no_immediate_action']);
+    expect([...select.options].map(o => o.textContent)).not.toContain('Awaiting review');
+    expect(within(screen.getByRole('group', { name:'Customer filter' })).getByRole('button', { name:'Flagged · awaiting review' })).toBeTruthy();
+  });
+
+  it('treats a legacy decision=awaiting_review link as all decisions without breaking the page', async () => {
+    api.summary.mockResolvedValue(summary());
+    api.customers.mockResolvedValue({ total:0, items:[] });
+    render(<MemoryRouter initialEntries={['/?decision=awaiting_review']}><Overview batch="saved" revision={0} /></MemoryRouter>);
+    const select = await screen.findByLabelText('This assessment decision');
+    expect(select.value).toBe('');
+    expect(screen.getByRole('heading', { name:'Review queue' })).toBeTruthy();
+    expect(api.customers.mock.calls.at(-1)[1]).not.toHaveProperty('decision');
+  });
+
+  it('still filters by a listed decision from the URL', async () => {
+    api.summary.mockResolvedValue(summary());
+    api.customers.mockResolvedValue({ total:0, items:[] });
+    render(<MemoryRouter initialEntries={['/?decision=monitor']}><Overview batch="saved" revision={0} /></MemoryRouter>);
+    expect((await screen.findByLabelText('This assessment decision')).value).toBe('monitor');
+    expect(api.customers.mock.calls.at(-1)[1].decision).toBe('monitor');
   });
 });

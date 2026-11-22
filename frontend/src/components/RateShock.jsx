@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
-import { count, dateLabel, percent } from '../format.js';
+import { count, dateLabel, monthLabel, percent } from '../format.js';
 import { featureMeta } from '../monitoringFeatures.js';
 import Icon from './Icon.jsx';
 
@@ -10,6 +10,13 @@ export const PASS_THROUGH = 'Own-bank pass-through affects the simulated FD offe
 export const KS_NOTE = 'KS is shown as a distance only, without p-values, because each scenario is a paired copy of the same customers rather than an independent sample.';
 export const SCOPE = 'Performance not evaluated: hypothetical outcomes are unavailable.';
 const WORDS = { 'No shift':['No','w-no'], 'Little shift':['Little','w-little'], 'Moderate shift':['Moderate','w-moderate'], 'Large shift':['Large','w-large'] };
+// The package names the saved assessment it stressed; the backend resolves its month (null when not in this database).
+// N is the package's own scored-customer count, never the month selected in the header.
+export function scopeNote(data) {
+  if (!data.assessment) return 'Stress test on a saved assessment that is not in this database.';
+  const customers = data.scenarios[0].prediction_change.risk.reference_available;
+  return `Stress test on the ${monthLabel(data.assessment.cutoff_month)} assessment · ${count(customers)} customers. The month comes from the scenario package, so it does not follow the month you select.`;
+}
 const fixed = (value, digits) => value === null || value === undefined ? 'Not applicable' : Number(value).toFixed(digits);
 
 function Assumed({ data, selected, choose }) {
@@ -89,6 +96,7 @@ export default function RateShock() {
   if (data.state === 'not_generated') return <section className="panel"><h2>No scenario package</h2><p>Not calculated. The scenario package is generated offline by an administrator; nothing is calculated in the browser.</p></section>;
   if (data.state !== 'ready') return <section className="panel"><h2>Scenario package unavailable</h2><p>The scenario package failed its integrity checks, so no figures are shown.</p></section>;
   return <>
+    <p className="scope-note">{scopeNote(data)}</p>
     <Assumed data={data} selected={selected} choose={setSelected} />
     <div className="two-columns"><Deposits scenarios={data.scenarios} /><Output scenarios={data.scenarios} selected={selected} /></div>
     <Inputs scenarios={data.scenarios} selected={selected} psi={data.psi} labels={data.feature_labels} />

@@ -16,10 +16,12 @@ from churn_backend import create_app, monthly
 from churn_backend.constants import PREDICTORS, CATEGORIES, PROTOCOL_SHA256
 from churn_backend.db import get_db
 from churn_backend.validation import ValidationError
+from tests.hermetic import unconfigured
 
 
 class MonthlyTests(unittest.TestCase):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.folder = tempfile.TemporaryDirectory()
         self.addCleanup(self.folder.cleanup)
         self.app = create_app({'TESTING':True, 'DATABASE':str(Path(self.folder.name)/'test.sqlite'), 'TXB_MONTHLY_POPULATION':1})
@@ -157,6 +159,8 @@ class MonthlyTests(unittest.TestCase):
         self.assertEqual(self.client.put('/api/predictions/'+prediction+'/review',data=' '*70000,content_type='application/json').status_code,413)
 
     def test_unconfigured_environment_still_serves_reads(self):
+        self.assertIsNone(self.app.config['TXB_RESEARCH_ROOT'])  # Established by unconfigured() in setUp,
+        self.assertIsNone(self.app.config['TXB_MODEL_PYTHON'])   # not by the caller's shell.
         self.assertEqual(self.client.get('/api/months').status_code,200)
         self.assertEqual(self.post().status_code,503)
 

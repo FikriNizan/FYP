@@ -106,9 +106,15 @@ def monitoring():
 
 @api.get('/scenarios')
 def opr_scenarios():
-    """Milestone 7 OPR stress demonstration: read-only scenario package, never a database."""
+    """Milestone 7 OPR stress demonstration: read-only scenario package. The package itself never touches a
+    database; here, one read-only lookup names the month of the saved assessment it stressed (None when that
+    batch is not in this database)."""
     from . import scenarios
-    return jsonify(scenarios.safe_load())
+    result = scenarios.safe_load()
+    if result.get('state') == 'ready':
+        row = repo.select_batch(batch_id=result['batch_id'])
+        result['assessment'] = dict(cutoff_month=row['cutoff_month']) if row is not None else None
+    return jsonify(result)
 
 
 @api.get('/monitoring/trend')

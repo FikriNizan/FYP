@@ -467,3 +467,30 @@
   .mon-table.sens { min-width:0; }
   .key .halved { background:#1b6b43; }.key .held { background:#c58a17; }
 }
+
+/* ---- Final tweaks (approved mockup docs/design/final-tweaks-mockup.html) ---- */
+@media screen {
+  /* Monitoring: rows of equal-height panels. */
+  .row-eq { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; align-items:stretch; margin-bottom:22px; }
+  .row-eq>.panel { margin:0; }
+  /* Flow history: closed "How to read the lines". */
+  details.chart-reference-note { margin:12px 0; padding:9px 14px; }
+  details.chart-reference-note summary { font-weight:600; }
+  details.chart-reference-note p { margin:6px 0 0; }
+  /* Guide. */
+  .g-steps { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+  .g-step { position:relative; border:1px solid var(--line); border-radius:6px; padding:16px; display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+  .g-step h3,.g-term h3 { margin:0; font-size:14px; }
+  .g-step p,.g-term p { margin:0; font-size:13px; }
+  .g-num { position:absolute; top:12px; right:14px; font-size:12px; font-weight:700; color:var(--muted); }
+  .g-terms { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+  .g-term { display:flex; gap:12px; align-items:flex-start; }
+  .g-three { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+  .g-two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .g-three .hint,.g-two .hint { margin:0; }
+  .g-example .context-card .number { display:block; margin:10px 0; font-size:30px; }
+  details pre { overflow-x:auto; background:#f8f9fb; border:1px solid var(--line); border-radius:6px; padding:10px 12px; font-size:12px; }
+}
+@media screen and (max-width:1100px) { .g-steps,.g-terms { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media screen and (max-width:900px) { .row-eq { grid-template-columns:minmax(0,1fr); } }
+@media screen and (max-width:700px) { .g-steps,.g-terms,.g-three,.g-two { grid-template-columns:minmax(0,1fr); } }

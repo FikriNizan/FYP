@@ -59,7 +59,7 @@ describe('Customer finance (Finance tab)', () => {
     expect(within(money).getByText(/fixed deposit needed for SME small/)).toBeTruthy();
     const breakdown = screen.getByRole('heading', { name:'Where the monthly figure comes from' }).closest('section');
     expect([...breakdown.querySelectorAll('.wf>span:first-child')].map(n => n.textContent))
-      .toEqual(['Fee income', 'Assumed transaction cost', 'Deposit earnings', 'Operating-balance earnings', 'Contribution a month']);
+      .toEqual(['Fee income', 'Assumed transaction cost', 'Fixed deposit earnings', 'Operating-balance earnings', 'Contribution a month']);
     expect(breakdown.textContent).toMatch(/-RM\s?18\.52/);
   });
 

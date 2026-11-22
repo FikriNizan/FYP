@@ -7,7 +7,7 @@ export const NEGATIVE_TEXT = 'Estimated relationship contribution is negative at
 export const FSL_A_TEXT = 'Fee waiver condition not met';
 export const FSL_B_TEXT = "Fixed deposits don't cover waived transaction cost.";
 export const SIGN_TEXT = 'The sign of these totals depends on both assumptions; both matter equally.';
-export const DEFINITION = 'Contribution at stake = three months of estimated fees, minus assumed transaction cost, plus deposit earnings. An estimate, not audited profit.';
+export const DEFINITION = 'Contribution at stake is our Revenue at Risk (RaR): three months of estimated fees, minus assumed transaction cost, plus fixed deposit and operating-balance earnings. An estimate, not audited profit.';
 
 const premiumLabel = key => (Number(key) * 100).toFixed(1) + '%';
 const base = (label, isBase) => isBase ? label + ' (base)' : label;

@@ -14,10 +14,12 @@ from churn_backend import repository as repo
 from churn_backend.db import get_db
 from churn_backend.importer import import_demo
 from churn_backend.validation import ValidationError
+from tests.hermetic import unconfigured
 
 
 class DraftTests(unittest.TestCase):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp=tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.path=str(Path(self.temp.name)/'test.sqlite')

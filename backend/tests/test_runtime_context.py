@@ -5,9 +5,13 @@ import tempfile
 import unittest
 
 from churn_backend import create_app
+from tests.hermetic import unconfigured
 
 
 class RuntimeContextTests(unittest.TestCase):
+    def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
+
     def test_disabled_and_mismatched_context(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'fixture.sqlite'

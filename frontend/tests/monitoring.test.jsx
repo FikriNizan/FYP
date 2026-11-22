@@ -46,7 +46,7 @@ describe('Monitoring · Outcomes',()=>{
     api.monitoring.mockResolvedValue(feb);api.monitoringTrend.mockResolvedValue(trend());
     const {container}=start('/monitoring?batch_id=feb');
     const matrix=await screen.findByRole('table',{name:'Flags against observed outcomes'});
-    expect(within(matrix).getAllByRole('columnheader').map(h=>h.textContent)).toEqual(['Activity halved','Activity held']);
+    expect(within(matrix).getAllByRole('columnheader').map(h=>h.textContent)).toEqual(['Activity halved','Not halved']);
     expect(within(matrix).getAllByRole('rowheader').map(h=>h.textContent)).toEqual(['Flagged','Not flagged']);
     expect(within(matrix).getAllByRole('cell').map(c=>c.textContent)).toEqual(['83Caught','125False alarmMay include customers an RM kept','88Missed','704Correctly quiet']);
     expect(screen.getByText(/flags were real drops/).closest('span').textContent).toBe('83 of 208 flags were real drops (39.9%).');
@@ -56,12 +56,42 @@ describe('Monitoring · Outcomes',()=>{
     expect(within(expected).getByText('161')).toBeTruthy();
     expect(within(expected).getByText('171')).toBeTruthy();
     expect(within(expected).getByText('More drops than the predicted risk expected.')).toBeTruthy();
-    const followed=screen.getByRole('heading',{name:'Were flags followed up?'}).closest('section');
-    expect(within(followed).getByRole('img',{name:'1 halved, 2 held'})).toBeTruthy();
-    expect(within(followed).getByRole('img',{name:'170 halved, 827 held'})).toBeTruthy();
-    expect(followed.textContent).toContain('No record does not prove no contact.');
+    const followed=screen.getByRole('heading',{name:'Follow-up and outcomes'}).closest('section');
+    expect(within(followed).getByText('All customers with outcomes · follow-up inside the Mar–May 2024 window')).toBeTruthy();
+    expect([...followed.querySelectorAll('.fu b')].map(b=>b.textContent)).toEqual(['Follow-up delivered','No delivered follow-up recorded']);
+    expect(within(followed).getByRole('img',{name:'1 halved, 2 not halved'})).toBeTruthy();
+    expect(within(followed).getByRole('img',{name:'170 halved, 827 not halved'})).toBeTruthy();
+    expect([...followed.querySelectorAll('.key span')].map(s=>s.textContent)).toEqual(['Activity halved','Not halved']);
+    expect(followed.querySelector('.hint').textContent).toBe('A followed-up customer whose activity was not halved counts as a false alarm, but the RM may have kept them. No record does not prove no contact.');
+    expect(screen.queryByText('Were flags followed up?')).toBeNull();
+    expect(container.textContent).not.toMatch(/Activity held|recorded follow-up/);
     expect(container.textContent).not.toMatch(/Brier|reference/i);           // Brier stays in the API and docs.
     expect(screen.queryByRole('combobox')).toBeNull();                      // No population selector toggle.
+  });
+
+  it('lays out readiness, two equal-height rows and month by month full width',async()=>{
+    api.monitoring.mockResolvedValue(feb);api.monitoringTrend.mockResolvedValue(trend());
+    const {container}=start('/monitoring?batch_id=feb');
+    await screen.findByRole('table',{name:'Flags against observed outcomes'});
+    const panel=container.querySelector('[role=tabpanel]');
+    const title=node=>node.querySelector('h2').textContent;
+    expect([...panel.children].map(n=>n.classList.contains('row-eq') ? [...n.children].map(title) : title(n))).toEqual([
+      'Which assessments can be checked',
+      ["How did February 2024's flags turn out?",'Follow-up and outcomes'],
+      ['Expected vs actual drops','Input movement since last month'],
+      'Month by month']);
+    expect(panel.querySelectorAll('.two-columns')).toHaveLength(0);
+  });
+
+  it('without outcomes keeps input movement and month by month, each full width',async()=>{
+    api.monitoring.mockResolvedValue(base);api.monitoringTrend.mockResolvedValue(trend({...waiting,ready_after_month:'2024-05-31'}));
+    const {container}=start();
+    await screen.findByText('Nothing to check yet.');
+    const panel=container.querySelector('[role=tabpanel]');
+    expect([...panel.children].map(n=>n.querySelector('h2')?.textContent ?? n.textContent)).toEqual([
+      'Which assessments can be checked','Nothing to check yet.April 2024 forecasts May–Jul 2024. It becomes checkable when the July 2024 package is uploaded in Monthly Assessments.',
+      'Input movement since last month','Month by month']);
+    expect(panel.querySelectorAll('.row-eq')).toHaveLength(0);
   });
 
   it('keeps unavailable outcomes out of the counts and never counts them as zero',async()=>{

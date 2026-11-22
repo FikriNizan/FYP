@@ -9,6 +9,7 @@ from pathlib import Path
 from churn_backend import create_app, drift
 from churn_backend.db import get_db
 from churn_backend.importer import import_demo
+from tests.hermetic import unconfigured
 
 try:
     from scipy.stats import ks_2samp
@@ -97,6 +98,7 @@ FRONTEND_FIXTURE = Path(__file__).resolve().parents[2] / 'frontend' / 'tests' / 
 class ScenarioPackageTests(unittest.TestCase):
     """The shared representative fixture (built by make_opr_fixture.py) is the valid package; malformed copies are invalid."""
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         root = Path(self.temp.name)
@@ -145,6 +147,19 @@ class ScenarioPackageTests(unittest.TestCase):
         self.assertEqual([s['id'] for s in body['scenarios']], ['no_shock', 'mild', 'severe'])
         with self.app.app_context():
             self.assertEqual(get_db().execute("SELECT count(*) FROM sqlite_master WHERE name LIKE '%scenario%'").fetchone()[0], 0)
+
+    def test_stressed_assessment_month_is_resolved_read_only_from_the_package_batch(self):
+        self.copy_fixture()
+        body = self.get().json
+        self.assertEqual((body['batch_id'], body['assessment']), ('fixture-batch', None))  # Not in this database.
+        with self.app.app_context():
+            batch_id, cutoff = get_db().execute('SELECT batch_id, cutoff_month FROM batches LIMIT 1').fetchone()
+        self.rewrite('manifest.json', lambda m: m.update(batch_id=batch_id))
+        body = self.get().json  # get() also proves the database bytes are unchanged.
+        self.assertEqual(body['state'], 'ready')
+        self.assertEqual((body['batch_id'], body['assessment']), (batch_id, dict(cutoff_month=cutoff)))
+        self.rewrite('manifest.json', lambda m: m.update(batch_id=''))
+        self.assertEqual(self.get().json, dict(state='invalid'))  # A package must name its batch.
 
     def test_tampered_file_or_failed_gate_is_rejected(self):
         self.copy_fixture()

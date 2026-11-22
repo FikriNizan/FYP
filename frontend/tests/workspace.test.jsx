@@ -172,7 +172,7 @@ describe('Work-focused frontend',()=>{
     start('/guide');
     await screen.findByText('70.0%');
     expect(screen.getByText('18.0%')).toBeTruthy();
-    expect(screen.getByText('Demo preview')).toBeTruthy();
+    expect(screen.getByText('Example values for explanation only.')).toBeTruthy();
     expect(api.case).not.toHaveBeenCalled();
   });
 });

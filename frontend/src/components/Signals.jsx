@@ -22,7 +22,7 @@ export default function Signals({ customer }) {
   const lower = [...(explanation.lower_risk_drivers || [])].sort((a, b) => strength(b) - strength(a)).slice(0, SHOWN_LOWER);
   const strongest = Math.max(0, ...[...higher, ...lower].map(strength));
   return <section className="panel" aria-labelledby="signals-title"><h2 id="signals-title">Signals to investigate</h2>
-    <p className="muted">What pushed this estimate up or down. Not proof of cause.</p>
+    <p className="muted">What pushed this estimate up or down. Not proof of cause. Bar length shows relative influence among the signals shown.</p>
     {higher.map(driver => <Signal key={driver.feature} driver={driver} strongest={strongest} label={customer.driver_labels?.[driver.feature]} />)}
     {!higher.length && <p>No signals pushing the estimate up were supplied.</p>}
     {lower.map(driver => <Signal key={driver.feature} driver={driver} strongest={strongest} label={customer.driver_labels?.[driver.feature]} lower />)}

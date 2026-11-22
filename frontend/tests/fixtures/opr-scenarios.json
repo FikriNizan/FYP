@@ -1,4 +1,6 @@
 {
+ "assessment": null,
+ "batch_id": "fixture-batch",
  "feature_labels": {
   "active_account_count": "Active accounts",
   "active_fd_count": "Active fixed deposits",

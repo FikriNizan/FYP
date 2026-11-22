@@ -4,7 +4,7 @@
 
 Writes backend/tests/fixtures/opr_package/{manifest.json, drift.json, scores.csv} and the API payload that
 the backend serves for it, frontend/tests/fixtures/opr-scenarios.json. The backend test checks that
-scenarios.load() on the package returns exactly that JSON, so backend and frontend tests share one
+GET /api/scenarios on the package returns exactly that JSON, so backend and frontend tests share one
 renderable contract. Figures are synthetic; they are not results.
 """
 import csv
@@ -119,8 +119,7 @@ def build():
     (PACKAGE / 'manifest.json').write_text(json.dumps(manifest, indent=1, sort_keys=True, allow_nan=False) + '\n', encoding='utf-8', newline='\n')
     with tempfile.TemporaryDirectory() as temp:
         app = create_app(dict(TESTING=True, DATABASE=str(Path(temp) / 'fixture.sqlite'), TXB_SCENARIO_DIR=str(PACKAGE)))
-        with app.app_context():
-            served = scenarios.load()
+        served = app.test_client().get('/api/scenarios').json  # Exactly what the API serves (empty database).
     FRONTEND.write_text(json.dumps(served, indent=1, sort_keys=True, allow_nan=False) + '\n', encoding='utf-8', newline='\n')
     return served
 

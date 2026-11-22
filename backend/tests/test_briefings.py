@@ -13,10 +13,12 @@ from churn_backend.constants import FINANCE_FIELDS
 from churn_backend.db import get_db
 from churn_backend.importer import import_demo
 from churn_backend.briefings import discussion_questions, money
+from tests.hermetic import unconfigured
 
 
 class BriefingTests(unittest.TestCase):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.app = create_app(dict(TESTING=True, DATABASE=str(Path(self.temp.name)/'test.sqlite')))

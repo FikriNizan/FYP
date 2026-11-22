@@ -13,6 +13,7 @@ from churn_backend.constants import (CALIBRATION_INTERCEPT, CALIBRATION_SLOPE,
                                       CATEGORIES, PREDICTORS, PROBABILITY_CUTOFF, RAW_BOUNDARY)
 from churn_backend.importer import import_demo, import_shap
 from churn_backend.validation import ValidationError, sigmoid
+from tests.hermetic import unconfigured
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -68,6 +69,7 @@ def fixture_export(directory):
 
 class BackendTests(unittest.TestCase):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
         self.config = dict(TESTING=True, DATABASE=str(self.root / "app.sqlite"))

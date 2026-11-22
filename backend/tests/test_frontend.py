@@ -3,10 +3,12 @@ import tempfile
 import unittest
 
 from churn_backend import create_app
+from tests.hermetic import unconfigured
 
 
 class FrontendServingTests(unittest.TestCase):
     def setUp(self):
+        unconfigured(self)  # Never inherit saved TXB_*/Gemini settings.
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)

@@ -29,7 +29,7 @@ function Readiness({ items, batch, choose }) {
 
 function Matrix({ stats }) {
   return <div className="matrix" role="table" aria-label="Flags against observed outcomes">
-    <span role="presentation" /><span className="mhead" role="columnheader">Activity halved</span><span className="mhead" role="columnheader">Activity held</span>
+    <span role="presentation" /><span className="mhead" role="columnheader">Activity halved</span><span className="mhead" role="columnheader">Not halved</span>
     <span className="mrow" role="rowheader">Flagged</span>
     <div className="mcell m-hit" role="cell"><b>{count(stats.true_positives)}</b><span>Caught</span></div>
     <div className="mcell m-fa" role="cell"><b>{count(stats.false_positives)}</b><span>False alarm</span><small>May include customers an RM kept</small></div>
@@ -42,39 +42,42 @@ function Matrix({ stats }) {
 function FollowUp({ title, data }) {
   const total = data.records || 0;
   return <div className="fu"><span><b>{title}</b><br /><span className="muted">{count(total)} {total === 1 ? 'customer' : 'customers'}</span></span>
-    {total ? <div className="stack" role="img" aria-label={`${data.positives} halved, ${data.negatives} held`}>
+    {total ? <div className="stack" role="img" aria-label={`${data.positives} halved, ${data.negatives} not halved`}>
       {data.positives > 0 && <span className="halved" style={{ width: data.positives / total * 100 + '%' }}>{count(data.positives)}</span>}
       {data.negatives > 0 && <span className="held" style={{ width: data.negatives / total * 100 + '%' }}>{count(data.negatives)}</span>}
     </div> : <span className="muted">None recorded</span>}</div>;
 }
 
-function Results({ data }) {
+function Flags({ data }) {
   const stats = data.observed_all, coverage = data.outcome_coverage, month = monthLabel(data.cutoff_month);
+  return <section className="panel" aria-labelledby="flags-title"><h2 id="flags-title">How did {month}'s flags turn out?</h2>
+    <p className="muted">{count(coverage.loaded)} customers · outcomes observed {forecastLabel(data.cutoff_month)}</p>
+    {coverage.unavailable > 0 && <p className="muted">{count(coverage.unavailable)} unavailable outcomes are excluded and never counted as zero.</p>}
+    <Matrix stats={stats} />
+    <div className="plain">
+      <p><span className="round"><Icon name="info" /></span><span><b>{count(stats.true_positives)} of {count(stats.flagged)}</b> flags were real drops ({percent(stats.precision)}).</span></p>
+      <p><span className="round"><Icon name="info" /></span><span>The model caught <b>{count(stats.true_positives)} of {count(stats.positives)}</b> drops ({percent(stats.recall)}).</span></p>
+    </div>
+    <p className="muted">F1 {score(stats.f1)}</p>
+  </section>;
+}
+
+function FollowUps({ data }) {
+  return <section className="panel" aria-labelledby="followed-title"><h2 id="followed-title">Follow-up and outcomes</h2><p className="muted">All customers with outcomes · follow-up inside the {forecastLabel(data.cutoff_month)} window</p>
+    <FollowUp title="Follow-up delivered" data={data.documented_delivery} />
+    <FollowUp title="No delivered follow-up recorded" data={data.without_recorded_delivery} />
+    <div className="key"><span><i className="halved" />Activity halved</span><span><i className="held" />Not halved</span></div>
+    <p className="hint"><span className="round small"><Icon name="info" /></span><span>A followed-up customer whose activity was not halved counts as a false alarm, but the RM may have kept them. No record does not prove no contact.</span></p></section>;
+}
+
+function Expected({ data }) {
+  const stats = data.observed_all;
   const largest = Math.max(stats.expected_positives || 0, stats.positives || 0) || 1;
   const comparison = !isNumber(stats.expected_positives) ? '' : stats.positives > stats.expected_positives ? 'More drops than the predicted risk expected.' : stats.positives < stats.expected_positives ? 'Fewer drops than the predicted risk expected.' : 'As many drops as the predicted risk expected.';
-  return <div className="two-columns">
-    <section className="panel" aria-labelledby="flags-title"><h2 id="flags-title">How did {month}'s flags turn out?</h2>
-      <p className="muted">{count(coverage.loaded)} customers · outcomes observed {forecastLabel(data.cutoff_month)}</p>
-      {coverage.unavailable > 0 && <p className="muted">{count(coverage.unavailable)} unavailable outcomes are excluded and never counted as zero.</p>}
-      <Matrix stats={stats} />
-      <div className="plain">
-        <p><span className="round"><Icon name="info" /></span><span><b>{count(stats.true_positives)} of {count(stats.flagged)}</b> flags were real drops ({percent(stats.precision)}).</span></p>
-        <p><span className="round"><Icon name="info" /></span><span>The model caught <b>{count(stats.true_positives)} of {count(stats.positives)}</b> drops ({percent(stats.recall)}).</span></p>
-      </div>
-      <p className="muted">F1 {score(stats.f1)}</p>
-    </section>
-    <div>
-      <section className="panel" aria-labelledby="expected-title"><h2 id="expected-title">Expected vs actual drops</h2><p className="muted">Does the predicted risk match what happened?</p>
-        <div className="activity-row usual"><span><b>Expected</b><br /><span className="muted">sum of predicted risk</span></span><span className="activity-track" aria-hidden="true"><i style={{ width: (stats.expected_positives || 0) / largest * 100 + '%' }} /></span><strong>{whole(stats.expected_positives)}</strong></div>
-        <div className="activity-row recent"><span><b>Actual</b><br /><span className="muted">observed drops</span></span><span className="activity-track" aria-hidden="true"><i style={{ width: (stats.positives || 0) / largest * 100 + '%' }} /></span><strong>{count(stats.positives)}</strong></div>
-        <p>{comparison}</p></section>
-      <section className="panel" aria-labelledby="followed-title"><h2 id="followed-title">Were flags followed up?</h2><p className="muted">Follow-up recorded inside the {forecastLabel(data.cutoff_month)} window</p>
-        <FollowUp title="With recorded follow-up" data={data.documented_delivery} />
-        <FollowUp title="No recorded follow-up" data={data.without_recorded_delivery} />
-        <div className="key"><span><i className="halved" />Activity halved</span><span><i className="held" />Activity held</span></div>
-        <p className="hint"><span className="round small"><Icon name="info" /></span><span>A followed-up customer who held their activity counts as a false alarm, but the RM may have kept them. No record does not prove no contact.</span></p></section>
-    </div>
-  </div>;
+  return <section className="panel" aria-labelledby="expected-title"><h2 id="expected-title">Expected vs actual drops</h2><p className="muted">Does the predicted risk match what happened?</p>
+    <div className="activity-row usual"><span><b>Expected</b><br /><span className="muted">sum of predicted risk</span></span><span className="activity-track" aria-hidden="true"><i style={{ width: (stats.expected_positives || 0) / largest * 100 + '%' }} /></span><strong>{whole(stats.expected_positives)}</strong></div>
+    <div className="activity-row recent"><span><b>Actual</b><br /><span className="muted">observed drops</span></span><span className="activity-track" aria-hidden="true"><i style={{ width: (stats.positives || 0) / largest * 100 + '%' }} /></span><strong>{count(stats.positives)}</strong></div>
+    <p>{comparison}</p></section>;
 }
 
 function MonthByMonth({ items }) {
@@ -120,13 +123,17 @@ function Outcomes({ batches }) {
   const month = monthLabel(data.cutoff_month);
   return <>
     <Readiness items={items} batch={batch} choose={choose} />
-    {data.outcome_coverage.loaded > 0 ? <Results data={data} /> :
+    {data.outcome_coverage.loaded > 0 ? <>
+      <div className="row-eq"><Flags data={data} /><FollowUps data={data} /></div>
+      <div className="row-eq"><Expected data={data} /><Movement data={data} /></div>
+    </> :
       <section className="panel"><div className="callout"><span className="round warn"><Icon name="clock" /></span><div>
         <p><b>{anyChecked ? `${month} cannot be checked yet.` : 'Nothing to check yet.'}</b></p>
         <p className="muted">{check?.state === 'not_checked'
           ? `${month}'s forecast months are published, but no outcomes are saved for it.`
           : `${month} forecasts ${forecastLabel(data.cutoff_month)}. It becomes checkable when the ${monthLabel(check?.ready_after_month)} package is uploaded in Monthly Assessments.`}</p></div></div></section>}
-    <div className="two-columns"><MonthByMonth items={items} /><Movement data={data} /></div>
+    {!(data.outcome_coverage.loaded > 0) && <Movement data={data} />}
+    <MonthByMonth items={items} />
   </>;
 }
 
