@@ -149,7 +149,7 @@ def main(argv=None):
     database, _, _, _ = selected_database(args.session)  # Refuses Working, M5 Test and aliases.
     sys.path.insert(0, str(ROOT / 'backend'))
     from churn_backend import create_app
-    app = create_app(dict(DATABASE=str(database), TXB_LOCAL_SESSION=True, TXB_LOCAL_MODE='m6-test',
+    app = create_app(dict(DATABASE=str(database), TXB_LOCAL_SESSION=True, TXB_LOCAL_MODE=args.session,
                           TXB_GENAI_KEEP_REJECTED=args.keep_rejected))
     with app.app_context():
         try:

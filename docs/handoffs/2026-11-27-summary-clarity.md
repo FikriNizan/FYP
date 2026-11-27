@@ -1,7 +1,10 @@
 # Handoff: Summary card clarity and AI citation rule (27 Nov 2026)
 
 - **Branch:** `m9-summary-clarity`, created from `final-tweaks`. It is pushed, not merged into `main`, and was never force-pushed.
-- **Implementation commit:** `2a81f419bfa3897be6c1a1d229b618dd44b74196`. This handoff is in the commit after it.
+- **Commits:**
+  - `2a81f419bfa3897be6c1a1d229b618dd44b74196`: implementation.
+  - `34eb2ab`: first version of this handoff.
+  - The follow-up commit after these: the diagnostics session label (below), plus this update.
 - **Versions:**
   - `ai_render.VERSION`: `render-8` → `render-9`
   - `CONTRACT_VERSION`: `m6-narrative-8` → `m6-narrative-9`
@@ -35,7 +38,7 @@ The consistency problem had a specific cause. The card named only the family of 
 | `backend/churn_backend/ai_output_audit.py` | New rule `citation_scope`, applied to both purposes. Its diagnostic lists the disallowed IDs and which of them are lower-risk drivers. For summaries the failing item is dropped (`LINK_FIT_RULES` / `QUESTION_FIT_RULES`): a template question fills the gap, nothing dropped is stored, and if nothing is left the whole card falls back. For discussion drafts any failure means the whole draft falls back to the standard questions (existing behaviour). |
 | `backend/churn_backend/ai_contract.py` | `m6-narrative-9`. The reference instructions for both purposes now tell Gemini to cite only `allowed_references`. |
 | `backend/churn_backend/ai_drafts.py` | The prompt's "Good link" example ended "…alongside the change in payments", which taught exactly the 689 failure. It now links allowed facts only. Message→rule map gains `citation_scope`. |
-| `scripts/generate_summaries.py` | `--session` with choices exactly `m6-test` and `m8-demo`, default `m6-test`. It is passed to `selected_database()` only (your amendment 1); nothing else changed. |
+| `scripts/generate_summaries.py` | `--session` with choices exactly `m6-test` and `m8-demo`, default `m6-test`. It is passed to `selected_database()` (your amendment 1). **Follow-up (your answer to open question 1):** the local diagnostics label `TXB_LOCAL_MODE` now also follows `--session`, so an m8-demo run is labelled m8-demo. |
 | `frontend/src/components/CustomerSummary.jsx` | Each meeting question shows `Based on: …`, using the existing `muted client-basis` classes. `AIBriefingDraft.jsx` and `Signals.jsx` are unchanged. |
 | `docs/MILESTONE_6.md` | Short policy note for render-9 / m6-narrative-9. |
 | Tests | Listed below. |
@@ -65,7 +68,7 @@ The consistency problem had a specific cause. The card named only the family of 
 - RM client questions citing outside the set fall back to the standard questions, with nothing stored.
 - **A draft stored under render-8 / m6-narrative-8 is not served after the bump.**
 
-**`test_ai_batch.py`:** `--session` default and choices; `working`, `test`, `m5-test`, unknown names and paths are refused before any database is opened.
+**`test_ai_batch.py`:** `--session` default and choices; `working`, `test`, `m5-test`, unknown names and paths are refused before any database is opened. Follow-up: the same test now also checks that the app is created with `TXB_LOCAL_MODE` equal to the chosen session (m6-test by default, m8-demo with `--session m8-demo`).
 
 **`tests/test_local_session.py` (utility):** the m8-demo session refuses a file that is the Working DB.
 
@@ -144,6 +147,8 @@ Login failure and sessions without transactions are its 4th and 5th drivers. Ope
 
 Backend +13: render +8 net (9 new, 1 deleted), drafts +4, batch +1. Utility +1. React +1.
 
+I re-ran `scripts\check.py` after the session-label follow-up and got the same results: backend `Ran 230 tests — OK (skipped=1)`, utility `Ran 36 tests — OK (skipped=11)`, Node `tests 10 · fail 0`, React `Tests 136 passed (136)`, build `✓ built in 307ms`. The counts didn't change because the new assertions are inside the existing `--session` test.
+
 ## How you re-generate for the demo (m8-demo, live, owner only)
 
 Your demo database is `artifacts\m8-demo.sqlite`. April 2024 there is batch `bf0e828cdd426ae496ff36bd207acfcd02dccd928eebd14eea5027ce45c9204a`, with 206 flagged customers (read-only check today).
@@ -179,9 +184,12 @@ Your demo database is `artifacts\m8-demo.sqlite`. April 2024 there is batch `bf0
 
 ## Open questions
 
-1. **Session label.** `generate_summaries.py` still passes `TXB_LOCAL_MODE='m6-test'` to `create_app`. I left it as you instructed (only `selected_database` changes), so an m8-demo run is labelled m6-test in local diagnostics only. Do you want that label to follow `--session`?
-2. **Wording.** The risk sentence uses "Collection + Disbursement" (singular, as specified), while the rest of the card says "Collections" and "Payments". Keep it, or say "Collections + Payments"?
-3. **Card length.** Cards are about 60 words longer (demo 228 → 288). The bottom line is clearer but the card is longer. Is that acceptable to your supervisor?
+All three are resolved (owner, 27 Nov 2026):
+1. **Session label:** it now follows `--session`. Done in the follow-up commit and tested.
+2. **Wording:** keep "Collection + Disbursement" as specified.
+3. **Card length:** the +60-word growth (demo 228 → 288) is accepted.
+
+No questions remain open.
 
 ## Known limitations
 

@@ -309,11 +309,14 @@ class BatchCommandTests(Base):
                                (['--batch-id', self.batch, '--dry-run', '--session', 'm6-test'], 'm6-test'),
                                (['--batch-id', self.batch, '--dry-run', '--session', 'm8-demo'], 'm8-demo')):
             with self.subTest(argv=argv), patch.object(batch, 'selected_database', return_value=(Path(self.path), 5, [], {})) as selected, \
-                 patch('churn_backend.create_app', return_value=self.app), redirect_stdout(io.StringIO()):
+                 patch('churn_backend.create_app', return_value=self.app) as created, redirect_stdout(io.StringIO()):
                 with self.assertRaises(SystemExit) as exit_:
                     batch.main(argv)
                 self.assertEqual(exit_.exception.code, 0)
                 selected.assert_called_once_with(expected)
+                # The local diagnostics label follows --session (27 Nov 2026), so an m8-demo run is not labelled m6-test.
+                config = created.call_args.args[0]
+                self.assertEqual((config['TXB_LOCAL_MODE'], config['TXB_LOCAL_SESSION']), (expected, True))
         # The Working database, other sessions, unknown names and paths are refused before any database is opened.
         with patch.object(batch, 'selected_database') as selected, redirect_stderr(io.StringIO()):
             for session in ('working', 'test', 'm5-test', 'unknown', 'backend/instance/churn.sqlite'):
