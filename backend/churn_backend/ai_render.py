@@ -477,9 +477,15 @@ def render_summary(evidence, link=None, questions=None):
 
 
 def basis(ids, facts):
-    """RM-only 'Based on' line: plain names of the cited facts."""
+    """RM-only 'Based on' line: plain names of the cited facts, each once in order of first appearance
+    (feature.X and signal.X share one name)."""
     names = [name(i, facts) for i in ids if i in facts]
-    return '; '.join(n[:1].upper() + n[1:] for n in names)
+    return '; '.join(dict.fromkeys(n[:1].upper() + n[1:] for n in names))
+
+
+def unique_basis(text):
+    """Display-time de-duplication of a stored 'Based on' text (labels never contain '; ')."""
+    return '; '.join(dict.fromkeys(text.split('; ')))
 
 
 def render_client_questions(evidence, questions=None, standard=None):

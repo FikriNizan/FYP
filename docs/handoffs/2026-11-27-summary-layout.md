@@ -144,3 +144,52 @@ So the `joined()` wording fix needs **`render-10`**:
 - If it prints `Stopped: daily quota exhausted`, run the same command the next day; stored customers are skipped.
 
 Then repeat the visual check above. Labels should sit above their values, values should be left-aligned with no trailing full stop, and lists containing a comma label should use semicolons.
+
+## Follow-up: "Based on" duplicates and the RM heading (no version bump)
+
+Your RM briefing check on m8-demo found:
+1. "Based on" repeated a label when the AI cited the same fact as both `feature.X` and `signal.X` (e.g. "Collections vs 12-month average; Collections vs 12-month average"). Both IDs map to one plain name.
+2. The heading should read "AI-suggested alternative wording".
+
+**No Gemini calls and no version bump.** Stored drafts keep their basis text but are de-duplicated wherever "Based on" is shown, so no regeneration is needed. New renders are de-duplicated in `basis()`. The displayed result is the same either way, so the cache keys didn't need to change.
+
+### Changes
+
+| File | Change |
+|---|---|
+| `backend/churn_backend/ai_render.py` | `basis()` keeps each label once, in order of first appearance. New `unique_basis(text)` de-duplicates a stored basis at `"; "`. A standard-question basis ("Label: value") is unchanged. |
+| `backend/churn_backend/briefing_pdf.py` | "Based on" lines use `unique_basis()`. The heading is now "AI-suggested alternative wording · reviewed". |
+| `frontend/src/components/AIBriefingDraft.jsx` | New `uniqueBasis(text)`, used in `ClientQuestions`, which covers the dashboard draft and the print section. The `<h3>` is now "AI-suggested alternative wording". |
+| `frontend/src/components/CustomerSummary.jsx` | The meeting-question "Based on" uses `uniqueBasis()`. |
+| `frontend/src/pages/Briefing.jsx` | The print-section heading is now "AI-suggested alternative wording · reviewed". |
+
+Nothing else in the section changed: the "Suggest/Regenerate questions" buttons, the per-item "AI-suggested" tag and the acknowledgement checkbox are as before.
+
+### Tests
+
+**New**
+- **Backend:** `test_based_on_lists_each_label_once_in_order_of_first_appearance` (`basis()` with `feature.X` + `signal.X`; `unique_basis()` with duplicates, one label and a standard basis).
+- **PDF:** `test_pdf_shows_a_stored_duplicated_based_on_once_under_the_renamed_heading`. A new draft's basis is already de-duplicated. The test then rewrites the stored basis, in the temporary test database only, as a duplicated string, to imitate an existing stored draft. It records the PDF paragraph texts and checks that "Based on: Collections vs 12-month average" appears exactly once, the duplicated text never appears, and the heading reads "AI-suggested alternative wording · reviewed".
+- **React:** `shows a stored duplicated Based on text once, for RM client questions and Summary meeting questions`.
+
+**Changed expectations (heading rename)**
+- `frontend/tests/ai-drafts.test.jsx`, `shows AI-suggested and standard client questions with an RM-only basis line`: heading `'AI-suggested client questions'` → `'AI-suggested alternative wording'`.
+- `frontend/tests/workspace.test.jsx`, line 148: same change.
+
+### Commands run
+
+`.\.venv\Scripts\python.exe scripts\check.py`
+
+| Suite | Result | Previously |
+|---|---|---|
+| Backend | `Ran 246 tests — OK (skipped=1)` | 244 (+2) |
+| Utility | `Ran 36 tests — OK (skipped=11)` | 36 |
+| Node | `tests 10 · fail 0` | 10 |
+| React | `Test Files 15 passed (15) · Tests 143 passed (143)` | 142 (+1) |
+| Build | `✓ built in 292ms` | OK |
+
+### Visual check
+
+1. Run `.\.venv\Scripts\python.exe scripts\local_session.py m8-demo --backend-port 5086 --frontend-port 5196`.
+2. Open a prioritised case's RM briefing. The section heading reads "AI-suggested alternative wording", and each "Based on: …" lists every label once. That includes a draft that was showing the repeat before.
+3. Print the briefing and download the PDF. Both show "AI-suggested alternative wording · reviewed" with no repeated labels.

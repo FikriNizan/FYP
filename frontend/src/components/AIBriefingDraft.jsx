@@ -12,11 +12,14 @@ function observationPeriod(period) {
   return 'Date unavailable';
 }
 
+// Stored drafts may repeat a label when a fact was cited as both feature.X and signal.X: show each label once.
+export const uniqueBasis = text => [...new Set(text.split('; '))].join('; ');
+
 // Client questions for the RM: the question is said to the client; "Based on" is for the RM only.
 export function ClientQuestions({ content }) {
   return <ol className="client-questions">{content.questions.map((q,i)=><li key={i}>
     <span className={q.source==='ai' ? 'ai-tag' : 'standard-tag'}>{q.source==='ai' ? 'AI-suggested' : 'Standard'}</span>{q.text}
-    {q.basis && <small className="muted client-basis">Based on: {q.basis}</small>}
+    {q.basis && <small className="muted client-basis">Based on: {uniqueBasis(q.basis)}</small>}
   </li>)}</ol>;
 }
 
@@ -48,7 +51,7 @@ export default function AIBriefingDraft({ purpose='discussion', recordId, onRevi
   const draft=state?.draft, content=draft?.content || state?.fallback;
   const label=busy ? 'Generating' : draft ? 'Saved AI draft' : state?.state==='fallback' ? 'Deterministic fallback' : state?.state==='evidence_changed' ? 'Evidence changed · regenerate and review' : 'Not generated · deterministic fallback';
   return <section className="ai-draft briefing-section no-print">
-    <h3>AI-suggested client questions</h3>
+    <h3>AI-suggested alternative wording</h3>
     <p role="status"><strong>{label}</strong>{draft && ' · '+new Date(draft.generated_at).toLocaleString('en-MY',{timeZone:'Asia/Kuala_Lumpur'})}</p>
     {draft && <p className="muted">Facts are from saved records. Items marked AI were drafted by Gemini for review.</p>}
     {error && <p role="alert">Request failed. {error}</p>}

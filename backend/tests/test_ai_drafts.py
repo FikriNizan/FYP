@@ -1088,6 +1088,42 @@ class DraftTests(unittest.TestCase):
             card=ai.validate(self.summary_raw(questions=[self.OPS,mismatch]),data)
             self.assertEqual(card['dropped'],[dict(item='question:1/finance',rules=['question_audience'])])
 
+    def test_pdf_shows_a_stored_duplicated_based_on_once_under_the_renamed_heading(self):
+        """27 Nov 2026: drafts stored before the basis() fix repeat a label; the PDF de-duplicates at display time."""
+        from churn_backend import briefing_pdf
+        url=self.prioritise()
+        state=self.client.get(url).json
+        raw=self.client_questions([dict(text='Have there been any changes in how or when your customers pay you?',
+                                        evidence_ids=[self.COLLECT,'signal.inbound_flow_ratio_3m_to_12m']),
+                                   dict(text='Have any of your payments been delayed or not gone through as expected?',evidence_ids=[self.PAYMENTS])])
+        with patch.object(ai.Gemini,'generate',return_value=raw):
+            draft=self.client.post(url,json={'expected_evidence_hash':state['evidence_hash']}).json['draft']
+        self.assertEqual(draft['content']['questions'][0]['basis'],'Collections vs 12-month average')  # New drafts: fixed in basis().
+        duplicated='Collections vs 12-month average; Collections vs 12-month average'
+        with self.app.app_context():  # Simulate a draft stored before the fix (temporary test database only).
+            db=get_db()
+            content=json.loads(db.execute('SELECT content_json FROM ai_drafts WHERE draft_id=?',(draft['draft_id'],)).fetchone()[0])
+            content['questions'][0]['basis']=duplicated
+            db.execute('UPDATE ai_drafts SET content_json=? WHERE draft_id=?',(json.dumps(content),draft['draft_id']))
+            db.commit()
+        self.assertEqual(self.client.get(url).json['draft']['content']['questions'][0]['basis'],duplicated)
+        preview=self.client.get('/api/briefings',query_string={'case_id':self.id}).json
+        body=dict(case_ids=[self.id],snapshots=preview['snapshots'],ai_drafts=[dict(case_id=self.id,draft_id=draft['draft_id'],
+                  evidence_hash=state['evidence_hash'],acknowledged=True)])
+        texts=[]
+        real=briefing_pdf.Paragraph
+        def recording(text,*args,**kwargs):
+            texts.append(text)
+            return real(text,*args,**kwargs)
+        with patch.object(briefing_pdf,'Paragraph',side_effect=recording):
+            self.assertEqual(self.client.post('/api/briefings/pdf',json=body).status_code,200)
+        based=[t for t in texts if t.startswith('Based on:')]
+        self.assertIn('Based on: Collections vs 12-month average',based)
+        self.assertNotIn('Based on: '+duplicated,based)
+        self.assertEqual(based.count('Based on: Collections vs 12-month average'),1)
+        self.assertIn('AI-suggested alternative wording · reviewed',texts)
+        self.assertNotIn('AI-suggested client questions · reviewed',texts)
+
     def test_drafts_cached_under_the_previous_versions_are_not_served(self):
         from churn_backend import ai_render
         for contract,render_version in [('m6-narrative-8','render-8'),('m6-narrative-9','render-9'),

@@ -630,6 +630,18 @@ class RenderTests(unittest.TestCase):
                          'failure rate (details in Signals to investigate).')  # No comma label: style unchanged.
         self.assertEqual(render.VERSION, 'render-10')
 
+    # 27 Nov 2026: the same fact cited as feature.X and signal.X must give one "Based on" label.
+    def test_based_on_lists_each_label_once_in_order_of_first_appearance(self):
+        facts = self.evidence['facts']
+        ids = ['feature.inbound_flow_ratio_3m_to_12m', 'feature.outbound_failure_rate_3m', 'signal.inbound_flow_ratio_3m_to_12m']
+        self.assertEqual(render.basis(ids, facts), 'Collections vs 12-month average; Payment failure rate')
+        self.assertEqual(render.unique_basis('Collections vs 12-month average; Collections vs 12-month average'),
+                         'Collections vs 12-month average')
+        self.assertEqual(render.unique_basis('B; A; B; C; A'), 'B; A; C')
+        self.assertEqual(render.unique_basis('Payment failure rate'), 'Payment failure rate')
+        standard = 'Combined flow vs 12-month average: 0.87% of the twelve-month average'  # Standard-question basis.
+        self.assertEqual(render.unique_basis(standard), standard)
+
 def render_link_rules():
     """Rules that may appear on a dropped link without rejecting the draft (m6-narrative-11)."""
     from churn_backend.ai_output_audit import LINK_FIT_RULES

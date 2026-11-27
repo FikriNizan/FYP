@@ -1,7 +1,7 @@
 import React from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import AIBriefingDraft, { ClientQuestions } from '../src/components/AIBriefingDraft.jsx';
+import AIBriefingDraft, { ClientQuestions, uniqueBasis } from '../src/components/AIBriefingDraft.jsx';
 import CustomerSummary from '../src/components/CustomerSummary.jsx';
 import { api } from '../src/api.js';
 
@@ -310,10 +310,27 @@ const clientContent={format:'questions-1',evidence_ids:['feature.login_failure_r
   {text:'Have you or your team had any difficulty signing in to online banking?',source:'ai',basis:'Login failure rate',evidence_ids:['feature.login_failure_rate_3m']},
   {text:'How has business activity been for you lately, and do you expect any changes ahead?',source:'standard',basis:'Combined flow vs 12-month average: 0.87% of the twelve-month average',evidence_ids:[]}]};
 
+// 27 Nov 2026: drafts stored before the basis() fix can repeat a label (feature.X and signal.X); show it once.
+it('shows a stored duplicated Based on text once, for RM client questions and Summary meeting questions',async()=>{
+  const duplicated='Collections vs 12-month average; Collections vs 12-month average; Payment failure rate';
+  expect(uniqueBasis(duplicated)).toBe('Collections vs 12-month average; Payment failure rate');
+  expect(uniqueBasis('Login failure rate')).toBe('Login failure rate');
+  const rm={...clientContent,questions:[{...clientContent.questions[0],basis:duplicated}]};
+  const view=render(<ClientQuestions content={rm} />);
+  expect(view.container.querySelector('.client-basis').textContent).toBe('Based on: Collections vs 12-month average; Payment failure rate');
+  view.unmount();
+  const summary={...noLink,questions:[{audience:'finance',text:'Has the customer told the relationship team about changes to its business needs?',
+    source:'ai',evidence_ids:['feature.inbound_flow_ratio_3m_to_12m','signal.inbound_flow_ratio_3m_to_12m'],basis:'Collections vs 12-month average; Collections vs 12-month average'}]};
+  api.aiDraft.mockResolvedValue(stored(summary));
+  summaryView('dup-basis');
+  const item=(await screen.findByText(/Has the customer told the relationship team/)).closest('li');
+  expect(item.querySelector('.client-basis').textContent).toBe('Based on: Collections vs 12-month average');
+});
+
 it('shows AI-suggested and standard client questions with an RM-only basis line',async()=>{
   api.aiDraft.mockResolvedValue({...saved,draft:{...saved.draft,content:clientContent}});
   render(<AIBriefingDraft recordId="case-a" />);
-  expect(await screen.findByRole('heading',{name:'AI-suggested client questions'})).toBeTruthy();
+  expect(await screen.findByRole('heading',{name:'AI-suggested alternative wording'})).toBeTruthy();  // Renamed 27 Nov 2026.
   const ai=screen.getByText('Have you or your team had any difficulty signing in to online banking?').closest('li');
   expect(ai.querySelector('.ai-tag').textContent).toBe('AI-suggested');
   expect(ai.querySelector('.client-basis').textContent).toBe('Based on: Login failure rate');

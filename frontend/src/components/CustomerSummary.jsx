@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Icon from './Icon.jsx';
+import { uniqueBasis } from './AIBriefingDraft.jsx';
 
 // Customer review Summary tab. The server renders every fact sentence from saved records; Gemini may add one
 // validated link note and meeting questions, which are labelled. Summaries are produced only by the offline
@@ -76,7 +77,7 @@ export default function CustomerSummary({ recordId, children }) {
       <ol className="meeting-questions">{content.questions.map((q, i) => <li key={i}>
         <span className={q.source === 'ai' ? 'ai-badge' : 'standard-badge'}>{q.source === 'ai' ? 'AI' : 'Standard'}</span>
         <span className="audience-badge">{q.audience === 'finance' ? 'Finance' : 'Operations'}</span>{q.text}
-        {q.basis && <small className="muted client-basis">Based on: {q.basis}</small>}
+        {q.basis && <small className="muted client-basis">Based on: {uniqueBasis(q.basis)}</small>}
       </li>)}</ol>
     </section>}
   </>;

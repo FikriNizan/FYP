@@ -17,6 +17,8 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import HRFlowable, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from .ai_render import unique_basis
+
 INK, MUTED, NAV = colors.HexColor('#343a40'), colors.HexColor('#5f6a75'), colors.HexColor('#132742')
 LINE, CANVAS = colors.HexColor('#e5e9ef'), colors.HexColor('#f1f4f6')
 WARN, WARN_BG = colors.HexColor('#80550d'), colors.HexColor('#fdf6e7')
@@ -160,12 +162,12 @@ def render(payload):
         if item.get('ai_discussion'):
             draft=item['ai_discussion']
             content=draft['content']
-            story += [paragraph('AI-suggested client questions · reviewed', heading), rule(),
+            story += [paragraph('AI-suggested alternative wording · reviewed', heading), rule(),
                       paragraph('Saved Gemini draft · '+draft['generated_at'],note)]
             for entry in content['questions']:  # Question for the client; "Based on" is for the RM only.
                 story.append(paragraph(('AI-suggested: ' if entry.get('source')=='ai' else 'Standard: ')+entry['text']))
                 if entry.get('basis'):
-                    story.append(paragraph('Based on: '+entry['basis'], note))
+                    story.append(paragraph('Based on: '+unique_basis(entry['basis']), note))  # Stored drafts may repeat a label.
         story += [paragraph('Evidence sources and identifiers', heading), rule()]
         story += rows_table(item['traceability'], WIDTH, id_style=True)
 
