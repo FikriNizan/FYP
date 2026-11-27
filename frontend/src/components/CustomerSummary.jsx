@@ -26,8 +26,29 @@ function useSummary(recordId) {
 
 const section = (content, id) => content?.sections?.find(s => s.id === id);
 
-function Fact({ item }) {
-  return <p>{item.source === 'ai' && <span className="ai-badge">AI note</span>}{item.text}</p>;
+// Bottom-line fact grid (layout only; the server's wording is unchanged). Cells are placed by evidence_ids, not
+// position: the risk sentence is the full-width hero; the flag and usual-flow sentences share one row (either alone
+// is full width); everything else is full width. Visual order: hero, the pair, then other cells in server order.
+const PAIR = ['prediction.flag', 'feature.combined_flow_mean_12m_myr'];
+const cites = (item, id) => (item.evidence_ids || []).includes(id);
+
+export function splitFact(text) {
+  const at = text.indexOf(': ');
+  return at < 0 ? null : { label: text.slice(0, at), value: text.slice(at + 2) };
+}
+
+function Fact({ item, kind }) {
+  const parts = splitFact(item.text), badge = item.source === 'ai' && <span className="ai-badge">AI note</span>;
+  if (!parts) return <p className={'fact ' + kind}>{badge}{item.text}</p>;
+  return <dl className={'fact ' + kind}><dt>{badge}{parts.label}</dt><dd>{parts.value}</dd></dl>;
+}
+
+export function factCells(items) {
+  const hero = items.filter(item => cites(item, 'prediction.risk'));
+  const pair = items.filter(item => !hero.includes(item) && PAIR.some(id => cites(item, id)));
+  const rest = items.filter(item => !hero.includes(item) && !pair.includes(item));
+  return [...hero.map(item => [item, 'hero']), ...pair.map(item => [item, pair.length === 2 ? 'pair' : 'wide']),
+    ...rest.map(item => [item, 'wide'])];
 }
 
 export default function CustomerSummary({ recordId, children }) {
@@ -42,9 +63,9 @@ export default function CustomerSummary({ recordId, children }) {
       {error && <p role="alert">The summary could not be loaded. {error}</p>}
       {state?.state === 'evidence_changed' && <p className="muted">{STALE_NOTE}</p>}
       {bottom && <div className="callout"><span className="round"><Icon name="info" /></span><div>
-        {bottom.items.map((item, i) => <Fact item={item} key={i} />)}
-        {link && link.items.map((item, i) => <p className="ai-link-note" key={'link' + i}><span className="ai-badge">AI note</span>{item.text}</p>)}
-        {footnote && <p className="muted">{footnote.items.map(item => item.text).join(' ')}</p>}
+        <div className="fact-grid">{factCells(bottom.items).map(([item, kind], i) => <Fact item={item} kind={kind} key={i} />)}</div>
+        {link && <div className="ai-link-box">{link.items.map((item, i) => <p className="ai-link-note" key={'link' + i}><span className="ai-badge">AI note</span>{item.text}</p>)}</div>}
+        {footnote && <p className="muted summary-footnote">{footnote.items.map(item => item.text).join(' ')}</p>}
       </div></div>}
     </section>
     {children}

@@ -129,7 +129,10 @@ it('shows the server bottom line and footnote only; the card sections stay in th
   api.aiDraft.mockResolvedValue(stored(sectionCard));
   const view=summaryView();
   await screen.findByText('Risk sentence from saved evidence.');
-  expect(screen.getByText('Strongest signals raising the estimate: payment failure rate (details in Signals to investigate).')).toBeTruthy();
+  // Layout (27 Nov 2026): the sentence is split at its first ': ' into a dt label and a dd value; its text is unchanged.
+  const signals=screen.getByText('Strongest signals raising the estimate');
+  expect(signals.tagName).toBe('DT');
+  expect(signals.closest('dl').querySelector('dd').textContent).toBe('payment failure rate (details in Signals to investigate).');
   expect(screen.getByText('Prediction for May–Jul 2024, based on data up to 30 Apr 2024.')).toBeTruthy();
   for(const text of ['Operations fact.','Finance fact.','Weighed fact.',"Prioritisation is the committee's decision.",'Bottom line','What the model weighed'])
     expect(view.container.textContent).not.toContain(text);
@@ -175,6 +178,95 @@ it('shows a Based on line under each summary meeting question that has one',asyn
   expect(ops.querySelector('.client-basis').textContent).toBe('Based on: Payment failure rate');
   expect(ops.querySelector('.client-basis').className).toBe('muted client-basis');
   expect(screen.getByText('Could Finance confirm the position?').closest('li').querySelector('.client-basis')).toBeNull();
+});
+
+// Summary layout (27 Nov 2026, frontend only): the bottom line as a fact grid placed by evidence_ids.
+const bottomItems=[
+  {text:'Strongest signals raising the estimate: payment failure rate (details in Signals to investigate).',source:'evidence',evidence_ids:[]},
+  {text:'Usual monthly combined flow (12-month average): RM 115.8 million.',source:'evidence',evidence_ids:['feature.combined_flow_mean_12m_myr']},
+  {text:'Flagged for committee review: at or above the 25.9% threshold, which was set from past data to balance catching real cases against false alerts.',
+    source:'evidence',evidence_ids:['prediction.flag','prediction.threshold']},
+  {text:'Estimated chance that average monthly combined flow (Collection + Disbursement) over May–Jul 2024 falls to half or less of its usual level: 56.7%, more likely than not.',
+    source:'evidence',evidence_ids:['prediction.risk']},
+  {text:'No signal raised the estimate notably.',source:'evidence',evidence_ids:[]}];
+const layoutCard=(items,withLink=true)=>({...sectionCard,sections:sectionCard.sections.map(s=>s.id==='bottom_line'?{...s,items}:s)
+  .filter(s=>withLink||s.id!=='link')});
+const cells=()=>[...document.querySelectorAll('.fact-grid > .fact')];
+
+it('splits each bottom-line sentence at its first ": " into a label and a value without changing the text',async()=>{
+  api.aiDraft.mockResolvedValue(stored(layoutCard(bottomItems)));
+  summaryView('split');
+  await screen.findByText('Estimated chance that average monthly combined flow (Collection + Disbursement) over May–Jul 2024 falls to half or less of its usual level');
+  const risk=cells()[0];
+  expect(risk.tagName).toBe('DL');
+  expect(risk.querySelector('dt').textContent).toBe('Estimated chance that average monthly combined flow (Collection + Disbursement) over May–Jul 2024 falls to half or less of its usual level');
+  expect(risk.querySelector('dd').textContent).toBe('56.7%, more likely than not.');
+  // Only the first ': ' splits; the value keeps its own text (first-letter capitalisation is CSS only).
+  const signals=cells().find(c=>c.textContent.startsWith('Strongest'));
+  expect(signals.querySelector('dd').textContent).toBe('payment failure rate (details in Signals to investigate).');
+  for(const cell of cells().filter(c=>c.tagName==='DL'))
+    expect(bottomItems.map(i=>i.text)).toContain(cell.querySelector('dt').textContent+': '+cell.querySelector('dd').textContent);
+  // A sentence without ': ' is plain text in a full-width cell.
+  const plain=screen.getByText('No signal raised the estimate notably.');
+  expect(plain.tagName).toBe('P');
+  expect(plain.className).toBe('fact wide');
+});
+
+it('places bottom-line cells by evidence_ids: hero, the flag and usual-flow pair, then the rest',async()=>{
+  api.aiDraft.mockResolvedValue(stored(layoutCard(bottomItems)));
+  summaryView('placement');
+  await screen.findByText('Strongest signals raising the estimate');
+  expect(cells().map(c=>[c.className,c.querySelector('dt')?.textContent || c.textContent])).toEqual([
+    ['fact hero','Estimated chance that average monthly combined flow (Collection + Disbursement) over May–Jul 2024 falls to half or less of its usual level'],
+    ['fact pair','Usual monthly combined flow (12-month average)'],
+    ['fact pair','Flagged for committee review'],
+    ['fact wide','Strongest signals raising the estimate'],
+    ['fact wide','No signal raised the estimate notably.']]);
+});
+
+it('gives the flag or usual-flow cell the full width when its partner is missing',async()=>{
+  for(const [id,keep] of [['flag-only','prediction.flag'],['usual-only','feature.combined_flow_mean_12m_myr']]) {
+    const items=bottomItems.filter(i=>!(i.evidence_ids.includes('prediction.flag')||i.evidence_ids.includes('feature.combined_flow_mean_12m_myr'))
+      || i.evidence_ids.includes(keep));
+    api.aiDraft.mockResolvedValue(stored(layoutCard(items)));
+    const view=summaryView(id);
+    await screen.findByText('Strongest signals raising the estimate');
+    const single=cells().find(c=>c.querySelector('dt') && (c.textContent.startsWith('Flagged') || c.textContent.startsWith('Usual')));
+    expect(single.className).toBe('fact wide');
+    expect(document.querySelectorAll('.fact.pair')).toHaveLength(0);
+    view.unmount();
+  }
+});
+
+it('shows the AI note in its own box below the fact grid and keeps the footnote last',async()=>{
+  api.aiDraft.mockResolvedValue(stored(layoutCard(bottomItems)));
+  summaryView('boxes');
+  const note=(await screen.findByText('A short connecting note.')).closest('p');
+  const box=note.parentElement;
+  expect(box.className).toBe('ai-link-box');
+  expect(box.querySelector('.ai-badge').textContent).toBe('AI note');
+  const content=document.querySelector('.fact-grid').parentElement;
+  expect([...content.children].map(c=>c.className)).toEqual(['fact-grid','ai-link-box','muted summary-footnote']);
+  expect(content.lastElementChild.textContent).toBe('Prediction for May–Jul 2024, based on data up to 30 Apr 2024.');
+  api.aiDraft.mockResolvedValue(stored(layoutCard(bottomItems,false)));
+  summaryView('no-box');
+  await screen.findAllByText('Strongest signals raising the estimate');
+  expect(document.querySelectorAll('.ai-link-box')).toHaveLength(1);  // Only the first view's box; none without a link note.
+});
+
+it('renders "Based on" as its own element after the meeting question text',async()=>{
+  const withBasis={...noLink,questions:[{audience:'operations',text:'Has the customer reported trouble completing payments online?',
+    source:'ai',evidence_ids:['feature.outbound_failure_rate_3m'],basis:'Payment failure rate'}]};
+  api.aiDraft.mockResolvedValue(stored(withBasis));
+  summaryView('basis-block');
+  const item=(await screen.findByText(/Has the customer reported trouble completing payments online\?/)).closest('li');
+  const basis=item.querySelector('.client-basis');
+  expect(basis.tagName).toBe('SMALL');
+  expect(basis.parentElement).toBe(item);
+  expect(item.lastElementChild).toBe(basis);
+  expect(basis.previousSibling.nodeType).toBe(Node.TEXT_NODE);  // The question text ends before the Based on element.
+  expect(basis.previousSibling.textContent).toBe('Has the customer reported trouble completing payments online?');
+  expect(item.closest('ol').className).toBe('meeting-questions');  // The block-line CSS rule targets .meeting-questions .client-basis.
 });
 
 it('falls back to standard text with no AI labels when no current stored draft exists, and says why when the evidence changed',async()=>{
