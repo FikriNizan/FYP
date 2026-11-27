@@ -7,12 +7,15 @@ a fact is "notable" when its feature is among the saved higher/lower risk driver
 """
 import re
 from datetime import date
+from decimal import Decimal, ROUND_HALF_UP
 from . import briefings
-from .ai_evidence import DICTIONARY
+from .ai_evidence import DICTIONARY, period
 
-VERSION = 'render-8'  # render-5: Finance 'contribution at stake' sentence (RaR/FSL); render-6: stage-2 wording;
+VERSION = 'render-9'  # render-5: Finance 'contribution at stake' sentence (RaR/FSL); render-6: stage-2 wording;
                       # render-7: check B owner rule (2026-11-22) and 'Combined flow' terminology;
-                      # render-8: FD earnings net of SRR (2026-11-23) and check B 'fixed deposits' wording.
+                      # render-8: FD earnings net of SRR (2026-11-23) and check B 'fixed deposits' wording;
+                      # render-9: plain bottom line (likelihood, threshold meaning, top-3 signals, rounded usual flow,
+                      # dated footnote) and 'Based on' for summary questions (2026-11-27).
 TOKEN = re.compile(r'\{\{([a-zA-Z0-9_.]+)\}\}')
 CARD_SECTIONS = ('bottom_line', 'operations', 'finance', 'weighed')
 AUDIENCE_ORDER = ('operations', 'finance')
@@ -23,7 +26,6 @@ PLAIN_NAMES = {'prediction.risk': 'the estimated risk', 'prediction.threshold': 
                'prediction.flag': 'the review flag'}
 NOT_NOTABLE = 'None of the service or online-banking measures are among the main signals for this estimate.'
 WEIGHED_NOTE = 'Signals the model weighed, not proven causes.'
-FOOTNOTE = '12-month averages include the latest 3 months.'
 CLOSING = "Prioritisation is the committee's decision."
 SERVICE_CLOSING = 'Service issues can be checked and fixed independently of the outreach decision.'
 QUESTION_LIMIT = 2  # Exactly one Operations and one Finance question when evidence allows.
@@ -281,49 +283,89 @@ def relative(ratio, possessive):
     return f'averaged {pct(abs(1 - ratio), 2)} {"below" if ratio < 1 else "above"} {possessive} 12-month average'
 
 
-# Payment-outcome features are service friction, not payment volume.
-SERVICE_FEATURES = {'outbound_failure_rate_3m', 'outbound_bank_failure_rate_3m', 'outbound_processing_rate_3m',
-                    'outbound_failure_count_mean_3m', 'outbound_processing_count_mean_3m'}
+THRESHOLD_MEANING = 'which was set from past data to balance catching real cases against false alerts'
+NO_SIGNAL = 'No signal raised the estimate notably.'
+TOP_SIGNALS = 3
+# Always citable: the usual-flow line (d), the "Recent activity vs usual" tile, and the prediction itself.
+ALWAYS_ALLOWED = ('feature.combined_flow_mean_12m_myr', 'feature.combined_flow_ratio_3m_to_12m',
+                  'prediction.risk', 'prediction.flag', 'prediction.threshold')
 
 
-def driver_family(feature):
-    """Family of the single top positive saved driver, named from that feature only."""
-    if feature in SERVICE_FEATURES or feature.startswith(('friction_', 'bank_friction_', 'session_', 'login_',
-                                                         'active_login_users', 'passive_session', 'approver_', 'untrusted_')):
-        return 'service and online banking'
-    if feature.startswith('combined_'):
-        return 'combined flow'
-    if feature.startswith('inbound_'):
-        return 'collections'
-    if feature.startswith('outbound_'):
-        return 'payments'
-    if feature.startswith(('fd_', 'non_fd_', 'active_account', 'active_fd', 'closed_fd')):
-        return 'balances and deposits'
-    if feature.startswith(('estimated_fee', 'estimated_waiver', 'catalog_')):
-        return 'fees and waivers'
-    return 'customer profile'  # tier_id, customer_type, sector_code
+def likelihood(risk, flagged):
+    """Phrase chosen from the percentage the card displays (a displayed 50% always reads 'more likely than not').
+    The middle band uses the saved flag, never a recomputed comparison with the threshold."""
+    if float(pct(risk, 1).rstrip('%')) >= 50:
+        return 'more likely than not'
+    return 'below even odds, but high enough to review' if flagged else None
+
+
+def short_money(value):
+    """Readable amount for the card: RM x.x billion / RM x.x million, else whole ringgit. Exact amounts stay on Finance."""
+    amount, sign = abs(Decimal(str(value))), '-' if value < 0 else ''
+    if amount.quantize(Decimal('1'), rounding=ROUND_HALF_UP) < 10**6:
+        return f'{sign}RM {amount.quantize(Decimal("1"), rounding=ROUND_HALF_UP):,}'
+    millions = (amount / 10**6).quantize(Decimal('.1'), rounding=ROUND_HALF_UP)
+    if millions < 1000:
+        return f'{sign}RM {millions} million'
+    return f'{sign}RM {(amount / 10**9).quantize(Decimal(".1"), rounding=ROUND_HALF_UP):,} billion'
+
+
+def top_higher(evidence):
+    """Top saved higher-risk drivers by contribution; stable sort, as in Signals to investigate."""
+    drivers = evidence['explanation']['higher_risk_drivers']
+    return sorted(drivers, key=lambda d: -abs(d['contribution_logodds']))[:TOP_SIGNALS]
+
+
+def in_sentence(label):
+    """Lowercase the first letter unless the label starts with an acronym ('FD balance' stays)."""
+    return label if len(label) > 1 and label[1].isupper() else label[:1].lower() + label[1:]
+
+
+def joined(labels):
+    return labels[0] if len(labels) == 1 else ', '.join(labels[:-1]) + ' and ' + labels[-1]
+
+
+def allowed_references(evidence):
+    """IDs AI text may cite: the top-3 higher-risk drivers named in the bottom line, the usual-flow and
+    recent-vs-usual facts, and the prediction. A lower-risk driver is never citable, whatever else applies."""
+    facts, saved = evidence['facts'], evidence['explanation']
+    ids = {prefix + d['feature'] for d in top_higher(evidence) for prefix in ('feature.', 'signal.')} | set(ALWAYS_ALLOWED)
+    ids -= {prefix + d['feature'] for d in saved['lower_risk_drivers'] for prefix in ('feature.', 'signal.')}
+    return sorted(i for i in ids if i in facts)
+
+
+def footnote(evidence, with_usual=True):
+    """Forecast window and data cutoff, then the usual-flow baseline: the 12 months ending at the cutoff."""
+    cutoff = evidence['identity']['cutoff']
+    text = f'Prediction for {briefings.forecast(cutoff)}, based on data up to {day(cutoff)}.'
+    if with_usual:
+        base = period(cutoff, 12)
+        start, end = date.fromisoformat(base['start']), date.fromisoformat(base['end'])
+        text += f' "Usual monthly combined flow" is the monthly average from {start:%b %Y} to {end:%b %Y}.'
+    return text
 
 
 def bottom_line(evidence):
-    facts, saved = evidence['facts'], evidence['explanation']
+    facts = evidence['facts']
     lines = []
-    risk = facts.get('prediction.risk')
+    risk, flag, threshold = facts.get('prediction.risk'), facts.get('prediction.flag'), facts.get('prediction.threshold')
     if risk:
-        lines.append(line('Estimated chance that average monthly combined flow over '
-                          f'{briefings.forecast(evidence["identity"]["cutoff"])} falls to half or less of its 12-month average: '
-                          f'{pct(risk["value"], 1)}.', ['prediction.risk'], twelve=True))  # Baseline: 12 months ending at cutoff.
-    flag, threshold = facts.get('prediction.flag'), facts.get('prediction.threshold')
+        phrase = likelihood(risk['value'], bool(flag and flag['value']))
+        lines.append(line('Estimated chance that average monthly combined flow (Collection + Disbursement) over '
+                          f'{briefings.forecast(evidence["identity"]["cutoff"])} falls to half or less of its usual level: '
+                          f'{pct(risk["value"], 1)}' + (f', {phrase}.' if phrase else '.'), ['prediction.risk'],
+                          twelve=True))  # Usual level: the 12 months ending at cutoff (see footnote).
     if flag and threshold:
         t = pct(threshold['value'], 1)
-        text = (f'Flagged for committee review: at or above the {t} threshold.' if flag['value']
-                else f'Not flagged: below the {t} threshold.')
+        text = (f'Flagged for committee review: at or above the {t} threshold, {THRESHOLD_MEANING}.' if flag['value']
+                else f'Not flagged: below the {t} threshold, {THRESHOLD_MEANING}.')
         lines.append(line(text, ['prediction.flag', 'prediction.threshold']))
-    if saved['higher_risk_drivers']:
-        top = max(saved['higher_risk_drivers'], key=lambda d: d['contribution_logodds'])
-        lines.append(line(f'Strongest signals: {driver_family(top["feature"])}.', []))
+    top = [in_sentence(driver_name(d['feature'], d)) for d in top_higher(evidence)]
+    lines.append(line(f'Strongest signals raising the estimate: {joined(top)} (details in Signals to investigate).' if top
+                      else NO_SIGNAL, []))
     usual = facts.get('feature.combined_flow_mean_12m_myr')
     if usual:
-        lines.append(line(f'Usual monthly combined flow (12-month average): {briefings.money(usual["value"])}.', [usual['id']],
+        lines.append(line(f'Usual monthly combined flow (12-month average): {short_money(usual["value"])}.', [usual['id']],
                           twelve=True))
     return lines
 
@@ -393,8 +435,11 @@ def render_summary(evidence, link=None, questions=None):
         if len(asked) < QUESTION_LIMIT and not any(q['audience'] == template['audience'] for q in asked):
             asked.append(template)
     asked.sort(key=lambda q: AUDIENCE_ORDER.index(q['audience']))
-    if any(l['twelve'] for lines in card_plan.values() for l in lines):  # Every card: the risk sentence uses a 12-month average.
-        sections.append(dict(id='footnote', title='', items=[dict(text=FOOTNOTE, source='standard', evidence_ids=[])]))
+    for q in asked:  # Deterministic 'Based on' from the cited facts, using the card's plain labels.
+        q['basis'] = basis(q['evidence_ids'], facts)
+    if any(l['twelve'] for lines in card_plan.values() for l in lines):  # Every card: the risk sentence uses the usual level.
+        sections.append(dict(id='footnote', title='', items=[dict(
+            text=footnote(evidence, 'feature.combined_flow_mean_12m_myr' in facts), source='standard', evidence_ids=[])]))
     closing = [CLOSING] + ([SERVICE_CLOSING] if service_issue(evidence) else [])
     sections.append(dict(id='closing', title=TITLES['closing'],
                          items=[dict(text=text, source='standard', evidence_ids=[]) for text in closing]))
@@ -438,5 +483,6 @@ def provider_payload(evidence):
                  direction=facts[i].get('direction'), group=facts[i].get('group')) for i in l['ids']]) for l in card_plan[key]
                  if l.get('external', True)]))
     return dict(customer='Customer A', purpose=evidence['identity']['purpose'], cutoff=evidence['identity']['cutoff'], sections=sections,
+                allowed_references=allowed_references(evidence),
                 limits='Signals show what the estimate weighed, not causes. Balances are exposures; fees and waivers are '
                        "historical estimates, not profit. Prioritisation is the committee's decision.")

@@ -54,6 +54,7 @@ export default function CustomerSummary({ recordId, children }) {
       <ol className="meeting-questions">{content.questions.map((q, i) => <li key={i}>
         <span className={q.source === 'ai' ? 'ai-badge' : 'standard-badge'}>{q.source === 'ai' ? 'AI' : 'Standard'}</span>
         <span className="audience-badge">{q.audience === 'finance' ? 'Finance' : 'Operations'}</span>{q.text}
+        {q.basis && <small className="muted client-basis">Based on: {q.basis}</small>}
       </li>)}</ol>
     </section>}
   </>;

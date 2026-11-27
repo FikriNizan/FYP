@@ -98,12 +98,12 @@ it('reports malformed backend key configuration without exposing credentials',as
 // meeting questions. Summaries are produced by the offline batch; the page only reads stored drafts.
 const sectionCard={format:'sections-1',evidence_ids:[],checks:['known_references'],sections:[
   {id:'bottom_line',title:'Bottom line',items:[{text:'Risk sentence from saved evidence.',source:'evidence',evidence_ids:['prediction.risk']},
-    {text:'Strongest signals: service and online banking.',source:'evidence',evidence_ids:[]}]},
+    {text:'Strongest signals raising the estimate: payment failure rate (details in Signals to investigate).',source:'evidence',evidence_ids:[]}]},
   {id:'link',title:'What links these signals',items:[{text:'A short connecting note.',source:'ai',evidence_ids:['prediction.risk']}]},
   {id:'operations',title:'Operations: what is happening',items:[{text:'Operations fact.',source:'evidence',evidence_ids:[]}]},
   {id:'finance',title:'Finance: what is at stake',items:[{text:'Finance fact.',source:'evidence',evidence_ids:[]}]},
   {id:'weighed',title:'What the model weighed',items:[{text:'Weighed fact.',source:'evidence',evidence_ids:[]}]},
-  {id:'footnote',title:'',items:[{text:'12-month averages include the latest 3 months.',source:'standard',evidence_ids:[]}]},
+  {id:'footnote',title:'',items:[{text:'Prediction for May–Jul 2024, based on data up to 30 Apr 2024.',source:'standard',evidence_ids:[]}]},
   {id:'closing',title:'Decision',items:[{text:"Prioritisation is the committee's decision.",source:'standard',evidence_ids:[]}]}],
   questions:[{audience:'operations',text:'Could Operations check the record?',source:'ai',evidence_ids:[]},
     {audience:'finance',text:'Could Finance confirm the position?',source:'template',evidence_ids:[]}]};
@@ -129,8 +129,8 @@ it('shows the server bottom line and footnote only; the card sections stay in th
   api.aiDraft.mockResolvedValue(stored(sectionCard));
   const view=summaryView();
   await screen.findByText('Risk sentence from saved evidence.');
-  expect(screen.getByText('Strongest signals: service and online banking.')).toBeTruthy();
-  expect(screen.getByText('12-month averages include the latest 3 months.')).toBeTruthy();
+  expect(screen.getByText('Strongest signals raising the estimate: payment failure rate (details in Signals to investigate).')).toBeTruthy();
+  expect(screen.getByText('Prediction for May–Jul 2024, based on data up to 30 Apr 2024.')).toBeTruthy();
   for(const text of ['Operations fact.','Finance fact.','Weighed fact.',"Prioritisation is the committee's decision.",'Bottom line','What the model weighed'])
     expect(view.container.textContent).not.toContain(text);
 });
@@ -161,6 +161,20 @@ it('lists questions for the meeting with AI and Standard badges after the tab co
   const text=view.container.textContent;
   expect(text.indexOf('Risk sentence')).toBeLessThan(text.indexOf('Chart and signals'));
   expect(text.indexOf('Chart and signals')).toBeLessThan(text.indexOf(heading.textContent));
+});
+
+// render-9: every meeting question carries a deterministic "Based on" line built from its cited facts.
+it('shows a Based on line under each summary meeting question that has one',async()=>{
+  const withBasis={...noLink,questions:[
+    {audience:'operations',text:'Has the customer reported trouble completing payments online?',source:'ai',
+      evidence_ids:['feature.outbound_failure_rate_3m'],basis:'Payment failure rate'},
+    {audience:'finance',text:'Could Finance confirm the position?',source:'template',evidence_ids:[]}]};
+  api.aiDraft.mockResolvedValue(stored(withBasis));
+  summaryView('with-basis');
+  const ops=(await screen.findByText('Has the customer reported trouble completing payments online?')).closest('li');
+  expect(ops.querySelector('.client-basis').textContent).toBe('Based on: Payment failure rate');
+  expect(ops.querySelector('.client-basis').className).toBe('muted client-basis');
+  expect(screen.getByText('Could Finance confirm the position?').closest('li').querySelector('.client-basis')).toBeNull();
 });
 
 it('falls back to standard text with no AI labels when no current stored draft exists, and says why when the evidence changed',async()=>{

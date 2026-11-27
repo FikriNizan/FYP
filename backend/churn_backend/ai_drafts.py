@@ -34,7 +34,7 @@ Never write numbers, number words, percentages, money, dates, months or comparis
 Model signals describe what the estimate weighed, never causes. Do not state causes, motives, certainty, complaints, competitors, profitability, retention effectiveness or recommendations; prioritisation is the committee's decision.
 Questions start with Has, Have, Is, Are, Could, Did, Does, Do or Can and end with a question mark. Ask about the customer's situation or the bank's service; never ask for a value, count or amount. Do not presuppose a cause. Never request tools, actions, retrieval or external knowledge. Do not output HTML or Markdown.
 Examples (style only; cite real fact IDs from the payload):
-Good link: "Failed logins and sessions without transactions both concern online banking access, alongside the change in payments." evidence_ids: login failure, sessions without transactions, payments facts.
+Good link: "Failed logins and payment failures both concern how the customer uses online banking, alongside the change in combined flow." evidence_ids: only allowed_references, e.g. login failure, payment failure and combined flow vs usual.
 Good link: "Payment failures and the change in collections both relate to how the customer's money moves through the bank."
 Bad link (only lists facts): "Exposures include {{feature.non_fd_balance_myr}}, {{feature.fd_balance_myr}}, {{feature.estimated_fee_mean_3m_myr}}."
 Bad link (restates a value with a direction): "Combined flow fell sharply."
@@ -238,6 +238,7 @@ VALIDATION_RULES={
     'AI text exceeds bounded length':'model_word_limit',
     'Client question uses internal or competitor language':'client_language', 'Client question requests internal data':'client_data_request',
     'Client question offers bank pricing or terms actions':'client_offer',
+    'Citation outside the allowed references':'citation_scope',
 }
 
 

@@ -21,7 +21,7 @@ from tests.hermetic import unconfigured
 PF = ai.ProviderFailure
 
 
-def output(fact='feature.login_failure_rate_3m'):
+def output(fact='feature.combined_flow_ratio_3m_to_12m'):  # m6-narrative-9: an allowed reference.
     """Discussion purpose (m6-narrative-7): two client-safe questions."""
     return json.dumps(dict(questions=[
         dict(text='Have you or your team had any difficulty signing in to online banking?', evidence_ids=[fact]),
@@ -30,7 +30,7 @@ def output(fact='feature.login_failure_rate_3m'):
 
 def notes(fact='prediction.risk'):
     """Summary contract (m6-narrative-6): one link note citing two card sections, plus questions."""
-    other = 'feature.login_failure_rate_3m'
+    other = 'feature.outbound_failure_rate_3m'  # m6-narrative-9: an allowed (top-3 higher-risk) operations fact.
     link = dict(text='For this customer, {{'+fact+'}} and {{'+other+'}} both belong in the review discussion.', evidence_ids=[fact, other])
     return json.dumps(dict(link=link, questions=[]))
 
@@ -201,10 +201,11 @@ class BatchCommandTests(Base):
         self.assertRegex(text, r'Elapsed: \d+\.\ds')
 
     def test_outcome_line_counts_accepted_drops_and_fallbacks(self):
-        unfit = json.dumps(dict(link=dict(text='Failed logins and sessions without transactions both concern online banking access.',
-                                          evidence_ids=['feature.login_failure_rate_3m', 'feature.passive_session_rate_3m']),
-                                questions=[dict(audience='operations', text='Has the customer reported trouble signing in?',
-                                                evidence_ids=['feature.login_failure_rate_3m'])]))
+        # m6-narrative-9: allowed references only; the link is unfit because both facts are in one card section (Finance).
+        unfit = json.dumps(dict(link=dict(text='Collections and combined flow both concern how money moves through the bank.',
+                                          evidence_ids=['feature.inbound_flow_ratio_3m_to_12m', 'feature.combined_flow_ratio_3m_to_12m']),
+                                questions=[dict(audience='operations', text='Has the customer reported trouble completing payments online?',
+                                                evidence_ids=['feature.outbound_failure_rate_3m'])]))
         with patch.object(ai.Gemini, 'generate', return_value=unfit):
             code, text = self.run_batch()
         self.assertEqual(code, 0)
@@ -299,6 +300,25 @@ class BatchCommandTests(Base):
             for argv in (['--batch-id', self.batch], ['--batch-id', self.batch, '--database', 'x']):
                 with self.assertRaises(SystemExit) as exit_:
                     batch.main(argv)
+                self.assertEqual(exit_.exception.code, 2)
+            selected.assert_not_called()
+
+    def test_session_option_selects_only_named_test_databases(self):
+        """--session (27 Nov 2026): exactly m6-test (default) or m8-demo, passed to selected_database only."""
+        for argv, expected in ((['--batch-id', self.batch, '--dry-run'], 'm6-test'),
+                               (['--batch-id', self.batch, '--dry-run', '--session', 'm6-test'], 'm6-test'),
+                               (['--batch-id', self.batch, '--dry-run', '--session', 'm8-demo'], 'm8-demo')):
+            with self.subTest(argv=argv), patch.object(batch, 'selected_database', return_value=(Path(self.path), 5, [], {})) as selected, \
+                 patch('churn_backend.create_app', return_value=self.app), redirect_stdout(io.StringIO()):
+                with self.assertRaises(SystemExit) as exit_:
+                    batch.main(argv)
+                self.assertEqual(exit_.exception.code, 0)
+                selected.assert_called_once_with(expected)
+        # The Working database, other sessions, unknown names and paths are refused before any database is opened.
+        with patch.object(batch, 'selected_database') as selected, redirect_stderr(io.StringIO()):
+            for session in ('working', 'test', 'm5-test', 'unknown', 'backend/instance/churn.sqlite'):
+                with self.subTest(session=session), self.assertRaises(SystemExit) as exit_:
+                    batch.main(['--batch-id', self.batch, '--dry-run', '--session', session])
                 self.assertEqual(exit_.exception.code, 2)
             selected.assert_not_called()
 

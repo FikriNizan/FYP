@@ -278,7 +278,7 @@ class PortfolioAndCardTests(unittest.TestCase):
         for item in (i for s in card['sections'] for i in s['items']):
             self.assertNotRegex(item['text'], r'(?i)loss')
         self.assertNotIn('Contribution at stake', payload)  # Deterministic only: never sent to Gemini.
-        self.assertLessEqual(render.card_words(card), 240)
+        self.assertLessEqual(render.card_words(card), 300)  # render-9: 240 -> 300 (plainer bottom line and footnote).
         self.assertEqual(data['finance_metrics']['rar_3m'], expected['rar_3m'])
 
     def test_card_wording_for_negative_contribution_and_policy_exemption(self):

@@ -446,3 +446,11 @@ These fall back to the deterministic card and are never stored as Gemini drafts.
 - **The "Good finance question" example conflicts with the competitor ban:** it asks about moving payments to another bank.
 
 Also undisclosed: the question-topic rule (a question that mentions payments, deposits, fees, balances or logins must cite a fact on that topic) is not stated to the model.
+
+### Summary clarity and citation rule (render-9, m6-narrative-9), 27 November 2026, branch `m9-summary-clarity`
+
+This answers supervisor feedback on customer 689 (April 2024). Details are in `docs/handoffs/2026-11-27-summary-clarity.md`.
+- **Bottom line:** the risk sentence defines combined flow (Collection + Disbursement) and adds a likelihood phrase. The flag sentence says what the threshold means. "Strongest signals" names the top-3 higher-risk drivers with the Signals to investigate labels, replacing a single driver family. Usual flow is rounded (RM x.x million). The footnote states the forecast window, the data cutoff and the 12-month baseline months.
+- **Citation rule (both purposes):** AI items may cite only `allowed_references`: the top-3 higher-risk drivers, usual combined flow, the recent-vs-usual ratio and the prediction. No lower-risk driver may ever be cited. A summary item that breaks the rule is dropped (rule `citation_scope`). A discussion draft that breaks it falls back to the standard questions.
+- **This resolves the deferred "Good link" prompt problem above:** the example now links allowed facts only. The "Good finance question" example (moving payments to another bank) is unchanged and still deferred.
+- Summary meeting questions show a deterministic "Based on" line.

@@ -41,6 +41,15 @@ class LocalSessionTests(unittest.TestCase):
         self.assertEqual(local.selected_database('working')[0],self.working.resolve())
         self.assertEqual(local.selected_database('test')[0],self.test.resolve())
 
+    def test_m8_demo_session_refuses_the_working_database(self):
+        demo=self.root/'artifacts'/'m8-demo.sqlite'
+        with patch.object(local,'M8_DEMO',demo):
+            demo.hardlink_to(self.working)  # The demo path is the Working file under another name.
+            with self.assertRaisesRegex(ValueError,'own confirmed Test copy'): local.selected_database('m8-demo')
+            demo.unlink()
+            local.copy_database(self.working,demo)
+            self.assertEqual(local.selected_database('m8-demo')[0],demo.resolve())
+
     def test_child_environment_overrides_stale_route_and_path(self):
         with patch.dict(local.os.environ,{'CHURN_DB_PATH':'wrong.sqlite','VITE_API_TARGET':'http://wrong:9999'}):
             env=local.child_environment('test',self.test.resolve())

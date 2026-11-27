@@ -2,7 +2,7 @@
 
 Run after an assessment is published. Reuses ai_drafts evidence, validation, cache identity and
 storage. Resumable: customers with a stored draft matching the current cache key are skipped.
-The database is always the pinned Milestone 6 Test file; there is deliberately no path option.
+The database is a named Test session (--session m6-test, the default, or m8-demo); there is deliberately no path option.
 """
 import argparse
 from collections import Counter
@@ -132,6 +132,8 @@ def run(args, out=print):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--batch-id', required=True)
+    parser.add_argument('--session', choices=('m6-test', 'm8-demo'), default='m6-test',
+                        help='Named Test database (default m6-test); the Working database is never selectable')
     parser.add_argument('--dry-run', action='store_true', help='Count eligible/cached/to-generate; zero API calls')
     parser.add_argument('--limit', type=int, default=20, help='Maximum customers to generate this run (default 20)')
     parser.add_argument('--min-interval', type=float, default=6.0,
@@ -144,7 +146,7 @@ def main(argv=None):
     # Only checks the variables are set; the key value is never read, printed or stored here.
     if not args.dry_run and (os.environ.get('TXB_GENAI_ENABLED') != '1' or not os.environ.get('GEMINI_API_KEY')):
         parser.error('Configure backend TXB_GENAI_ENABLED=1 and GEMINI_API_KEY locally first (or use --dry-run)')
-    database, _, _, _ = selected_database('m6-test')  # Refuses Working, M5 Test and aliases.
+    database, _, _, _ = selected_database(args.session)  # Refuses Working, M5 Test and aliases.
     sys.path.insert(0, str(ROOT / 'backend'))
     from churn_backend import create_app
     app = create_app(dict(DATABASE=str(database), TXB_LOCAL_SESSION=True, TXB_LOCAL_MODE='m6-test',

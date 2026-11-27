@@ -33,7 +33,7 @@ class DraftTests(unittest.TestCase):
 
     def notes(self, fact='prediction.risk', questions=()):
         """Summary contract (m6-narrative-6): one link note citing two card sections, plus questions."""
-        other='feature.login_failure_rate_3m'
+        other='feature.outbound_failure_rate_3m'  # m6-narrative-9: an allowed (top-3 higher-risk) operations fact.
         link=dict(text='For this customer, {{'+fact+'}} and {{'+other+'}} both belong in the review discussion.',evidence_ids=[fact,other])
         return json.dumps(dict(link=link,questions=list(questions)))
 
@@ -46,7 +46,7 @@ class DraftTests(unittest.TestCase):
     def client_questions(self, questions=None):
         return json.dumps(dict(questions=questions if questions is not None else [
             dict(text='Have any of your payments been delayed or not gone through as expected?',evidence_ids=['feature.outbound_failure_rate_3m']),
-            dict(text='Have you or your team had any difficulty signing in to online banking?',evidence_ids=['feature.login_failure_rate_3m'])]))
+            dict(text='Have you or your team had any difficulty signing in to online banking?',evidence_ids=['feature.combined_flow_ratio_3m_to_12m'])]))
 
     def generate(self):
         """Summary generation is batch-only (no HTTP POST). Call the same backend function the batch
@@ -166,8 +166,8 @@ class DraftTests(unittest.TestCase):
         with self.app.app_context():
             data=self.client_data()
             good='Have you or your team had any difficulty signing in to online banking?'
-            def raw(text,refs=('feature.login_failure_rate_3m',)):
-                return self.client_questions([dict(text=good,evidence_ids=['feature.login_failure_rate_3m']),dict(text=text,evidence_ids=list(refs))])
+            def raw(text,refs=('feature.outbound_failure_rate_3m',)):
+                return self.client_questions([dict(text=good,evidence_ids=['feature.outbound_failure_rate_3m']),dict(text=text,evidence_ids=list(refs))])
             # Ported from the retired block contract: each claim wrapped as a client question is still rejected.
             for claim in ['risk is 99%','fees are five million ringgit','the customer is unprofitable',
                     'service friction caused departure','payments deteriorated because of login failures',
@@ -248,7 +248,7 @@ class DraftTests(unittest.TestCase):
             mock.assert_not_called()
         # Print and PDF render this same server-validated draft: the client question plus an RM-only basis line.
         exported=checked.json['items'][0]['ai_discussion']['content']['questions']
-        self.assertEqual([(q['source'],q['basis']) for q in exported],[('ai','Payment failure rate'),('ai','Login failure rate')])
+        self.assertEqual([(q['source'],q['basis']) for q in exported],[('ai','Payment failure rate'),('ai','Combined flow vs 12-month average')])
         self.assertEqual(exported[0]['text'],'Have any of your payments been delayed or not gone through as expected?')
         body['ai_drafts'][0]['acknowledged']=False
         self.assertEqual(self.client.post('/api/briefings/pdf',json=body).status_code,422)
@@ -653,10 +653,10 @@ class DraftTests(unittest.TestCase):
                 data['identity']['purpose']=purpose
                 summary=purpose=='summary'
                 payload=json.loads(self.notes() if summary else self.client_questions())
-                question=(dict(audience='operations',text='Could we verify the recorded context?',evidence_ids=['feature.login_failure_rate_3m'])
+                question=(dict(audience='operations',text='Could we verify the recorded context?',evidence_ids=['feature.outbound_failure_rate_3m'])
                     if summary else dict(text='Could we verify the recorded context?',evidence_ids=['prediction.risk']))
                 # Summary (m6-narrative-6): at most one question per audience, so the second one is Finance.
-                finance=dict(audience='finance',text='Could we verify the recorded context?',evidence_ids=['feature.non_fd_balance_myr'])
+                finance=dict(audience='finance',text='Could we verify the recorded context?',evidence_ids=['feature.combined_flow_ratio_3m_to_12m'])
                 for count in [0,1,maximum]:
                     with self.subTest(purpose=purpose,count=count):
                         payload['questions']=[copy.deepcopy(question if i==0 or not summary else finance) for i in range(count)]
@@ -775,7 +775,7 @@ class DraftTests(unittest.TestCase):
     def test_validator_enforces_reference_count_uniqueness_and_known_ids(self):
         with self.app.app_context():
             data=self.client_data()
-            ids=['feature.login_failure_rate_3m','feature.outbound_failure_rate_3m','feature.passive_session_rate_3m','prediction.risk']
+            ids=['feature.outbound_failure_rate_3m','feature.combined_flow_ratio_3m_to_12m','feature.inbound_flow_ratio_3m_to_12m','prediction.risk']
             text='Have you or your team had any difficulty signing in to online banking?'
             other=dict(text='Have any of your payments been delayed or not gone through as expected?',evidence_ids=ids[1:2])
             accepted=ai.validate(self.client_questions([dict(text=text,evidence_ids=ids[:3]),other]),data)  # Boundary: three refs.
@@ -805,6 +805,11 @@ class DraftTests(unittest.TestCase):
     PAYMENTS='feature.outbound_failure_rate_3m'
     BALANCE='feature.non_fd_balance_myr'
     RISK='prediction.risk'
+    # m6-narrative-9: the demo customer's allowed references are its top-3 higher-risk drivers (combined flow vs usual,
+    # collections vs usual, payment failure rate), usual combined flow and the prediction. LOGIN, PASSIVE and BALANCE
+    # (BALANCE is a lower-risk driver) are no longer citable, so accepted examples cite these instead.
+    FLOW='feature.combined_flow_ratio_3m_to_12m'
+    COLLECT='feature.inbound_flow_ratio_3m_to_12m'
 
     def test_summary_link_note_keeps_content_and_reference_rules(self):
         with self.app.app_context():
@@ -844,15 +849,15 @@ class DraftTests(unittest.TestCase):
             same_section=self.summary_raw(dict(text='Failed logins and sessions without transactions both concern online banking access.',
                 evidence_ids=[self.LOGIN,self.PASSIVE]))
             self.assert_rejected(same_section,data,'link_sections')
-            # Owner's good example ("fall" -> "change", which the comparison rule requires).
-            good=dict(text='Failed logins and sessions without transactions both concern online banking access, alongside the change in payments.',
-                      evidence_ids=[self.LOGIN,self.PASSIVE,self.BALANCE])
+            # Good example ("fall" -> "change", which the comparison rule requires), citing allowed facts only (m6-narrative-9).
+            good=dict(text='Payment failures concern how the customer uses online banking, alongside the change in collections.',
+                      evidence_ids=[self.PAYMENTS,self.COLLECT])
             card=ai.validate(self.summary_raw(good),data)
             link=next(s for s in card['sections'] if s['id']=='link')
             self.assertEqual((link['title'],link['items'][0]['source']),('What links these signals','ai'))
             self.assertEqual([s['id'] for s in card['sections']][:2],['bottom_line','link'])
-            connected=dict(text='{{feature.login_failure_rate_3m}} and {{feature.passive_session_rate_3m}} both concern online banking access, '
-                'alongside {{feature.non_fd_balance_myr}}.',evidence_ids=[self.LOGIN,self.PASSIVE,self.BALANCE])
+            connected=dict(text='{{feature.outbound_failure_rate_3m}} and {{feature.inbound_flow_ratio_3m_to_12m}} both concern how money moves '
+                'through the bank, alongside {{feature.combined_flow_ratio_3m_to_12m}}.',evidence_ids=[self.PAYMENTS,self.COLLECT,self.FLOW])
             self.assertTrue(ai.validate(self.summary_raw(connected),data)['sections'])
             # The owner's original wording is still rejected by the kept comparison rule.
             self.assert_rejected(self.summary_raw(dict(good,text=good['text'].replace('the change in','the fall in'))),data,'unprotected_comparison')
@@ -867,9 +872,9 @@ class DraftTests(unittest.TestCase):
                 with self.subTest(question=question['text']):
                     self.assert_rejected(self.summary_raw(questions=[question]),data,'verification_question')
             good=[dict(audience='operations',text='Has the customer reported trouble logging in or completing payments online?',
-                       evidence_ids=[self.LOGIN,self.PAYMENTS]),
-                  dict(audience='finance',text='Is the customer moving part of its payments to another bank?',evidence_ids=['feature.inbound_flow_ratio_3m_to_12m','feature.non_fd_balance_myr'])]
-            for question in good+[dict(audience='operations',text='Did the customer change how its team uses online banking?',evidence_ids=[self.LOGIN])]:
+                       evidence_ids=[self.PAYMENTS]),
+                  dict(audience='finance',text='Is the customer moving part of its payments to another bank?',evidence_ids=[self.COLLECT])]
+            for question in good+[dict(audience='operations',text='Did the customer change how its team uses online banking?',evidence_ids=[self.PAYMENTS])]:
                 with self.subTest(question=question['text']):
                     card=ai.validate(self.summary_raw(questions=[question]),data)
                     self.assertIn(question['text'],[q['text'] for q in card['questions']])
@@ -877,8 +882,8 @@ class DraftTests(unittest.TestCase):
     def test_summary_has_exactly_one_question_per_audience(self):
         with self.app.app_context():
             data=evidence.build('summary',self.id)
-            ops=dict(audience='operations',text='Has the customer reported trouble signing in?',evidence_ids=[self.LOGIN])
-            fin=dict(audience='finance',text='Has the customer told the relationship team about changes to its business needs?',evidence_ids=[self.BALANCE])
+            ops=dict(audience='operations',text='Has the customer reported trouble completing payments online?',evidence_ids=[self.PAYMENTS])
+            fin=dict(audience='finance',text='Has the customer told the relationship team about changes to its business needs?',evidence_ids=[self.FLOW])
             self.assert_rejected(self.summary_raw(questions=[ops,dict(ops)]),data,'question_audience')
             self.assertEqual([(q['audience'],q['source']) for q in ai.validate(self.summary_raw(),data)['questions']],
                              [('operations','template'),('finance','template')])
@@ -904,16 +909,16 @@ class DraftTests(unittest.TestCase):
     # Item-level acceptance (21 Nov 2026, contract unchanged at m6-narrative-8): an unfit optional link, or a
     # question failing only question_relevance, is dropped; every other rule still rejects the whole draft.
     MARK='Zebracorn'  # Appears only in text that must be dropped: never stored, shown or logged.
-    OPS=dict(audience='operations',text='Has the customer reported trouble signing in?',evidence_ids=['feature.login_failure_rate_3m'])
+    OPS=dict(audience='operations',text='Has the customer reported trouble completing payments online?',evidence_ids=['feature.outbound_failure_rate_3m'])
     FIN=dict(audience='finance',text='Has the customer told the relationship team about changes to its business needs?',
-             evidence_ids=['feature.non_fd_balance_myr'])
+             evidence_ids=['feature.combined_flow_ratio_3m_to_12m'])
 
     def same_section_link(self):
-        return dict(text='Failed logins and sessions without transactions both concern '+self.MARK+' online banking access.',
-                    evidence_ids=[self.LOGIN,self.PASSIVE])
+        return dict(text='Collections and combined flow both concern how '+self.MARK+' money moves through the bank.',
+                    evidence_ids=[self.COLLECT,self.FLOW])  # Both Finance: one section only.
 
     def unfit_finance_question(self):
-        return dict(audience='finance',text='Has the customer changed how its '+self.MARK+' payments are made?',evidence_ids=[self.BALANCE])
+        return dict(audience='finance',text='Has the customer changed its '+self.MARK+' deposit plans?',evidence_ids=[self.FLOW])
 
     def stored(self):
         with self.app.app_context():
@@ -974,8 +979,8 @@ class DraftTests(unittest.TestCase):
         self.assertEqual(json.loads(row)['dropped'],[dict(item='question:1/finance',rules=['question_relevance'])])
 
     def test_relevance_failure_with_a_prohibited_claim_on_the_same_question_rejects_the_whole_draft(self):
-        question=dict(audience='finance',text='Is the customer going to leave because '+self.MARK+' payments failed?',
-                      evidence_ids=[self.BALANCE])
+        question=dict(audience='finance',text='Is the customer going to leave because '+self.MARK+' deposits ended?',
+                      evidence_ids=[self.FLOW])
         self.assert_whole_fallback(self.summary_raw(questions=[self.OPS,question]),['question_relevance','prohibited_claim'])
 
     def test_link_reference_failure_rejects_the_whole_draft(self):
@@ -986,6 +991,53 @@ class DraftTests(unittest.TestCase):
         ops=dict(audience='operations',text='Has the customer raised '+self.MARK+' deposit questions?',evidence_ids=[self.LOGIN])
         self.assert_whole_fallback(self.summary_raw(self.same_section_link(),[ops,self.unfit_finance_question()]),
                                    ['link_sections','question_relevance'])
+
+    # Citation rule (m6-narrative-9, 27 Nov 2026): AI items may cite only the allowed references.
+    def test_lower_risk_driver_citation_drops_the_link_and_is_never_stored(self):
+        link=dict(text='Payment failures sit alongside '+self.MARK+' {{feature.non_fd_balance_myr}} for this customer.',
+                  evidence_ids=[self.PAYMENTS,self.BALANCE])  # Operating balance is a lower-risk driver of the demo customer.
+        with self.app.app_context():
+            failure=next(f for f in ai.audit_output(self.summary_raw(link,[self.OPS]),evidence.build('summary',self.id))['failures']
+                         if f['rule']=='citation_scope')
+        self.assertEqual((failure['disallowed'],failure['lower_risk']),([self.BALANCE],[self.BALANCE]))
+        result=self.generate_with(self.summary_raw(link,[self.OPS,self.FIN]))
+        self.assertEqual(result.json['state'],'saved')
+        self.assertEqual(result.json['item_drops'],dict(link_dropped=1,question_dropped=0))
+        self.assertNotIn(self.MARK,result.get_data(as_text=True))
+        [row]=self.stored()
+        self.assertNotIn(self.MARK,row)
+        self.assertEqual(json.loads(row)['dropped'],[dict(item='link',rules=['citation_scope'])])
+
+    def test_out_of_scope_citations_alone_are_a_full_fallback_and_nothing_is_stored(self):
+        # Login failure rate is the demo's 4th higher-risk driver: not shown in the bottom line, so not citable.
+        question=dict(audience='operations',text='Has the customer reported '+self.MARK+' trouble signing in?',evidence_ids=[self.LOGIN])
+        self.assert_whole_fallback(self.summary_raw(questions=[question]),['citation_scope'])
+
+    def test_client_questions_citing_outside_the_allowed_set_fall_back_to_the_standard_bank(self):
+        url=self.prioritise()
+        state=self.client.get(url).json
+        for refs in ([self.LOGIN],[self.BALANCE]):  # Not shown in the bottom line; a lower-risk driver.
+            with self.subTest(refs=refs):
+                raw=self.client_questions([dict(text='Have any of your payments been delayed or not gone through as expected?',
+                                                evidence_ids=[self.PAYMENTS]),
+                                           dict(text='Have you or your team had any difficulty signing in to online banking?',evidence_ids=refs)])
+                with self.app.app_context():
+                    self.assertIn('citation_scope',{f['rule'] for f in ai.audit_output(raw,self.client_data())['failures']})
+                with patch.object(ai.Gemini,'generate',return_value=raw):
+                    failed=self.client.post(url,json={'expected_evidence_hash':state['evidence_hash']}).json
+                self.assertEqual((failed['state'],failed['failure_code'],failed['draft']),('fallback','output_validation_failed',None))
+                self.assertEqual({q['source'] for q in failed['fallback']['questions']},{'standard'})
+        self.assertEqual(self.stored(),[])
+
+    def test_drafts_cached_under_the_previous_versions_are_not_served(self):
+        from churn_backend import ai_render
+        with patch.object(ai,'VERSION','m6-narrative-8'),patch.object(ai_render,'VERSION','render-8'):
+            with patch.object(ai.Gemini,'generate',return_value=self.notes()):
+                self.assertEqual(self.generate().json['state'],'saved')
+            self.assertEqual(self.client.get(self.url).json['state'],'saved')
+        current=self.client.get(self.url).json
+        self.assertEqual((current['state'],current['draft'],current['source_type']),('evidence_changed',None,'deterministic'))
+        self.assertEqual((ai.VERSION,ai_render.VERSION),('m6-narrative-9','render-9'))
 
     def test_item_drop_diagnostic_counts_without_text(self):
         from flask import g
@@ -1004,7 +1056,7 @@ class DraftTests(unittest.TestCase):
 
     def test_client_question_contract_schema_and_prompt(self):
         from churn_backend.ai_contract import limits_for,schema_for,purpose_instruction,CONTRACT_VERSION
-        self.assertEqual(CONTRACT_VERSION,'m6-narrative-8')
+        self.assertEqual(CONTRACT_VERSION,'m6-narrative-9')
         schema=schema_for('discussion')
         self.assertEqual((schema['properties']['questions']['minItems'],schema['properties']['questions']['maxItems']),(2,3))
         instruction=purpose_instruction('discussion')
@@ -1016,7 +1068,7 @@ class DraftTests(unittest.TestCase):
             for count in [2,3]:
                 with self.subTest(count=count):
                     questions=[dict(text='Have you or your team had any difficulty signing in to online banking?',
-                                    evidence_ids=['feature.login_failure_rate_3m'])]*count
+                                    evidence_ids=['feature.outbound_failure_rate_3m'])]*count
                     self.assertEqual(len(ai.validate(self.client_questions(questions),data)['questions']),count)
             for wrong in [[],[dict(text='Is our online banking still meeting your needs?',evidence_ids=['feature.login_failure_rate_3m'])],
                           [dict(text='Is our online banking still meeting your needs?',evidence_ids=['feature.login_failure_rate_3m'])]*4,None,{},'x',3]:
@@ -1047,7 +1099,7 @@ class DraftTests(unittest.TestCase):
         self.assertIn('never offer reviews, discounts, waivers or changes to fees or terms',purpose_instruction('discussion'))
         with self.app.app_context():
             data=self.client_data()
-            login='feature.login_failure_rate_3m'
+            login='feature.outbound_failure_rate_3m'  # m6-narrative-9: an allowed reference (top-3 higher-risk driver).
             def raw(text,refs=(login,)):
                 return self.client_questions([dict(text='Is our online banking still meeting your team\'s day-to-day needs?',evidence_ids=[login]),
                                               dict(text=text,evidence_ids=list(refs))])

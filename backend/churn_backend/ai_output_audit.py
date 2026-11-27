@@ -21,7 +21,19 @@ MESSAGES={
  # Client questions (m6-narrative-7).
  'client_language':'Client question uses internal or competitor language','client_data_request':'Client question requests internal data',
  'client_offer':'Client question offers bank pricing or terms actions',
+ # Both purposes (m6-narrative-9): cite only what the card's bottom line and activity tile show.
+ 'citation_scope':'Citation outside the allowed references',
 }
+
+
+def citation_scope(refs,allowed,lower):
+    """Known IDs the item may not cite: outside the allowed set, and any lower-risk driver."""
+    outside=[r for r in dict.fromkeys(refs) if r not in allowed]
+    return dict(disallowed=outside,lower_risk=[r for r in outside if r in lower]) if outside else None
+
+
+def lower_ids(evidence):
+    return {prefix+d['feature'] for d in evidence['explanation']['lower_risk_drivers'] for prefix in ('feature.','signal.')}
 
 
 def json_type(value):
@@ -52,10 +64,11 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
     """Summary contract (m6-narrative-6): one optional link note + at most one question per audience.
     The server renders every fact sentence; content, reference, question and length rules apply to
     everything the model wrote. A link must connect facts from different card sections, not list them."""
-    from .ai_render import plan, section_ids
+    from .ai_render import plan, section_ids, allowed_references
     from .ai_contract import AUDIENCES
     bounds=limits_for('summary')
     sections=section_ids(plan(evidence))
+    allowed,lower=set(allowed_references(evidence)),lower_ids(evidence)
     known=set().union(*sections.values())
     section_of={fact_id:key for key,ids in sections.items() for fact_id in ids}
     safe_id=reference_labeler(evidence,token)
@@ -88,6 +101,8 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
             issue('evidence_references',path+'.evidence_ids',received_type=json_type(refs),
                 actual_count=len(refs) if isinstance(refs,list) else None,unknown_fact_ids=unknown,
                 duplicate_references=valid_refs and len(set(refs))!=len(refs))
+        elif (scope:=citation_scope(refs,allowed,lower)):
+            issue('citation_scope',path+'.evidence_ids',**scope)
         if any(t not in known for t in tokens):
             issue('unresolved_placeholder',path+'.text',unknown_fact_ids=[safe_id(t) for t in tokens if t not in known])
         if not valid_refs or any(t not in refs for t in tokens):
@@ -160,10 +175,11 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
     return report,dict(link=link,questions=questions)
 
 
-# Item-level acceptance (summary only, 21 Nov 2026; contract stays m6-narrative-8). These two kinds of
+# Item-level acceptance (summary only, 21 Nov 2026; citation_scope added in m6-narrative-9). These kinds of
 # failure mean an optional item does not fit the card, not that the model wrote something unsafe: the
 # failing item is dropped (never stored or shown) and every other item must have passed every rule.
-LINK_FIT_RULES={'link_sections','link_list_only','link_length'}
+LINK_FIT_RULES={'link_sections','link_list_only','link_length','citation_scope'}
+QUESTION_FIT_RULES={'question_relevance','citation_scope'}  # citation_scope: m6-narrative-9 (27 Nov 2026).
 QUESTION_FIT=re.compile(r'questions\[(\d+)\]\.evidence_ids')
 
 
@@ -176,7 +192,7 @@ def drop_unfit_items(errors,link,questions):
         match=QUESTION_FIT.fullmatch(error['path'])
         if error['rule'] in LINK_FIT_RULES and error['path'].startswith('link'):
             dropped_link.append(error['rule'])
-        elif error['rule']=='question_relevance' and match:
+        elif error['rule'] in QUESTION_FIT_RULES and match:
             dropped_questions.setdefault(int(match[1]),[]).append(error['rule'])
         else:
             return None
@@ -208,9 +224,10 @@ def inspect_client_questions(raw,evidence,token,quantity,prohibited,comparison):
     """Client questions (m6-narrative-7): 2-3 open questions the RM can ask the client directly.
     Existing content rules apply, plus client-safe language and no requests for internal data.
     Open What/How questions are allowed, unlike internal summary questions."""
-    from .ai_render import plan, section_ids
+    from .ai_render import plan, section_ids, allowed_references
     bounds=limits_for('discussion')
     known=set().union(*section_ids(plan(evidence)).values())
+    allowed,lower=set(allowed_references(evidence)),lower_ids(evidence)
     safe_id=reference_labeler(evidence,token)
     errors=[]
     def issue(rule,path,**details):
@@ -247,6 +264,8 @@ def inspect_client_questions(raw,evidence,token,quantity,prohibited,comparison):
             issue('evidence_references',path+'.evidence_ids',received_type=json_type(refs),
                 actual_count=len(refs) if isinstance(refs,list) else None,unknown_fact_ids=unknown,
                 duplicate_references=valid_refs and len(set(refs))!=len(refs))
+        elif (scope:=citation_scope(refs,allowed,lower)):
+            issue('citation_scope',path+'.evidence_ids',**scope)  # Discussion: any failure is a whole fallback.
         if token.search(text):
             issue('client_language',path+'.text',reason='placeholder')  # Placeholders resolve to internal metric names.
         plain=token.sub('',text)
