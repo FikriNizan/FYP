@@ -331,7 +331,10 @@ def allowed_references(evidence):
     facts, saved = evidence['facts'], evidence['explanation']
     ids = {prefix + d['feature'] for d in top_higher(evidence) for prefix in ('feature.', 'signal.')} | set(ALWAYS_ALLOWED)
     ids -= {prefix + d['feature'] for d in saved['lower_risk_drivers'] for prefix in ('feature.', 'signal.')}
-    return sorted(i for i in ids if i in facts)
+    # m6-narrative-11: only IDs the card payload actually lists (a signal.* fact exists only if its driver is
+    # among the weighed signals); listing others invited citations the validator rejects as unknown.
+    listed = set().union(*section_ids(plan(evidence)).values())
+    return sorted(i for i in ids if i in facts and i in listed)
 
 
 # m6-narrative-10: questions never cite the prediction itself; Finance questions may cite only usual or recent

@@ -1,8 +1,9 @@
 """Purpose-specific output bounds shared by SDK schema, instructions and validation."""
 from .validation import require, strict_json, ValidationError
 
-CONTRACT_VERSION='m6-narrative-10'  # m6-narrative-9: citations limited to allowed_references (27 Nov 2026);
-                                    # m6-narrative-10: questions never cite prediction.*; per-audience question_references.
+CONTRACT_VERSION='m6-narrative-11'  # m6-narrative-9: citations limited to allowed_references (27 Nov 2026);
+                                    # m6-narrative-10: questions never cite prediction.*; per-audience question_references;
+                                    # m6-narrative-11: listed IDs only; link reference/quantity failures drop the link only.
 REFERENCE_MIN=1
 REFERENCE_MAX=4
 
@@ -118,7 +119,10 @@ def reference_instruction(purpose='discussion'):
             'operations: the allowed signal facts in the operations section). If the list for an audience is empty, omit that '
             'question; a standard question covers it. Never ask about balances, deposits, fees, logins or any other topic whose '
             'fact is not listed for that audience. An item citing any other ID, including signals that lowered the estimate, '
-            'is discarded.')
+            'is discarded. Use only the exact IDs listed: never build a signal ID from a feature ID or the reverse '
+            '(for example, do not write signal.login_failure_rate_3m unless that exact ID is listed). Write the link in plain '
+            'words: never put IDs in the link text, and never copy a fact name that contains a number (for example '
+            '"vs 12-month average"); say "compared with usual" instead.')
     require(False,'Unknown AI output purpose')
 
 def question_metadata(raw,purpose):

@@ -521,5 +521,98 @@ class RenderTests(unittest.TestCase):
         self.assertFalse([i for i in payload['question_references'] if i.startswith('prediction.')])
         self.assertEqual(payload['customer'], 'Customer A')
 
+    # m6-narrative-11 (27 Nov 2026): the five outputs rejected in the owner's m8-demo run (verbatim, pseudonymised), all
+    # because of the link note. Renderer input is shaped like each customer's saved drivers (real weights; copies only).
+    LIVE_LINK_FAILURES = [
+        ('6eacc4bd run 1', ([('session_duration_mean_3m_sec', 0.289), ('outbound_failure_rate_3m', 0.285), ('login_failure_rate_3m', 0.265),
+                             ('outbound_submitted_count_mean_3m', 0.26)],
+                            [('outbound_flow_mean_12m_myr', -0.278), ('inbound_share_3m', -0.147), ('combined_flow_mean_12m_myr', -0.14),
+                             ('non_fd_balance_myr', -0.037), ('outbound_flow_mean_1m_myr', -0.035)]),
+         {"link": {"text": "Payment failures and login failures both relate to online banking access, alongside the change in combined flow.", "evidence_ids": ["signal.outbound_failure_rate_3m", "signal.login_failure_rate_3m", "feature.combined_flow_ratio_3m_to_12m"]}, "questions": [{"audience": "operations", "text": "Has the customer reported trouble accessing online banking or completing payments?", "evidence_ids": ["feature.login_failure_rate_3m", "feature.outbound_failure_rate_3m"]}, {"audience": "finance", "text": "Is the customer routing its payment activity through another institution?", "evidence_ids": ["feature.combined_flow_ratio_3m_to_12m"]}]},
+         ['evidence_references']),
+        ('6eacc4bd run 2', None,
+         {"link": {"text": "Payment failures and login failures both relate to how the customer uses online banking, alongside the combined flow.", "evidence_ids": ["feature.combined_flow_ratio_3m_to_12m", "signal.login_failure_rate_3m", "signal.outbound_failure_rate_3m"]}, "questions": [{"audience": "operations", "text": "Has the customer reported trouble logging in or completing payments online?", "evidence_ids": ["feature.login_failure_rate_3m"]}, {"audience": "finance", "text": "Is the customer moving part of its payments to another bank?", "evidence_ids": ["feature.combined_flow_ratio_3m_to_12m"]}]},
+         ['evidence_references']),
+        ('d6960b12', ([('session_duration_mean_3m_sec', 0.362), ('combined_flow_ratio_3m_to_12m', 0.327), ('outbound_failure_rate_3m', 0.283),
+                       ('inbound_flow_ratio_3m_to_12m', 0.272)],
+                      [('combined_flow_mean_12m_myr', -0.45), ('outbound_flow_mean_12m_myr', -0.324), ('inbound_share_3m', -0.091),
+                       ('combined_flow_mean_6m_myr', -0.084), ('session_timeout_rate_3m', -0.053)]),
+         {"link": {"text": "{{signal.combined_flow_ratio_3m_to_12m}} and {{signal.outbound_failure_rate_3m}} both relate to how the customer uses online banking alongside {{prediction.risk}}.", "evidence_ids": ["signal.combined_flow_ratio_3m_to_12m", "signal.outbound_failure_rate_3m", "prediction.risk"]}, "questions": [{"audience": "operations", "text": "Has the customer reported trouble completing payments online?", "evidence_ids": ["feature.outbound_failure_rate_3m"]}, {"audience": "finance", "text": "Is the customer moving part of its payments to another bank?", "evidence_ids": ["feature.combined_flow_ratio_3m_to_12m"]}]},
+         ['evidence_references', 'unresolved_placeholder']),
+        ('0371949b', ([('inbound_flow_ratio_3m_to_12m', 0.334), ('login_failure_rate_3m', 0.311), ('session_duration_mean_3m_sec', 0.252),
+                       ('inbound_count_mean_12m', 0.249)],
+                      [('combined_flow_mean_12m_myr', -0.469), ('outbound_flow_mean_12m_myr', -0.258), ('outbound_flow_ratio_3m_to_12m', -0.042),
+                       ('combined_flow_ratio_3m_to_12m', -0.038), ('outbound_flow_change_3m_vs_previous_3m', -0.03)]),
+         {"link": {"text": "Login failure rate and collections vs 12-month average both relate to the model assessment of the customer's online banking usage and estimated risk.", "evidence_ids": ["signal.login_failure_rate_3m", "signal.inbound_flow_ratio_3m_to_12m", "prediction.risk"]}, "questions": [{"audience": "operations", "text": "Has the customer reported trouble logging in to online banking?", "evidence_ids": ["feature.login_failure_rate_3m"]}]},
+         ['protected_content']),
+        ('71dce2a2', ([('session_duration_mean_3m_sec', 0.357), ('login_failure_rate_3m', 0.291), ('outbound_failure_rate_3m', 0.262),
+                       ('passive_session_rate_3m', 0.194)],
+                      [('outbound_flow_mean_12m_myr', -0.27), ('combined_flow_mean_12m_myr', -0.093), ('inbound_flow_ratio_3m_to_12m', -0.059),
+                       ('outbound_zero_months_3m', -0.059), ('outbound_flow_ratio_3m_to_12m', -0.028)]),
+         {"link": {"text": "Login failure rate, payment failure rate, and combined flow vs 12-month average all relate to the customer's online banking experience and activity levels.", "evidence_ids": ["feature.login_failure_rate_3m", "feature.outbound_failure_rate_3m", "feature.combined_flow_ratio_3m_to_12m"]}, "questions": [{"audience": "operations", "text": "Has the customer reported trouble logging in or completing online payments?", "evidence_ids": ["feature.login_failure_rate_3m", "feature.outbound_failure_rate_3m"]}, {"audience": "finance", "text": "Is the customer routing part of its usual business payments through another bank?", "evidence_ids": ["feature.combined_flow_ratio_3m_to_12m"]}]},
+         ['protected_content']),
+    ]
+
+    def test_live_link_failures_are_accepted_with_the_link_dropped_and_valid_questions_kept(self):
+        shape = None
+        for name, drivers, raw, rules in self.LIVE_LINK_FAILURES:
+            shape = drivers or shape  # Run 2 is the same customer as run 1.
+            with self.subTest(output=name):
+                data = self.with_drivers(*shape)
+                with self.app.app_context():
+                    found = {f['rule'] for f in ai.audit_output(json.dumps(raw), data)['failures']}
+                    card = ai.validate(json.dumps(raw), data)
+                self.assertTrue(set(rules) <= found, found)
+                self.assertTrue(all(rule in render_link_rules() for rule in found), found)  # Only link failures.
+                self.assertNotIn('link', [s['id'] for s in card['sections']])
+                self.assertEqual(card['dropped'], [dict(item='link', rules=sorted(found))])
+                self.assertNotIn(raw['link']['text'], text_of(card))
+                ai_questions = [(q['audience'], q['text']) for q in card['questions'] if q['source'] == 'ai']
+                self.assertEqual(ai_questions, [(q['audience'], q['text']) for q in raw['questions']])
+                if len(raw['questions']) == 1:
+                    self.assertEqual([(q['audience'], q['source']) for q in card['questions']],
+                                     [('operations', 'ai'), ('finance', 'template')])
+
+    def test_allowed_references_list_only_ids_the_card_payload_contains(self):
+        # 6eacc4bd shape: login failure is a top-3 higher-risk driver, but a lower-risk driver pushes it out of the
+        # weighed signals, so signal.login_failure_rate_3m is not on the card and must not be offered (the live failure).
+        data = self.with_drivers(*self.LIVE_LINK_FAILURES[0][1])
+        listed = set().union(*render.section_ids(render.plan(data)).values())
+        allowed = render.allowed_references(data)
+        self.assertIn('signal.login_failure_rate_3m', data['facts'])
+        self.assertNotIn('signal.login_failure_rate_3m', allowed)
+        self.assertIn('signal.outbound_failure_rate_3m', allowed)  # 2nd strongest signal: weighed, so on the card.
+        self.assertIn('feature.login_failure_rate_3m', allowed)
+        self.assertTrue(set(allowed) <= listed)
+        payload = render.provider_payload(data)
+        offered = {fact['id'] for s in payload['sections'] for l in s['lines'] for fact in l['facts']}
+        self.assertTrue(set(payload['allowed_references']) <= offered)
+
+    def test_quantity_in_the_link_drops_it_but_markup_rejects_the_whole_draft(self):
+        ops = dict(audience='operations', text='Has the customer reported trouble completing payments online?',
+                   evidence_ids=['feature.outbound_failure_rate_3m'])
+        ids = ['feature.outbound_failure_rate_3m', 'feature.combined_flow_ratio_3m_to_12m']
+        quantity = dict(text='Payment failures sit beside combined flow vs 12-month average for this customer.', evidence_ids=ids)
+        markup = dict(text='Payment failures sit beside <b>combined flow</b> for this customer.', evidence_ids=ids)
+        with self.app.app_context():
+            card = ai.validate(json.dumps(dict(link=quantity, questions=[ops])), self.evidence)
+            self.assertEqual(card['dropped'], [dict(item='link', rules=['protected_content'])])
+            with self.assertRaises(ValidationError):
+                ai.validate(json.dumps(dict(link=markup, questions=[ops])), self.evidence)
+
+    def test_provider_instruction_says_listed_ids_only_and_no_ids_or_numbered_names_in_link_text(self):
+        from churn_backend.ai_contract import reference_instruction, CONTRACT_VERSION
+        text = reference_instruction('summary')
+        self.assertEqual(CONTRACT_VERSION, 'm6-narrative-11')
+        for phrase in ['Use only the exact IDs listed', 'never build a signal ID from a feature ID or the reverse',
+                       'never put IDs in the link text', 'never copy a fact name that contains a number']:
+            self.assertIn(phrase, text)
+
+def render_link_rules():
+    """Rules that may appear on a dropped link without rejecting the draft (m6-narrative-11)."""
+    from churn_backend.ai_output_audit import LINK_FIT_RULES
+    return LINK_FIT_RULES | {'protected_content'}
+
+
 if __name__ == '__main__':
     unittest.main()

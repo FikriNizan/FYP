@@ -5,10 +5,11 @@
   - `2a81f419bfa3897be6c1a1d229b618dd44b74196`: implementation.
   - `34eb2ab`: first version of this handoff.
   - `cd8b5be`: diagnostics session label follows `--session`, plus a handoff update.
-  - The commit after these: **m6-narrative-10**, the question-citation follow-up after your live `--limit 5` run (see the last section).
+  - `6d40bdb`: **m6-narrative-10**, the question-citation follow-up after your live `--limit 5` run.
+  - The commit after these: **m6-narrative-11**, the link-note follow-up after your m8-demo run (see the last section).
 - **Versions:**
   - `ai_render.VERSION`: `render-8` → `render-9`
-  - `CONTRACT_VERSION`: `m6-narrative-8` → `m6-narrative-9` → **`m6-narrative-10`**
+  - `CONTRACT_VERSION`: `m6-narrative-8` → `m6-narrative-9` → `m6-narrative-10` → **`m6-narrative-11`**
   - Both are part of the draft cache key, so every stored summary and RM draft is now stale. A stale draft shows standard text until it is regenerated.
 - **Not touched:** the frozen champion, saved predictions/SHAP/flags, the Working DB and the research project. No live Gemini calls were made; every test mocks the provider.
 
@@ -263,4 +264,98 @@ Your run used the default m6-test session. Of the 5 summaries, **2 fell back**. 
 
 - **Customers like `0040e1ec`/`8543bea9`:** usual flow is a lower-risk driver, so a Finance question can cite only the recent-vs-usual ratio. If the model asks about balances or deposits anyway, that question is dropped and the template is used.
 - **Malformed IDs:** an ID with a typo (e.g. a stray space) still rejects the whole draft, as you chose.
+
+## Follow-up: m6-narrative-11 (link note failures, after the m8-demo run)
+
+### What happened
+
+5 of 25 summaries fell back, all because of the **link note**; every question was valid. I read `artifacts\m6-rejected-20261127T135624Z.jsonl` and `…135744Z.jsonl`.
+
+| Customer | Rule | Cause |
+|---|---|---|
+| `6eacc4bd` (run 1 and its retry in run 2) | `evidence_references` | Cited `signal.login_failure_rate_3m`. |
+| `d6960b12` | `evidence_references`, `unresolved_placeholder` | Cited `signal.outbound_failure_rate_3m`, also as a `{{…}}` placeholder. |
+| `0371949b` | `protected_content` | Copied the fact name "collections vs 12-month average" into the text. |
+| `71dce2a2` | `protected_content` | Copied "combined flow vs 12-month average" into the text. |
+
+**Root cause of the 3 reference failures: my m6-narrative-9 bug.**
+- `allowed_references()` listed every `signal.*` fact in the evidence. A `signal.*` ID is only on the card, and so citable, when its driver is among the 3 strongest weighed signals, lower-risk ones included.
+- For these customers a lower-risk driver pushed the cited signal out of that section. The payload offered an ID that the validator then rejected as unknown.
+
+### Changes
+
+| File | Change |
+|---|---|
+| `backend/churn_backend/ai_render.py` | `allowed_references()` now keeps only IDs the card payload lists (the bug fix). `question_references` was already limited to card sections and is unchanged. |
+| `backend/churn_backend/ai_output_audit.py` | **Summaries:** a link that fails a reference rule is dropped, and the questions are validated and kept as before. The reference rules are `evidence_references`, `unresolved_placeholder`, `placeholder_reference` and `citation_scope`. A `protected_content` failure for a *quantity* also drops only the link. <br>**Still whole-draft rejections (owner decision D1):** prohibited claims and injection-like text (`prohibited_claim`), markup (`protected_content` with reason `markup`), comparison words and the link's shape. <br>The total word limit is checked on the text that's kept. Nothing dropped is stored. Questions and discussion drafts are unchanged. |
+| `backend/churn_backend/ai_contract.py` | **`m6-narrative-11`.** The summary reference instruction now says: use only the exact IDs listed; never build a `signal.*` ID from a `feature.*` ID or the reverse; never put IDs in the link text; never copy a fact name that contains a number, say "compared with usual" instead. This is instruction only (D2): the validator still accepts listed `{{…}}` placeholders. |
+
+`placeholder_reference` (a placeholder in the text that isn't in the link's `evidence_ids`) counts as a reference rule here, so it also drops only the link.
+
+### Versions (D3)
+
+**`m6-narrative-11`, one prompt wording per version.** The 20 April summaries stored in m8-demo under `m6-narrative-10` are **superseded**. They stay in storage but are no longer served, and the Summary tab shows standard text for them until they are regenerated. A test checks that drafts under m6-narrative-8, -9 and -10 are all no longer served.
+
+### Tests
+
+**New in `test_ai_render.py`**
+- **All 5 live outputs, verbatim,** each on input shaped like its customer (same top drivers and lower-risk drivers with the real weights). Each is now **accepted**: the link is dropped with exactly its live rule IDs recorded, its text is not on the card, and every valid question is kept as AI text. For `0371949b`, which wrote only an operations question, the template fills Finance.
+- `allowed_references` lists only IDs on the card. `6eacc4bd` shape: `signal.login_failure_rate_3m` exists in the evidence but is not offered; `feature.login_failure_rate_3m` is.
+- A quantity in the link drops the link; markup rejects the whole draft.
+- The instruction contains the new rules, and `CONTRACT_VERSION` is `m6-narrative-11`.
+
+**New in `test_ai_drafts.py`:** `test_link_with_a_prohibited_claim_or_injection_text_discards_the_whole_draft_with_valid_questions`. Four cases, each with both questions valid, each through `generate()`, each a whole fallback with nothing stored: a causal claim, "ignore previous instructions", `<script>` markup, and a prohibited claim combined with a reference failure.
+
+**Changed (approved, D1):** `test_link_reference_failure_rejects_the_whole_draft` is renamed `test_link_reference_failure_drops_only_the_link`. It used to assert a whole fallback. It now asserts:
+- the draft is saved and the link section is absent;
+- both AI questions are kept;
+- `item_drops` shows one link dropped;
+- the marker word is not in the response or storage;
+- the stored `dropped` is `[link: evidence_references, link_sections]`. Its single reference also fails `link_sections`.
+
+**Unchanged (D1):** `test_unfit_link_with_a_prohibited_claim_rejects_the_whole_draft`.
+
+**Extended:** the old-cache test now also covers `m6-narrative-10`.
+
+**Expected strings changed:** the `CONTRACT_VERSION` assertions, `m6-narrative-10` → `m6-narrative-11`.
+
+### Commands run
+
+`.\.venv\Scripts\python.exe scripts\check.py`
+
+| Suite | Result | Previously |
+|---|---|---|
+| Backend | `Ran 242 tests — OK (skipped=1)` | 237 |
+| Utility | `Ran 36 tests — OK (skipped=11)` | 36 |
+| Node | `tests 10 · fail 0` | 10 |
+| React | `Test Files 15 passed · Tests 136 passed (136)` | 136 |
+| Build | `✓ built in 263ms` | OK |
+
+### Why the full-batch run stopped after 20, and how to resume
+
+It stopped at the **`--limit` cap**: the script handles at most `--limit` customers per run, the default is 20, and that run didn't pass `--limit 206`.
+- **Not quota or rate limit:** those always print a `Stopped: …` line, and this run had none.
+- **Not a reservation conflict:** that is counted as a `conflict` fallback, and the run continues.
+
+The m8-demo database agrees (read-only check): 20 April summaries were stored under `m6-narrative-10`.
+- The second run started with 202 pending (206 minus the 4 saved by the `--limit 5` run).
+- It tried 20 and saved 16, which leaves 202 − 16 = **186** remaining.
+- `6eacc4bd` was retried in the second run because a fallback is never stored.
+
+**Resume.** Because of m6-narrative-11, all 206 April customers need generating again.
+1. Dry run; expect `to generate: 206`:
+   ```PowerShell
+   .\.venv\Scripts\python.exe scripts\generate_summaries.py --session m8-demo --batch-id bf0e828cdd426ae496ff36bd207acfcd02dccd928eebd14eea5027ce45c9204a --dry-run
+   ```
+2. Live run in your own terminal, with the variables set:
+   ```PowerShell
+   .\.venv\Scripts\python.exe scripts\generate_summaries.py --session m8-demo --batch-id bf0e828cdd426ae496ff36bd207acfcd02dccd928eebd14eea5027ce45c9204a --limit 206 --keep-rejected
+   ```
+- If it prints `Stopped: daily quota exhausted`, run the same command the next day; customers already stored are skipped.
+- To count fallbacks, read the final `Outcomes: … | fallback F` line. Links dropped under the new rule appear as `link dropped L`, and those drafts are saved.
+
+### Known limitations (added)
+
+- **The link stays optional.** Link failures from references or numbers now drop the note silently, so more cards will show no "What links these signals" note. The batch output counts these as `link dropped`.
+- **Some failures still discard everything.** A safety failure in the link (a prohibited claim, injection-like text, markup or comparison words) still discards valid questions written alongside it. This is deliberate (D1).
 

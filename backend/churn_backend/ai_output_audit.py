@@ -116,8 +116,11 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
             issue('placeholder_reference',path+'.text',missing_references=[safe_id(t) for t in dict.fromkeys(tokens)
                 if not valid_refs or t not in refs])
         plain=token.sub('',text)
-        if any(c in plain for c in '{}<>`\\') or quantity.search(plain):
-            issue('protected_content',path+'.text')
+        markup=any(c in plain for c in '{}<>`\\')
+        if markup or quantity.search(plain):
+            # reason (m6-narrative-11): 'markup' is injection-like and always rejects the whole draft; a 'quantity'
+            # in the link (e.g. a copied fact name such as "vs 12-month average") drops only the link.
+            issue('protected_content',path+'.text',reason='markup' if markup else 'quantity')
         if prohibited.search(plain):
             issue('prohibited_claim',path+'.text')
         if comparison.search(plain):
@@ -176,7 +179,8 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
                 if re.search(r'\b(?:'+topic+r')\w*\b',plain,re.I) and not any(any(i in r for i in identifiers) for r in refs):
                     issue('question_relevance',path+'.evidence_ids')
     if words>bounds['model_words']:
-        issue('model_word_limit','$',maximum=bounds['model_words'])
+        link_words=len(link['text'].split()) if isinstance(link,dict) and isinstance(link.get('text'),str) else 0
+        issue('model_word_limit','$',maximum=bounds['model_words'],without_link=words-link_words)
     report['model_word_count']=words
     report['failure_count']=len(errors)
     if errors:
@@ -191,9 +195,19 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
 # Item-level acceptance (summary only, 21 Nov 2026; citation_scope added in m6-narrative-9). These kinds of
 # failure mean an optional item does not fit the card, not that the model wrote something unsafe: the
 # failing item is dropped (never stored or shown) and every other item must have passed every rule.
-LINK_FIT_RULES={'link_sections','link_list_only','link_length','citation_scope'}
+LINK_FIT_RULES={'link_sections','link_list_only','link_length','citation_scope',
+                # m6-narrative-11 (27 Nov 2026): reference failures in the link drop only the link.
+                'evidence_references','unresolved_placeholder','placeholder_reference'}
 QUESTION_FIT_RULES={'question_relevance','citation_scope'}  # citation_scope: m6-narrative-9 (27 Nov 2026).
 QUESTION_FIT=re.compile(r'questions\[(\d+)\]\.(?:evidence_ids|audience)')
+
+
+def link_droppable(error):
+    """Link failures that drop only the link. Prohibited claims, comparisons, markup and link shape still
+    reject the whole draft (owner decision, m6-narrative-11)."""
+    if not (error['path']=='link.text' or error['path']=='link.evidence_ids'):
+        return False
+    return error['rule'] in LINK_FIT_RULES or (error['rule']=='protected_content' and error.get('reason')=='quantity')
 
 
 def drop_unfit_items(errors,link,questions):
@@ -201,10 +215,13 @@ def drop_unfit_items(errors,link,questions):
     any other rule on any item (safety, references, audience, schema, word limit) rejects the whole draft,
     and so does a draft with nothing left after dropping."""
     dropped_link,dropped_questions=[],{}
+    link_drops=any(link_droppable(e) for e in errors)
     for error in errors:
         match=QUESTION_FIT.fullmatch(error['path'])
-        if error['rule'] in LINK_FIT_RULES and error['path'].startswith('link'):
+        if link_droppable(error):
             dropped_link.append(error['rule'])
+        elif error['rule']=='model_word_limit' and link_drops and error.get('without_link',error['maximum']+1)<=error['maximum']:
+            continue  # The word limit is checked on the text that is kept: without the dropped link it fits.
         elif match and (error['rule'] in QUESTION_FIT_RULES
                         or (error['rule']=='question_audience' and error.get('reason')=='evidence')):
             dropped_questions.setdefault(int(match[1]),[]).append(error['rule'])
