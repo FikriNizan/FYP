@@ -1016,7 +1016,7 @@ class DraftTests(unittest.TestCase):
     def test_client_questions_citing_outside_the_allowed_set_fall_back_to_the_standard_bank(self):
         url=self.prioritise()
         state=self.client.get(url).json
-        for refs in ([self.LOGIN],[self.BALANCE]):  # Not shown in the bottom line; a lower-risk driver.
+        for refs in ([self.LOGIN],[self.BALANCE],[self.RISK]):  # Not shown; a lower-risk driver; the prediction (m6-narrative-10).
             with self.subTest(refs=refs):
                 raw=self.client_questions([dict(text='Have any of your payments been delayed or not gone through as expected?',
                                                 evidence_ids=[self.PAYMENTS]),
@@ -1029,15 +1029,46 @@ class DraftTests(unittest.TestCase):
                 self.assertEqual({q['source'] for q in failed['fallback']['questions']},{'standard'})
         self.assertEqual(self.stored(),[])
 
+    def test_live_failure_shape_keeps_link_and_operations_question_and_stores_no_dropped_text(self):
+        """m6-narrative-10: the live rejected output 2 shape on the stored demo customer, through generate()."""
+        link=dict(text='Payment failures and the change in combined flow both relate to online banking use.',
+                  evidence_ids=[self.PAYMENTS,self.FLOW])
+        finance=dict(audience='finance',text='Is the customer planning any changes to its '+self.MARK+' operating account balances?',
+                     evidence_ids=[self.RISK])
+        result=self.generate_with(self.summary_raw(link,[self.OPS,finance]))
+        self.assertEqual(result.json['state'],'saved')
+        content=result.json['draft']['content']
+        self.assertEqual(next(s for s in content['sections'] if s['id']=='link')['items'][0]['text'],link['text'])
+        self.assertEqual([(q['audience'],q['source']) for q in content['questions']],[('operations','ai'),('finance','template')])
+        self.assertEqual(result.json['item_drops'],dict(link_dropped=0,question_dropped=1))
+        self.assertNotIn(self.MARK,result.get_data(as_text=True))
+        [row]=self.stored()
+        self.assertNotIn(self.MARK,row)
+        self.assertEqual(json.loads(row)['dropped'],[dict(item='question:1/finance',
+                                                         rules=['citation_scope','question_audience','question_relevance'])])
+
+    def test_question_audience_drops_only_unfitting_evidence_not_a_repeated_audience(self):
+        with self.app.app_context():
+            data=evidence.build('summary',self.id)
+            repeated=self.summary_raw(questions=[self.OPS,dict(self.OPS)])
+            self.assertIn('audience',{f.get('reason') for f in ai.audit_output(repeated,data)['failures'] if f['rule']=='question_audience'})
+            with self.assertRaises(ValidationError):
+                ai.validate(repeated,data)
+            mismatch=dict(audience='finance',text='Could Finance verify the recorded context?',evidence_ids=[self.PAYMENTS])
+            card=ai.validate(self.summary_raw(questions=[self.OPS,mismatch]),data)
+            self.assertEqual(card['dropped'],[dict(item='question:1/finance',rules=['question_audience'])])
+
     def test_drafts_cached_under_the_previous_versions_are_not_served(self):
         from churn_backend import ai_render
-        with patch.object(ai,'VERSION','m6-narrative-8'),patch.object(ai_render,'VERSION','render-8'):
-            with patch.object(ai.Gemini,'generate',return_value=self.notes()):
-                self.assertEqual(self.generate().json['state'],'saved')
-            self.assertEqual(self.client.get(self.url).json['state'],'saved')
-        current=self.client.get(self.url).json
-        self.assertEqual((current['state'],current['draft'],current['source_type']),('evidence_changed',None,'deterministic'))
-        self.assertEqual((ai.VERSION,ai_render.VERSION),('m6-narrative-9','render-9'))
+        for contract,render_version in [('m6-narrative-8','render-8'),('m6-narrative-9','render-9')]:  # Both earlier keys.
+            with self.subTest(contract=contract):
+                with patch.object(ai,'VERSION',contract),patch.object(ai_render,'VERSION',render_version):
+                    with patch.object(ai.Gemini,'generate',return_value=self.notes()):
+                        self.assertEqual(self.generate().json['state'],'saved')
+                    self.assertEqual(self.client.get(self.url).json['state'],'saved')
+                current=self.client.get(self.url).json
+                self.assertEqual((current['state'],current['draft'],current['source_type']),('evidence_changed',None,'deterministic'))
+        self.assertEqual((ai.VERSION,ai_render.VERSION),('m6-narrative-10','render-9'))
 
     def test_item_drop_diagnostic_counts_without_text(self):
         from flask import g
@@ -1056,7 +1087,7 @@ class DraftTests(unittest.TestCase):
 
     def test_client_question_contract_schema_and_prompt(self):
         from churn_backend.ai_contract import limits_for,schema_for,purpose_instruction,CONTRACT_VERSION
-        self.assertEqual(CONTRACT_VERSION,'m6-narrative-9')
+        self.assertEqual(CONTRACT_VERSION,'m6-narrative-10')
         schema=schema_for('discussion')
         self.assertEqual((schema['properties']['questions']['minItems'],schema['properties']['questions']['maxItems']),(2,3))
         instruction=purpose_instruction('discussion')

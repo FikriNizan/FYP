@@ -4,10 +4,11 @@
 - **Commits:**
   - `2a81f419bfa3897be6c1a1d229b618dd44b74196`: implementation.
   - `34eb2ab`: first version of this handoff.
-  - The follow-up commit after these: the diagnostics session label (below), plus this update.
+  - `cd8b5be`: diagnostics session label follows `--session`, plus a handoff update.
+  - The commit after these: **m6-narrative-10**, the question-citation follow-up after your live `--limit 5` run (see the last section).
 - **Versions:**
   - `ai_render.VERSION`: `render-8` → `render-9`
-  - `CONTRACT_VERSION`: `m6-narrative-8` → `m6-narrative-9`
+  - `CONTRACT_VERSION`: `m6-narrative-8` → `m6-narrative-9` → **`m6-narrative-10`**
   - Both are part of the draft cache key, so every stored summary and RM draft is now stale. A stale draft shows standard text until it is regenerated.
 - **Not touched:** the frozen champion, saved predictions/SHAP/flags, the Working DB and the research project. No live Gemini calls were made; every test mocks the provider.
 
@@ -155,6 +156,8 @@ Your demo database is `artifacts\m8-demo.sqlite`. April 2024 there is batch `bf0
 
 **Safety:** `--session m8-demo` goes through `local_session.selected_database('m8-demo')`. That refuses to run if the file is the Working DB, the M5 Test file or `m6-review.sqlite`, under any name (tested). `working`, unknown names and paths are not accepted as `--session` values.
 
+**Always pass `--session m8-demo`.** Without it, the script uses the default `m6-test` session (`artifacts\m6-review.sqlite`), which is what happened in the first live `--limit 5` run. Those drafts went into the M6 Test copy, not into your demo.
+
 1. **Dry run.** Zero API calls, no key needed, nothing written. Expect `to generate: 206`, because the version bump makes every old draft stale.
    ```PowerShell
    .\.venv\Scripts\python.exe scripts\generate_summaries.py --session m8-demo --batch-id bf0e828cdd426ae496ff36bd207acfcd02dccd928eebd14eea5027ce45c9204a --dry-run
@@ -198,3 +201,66 @@ No questions remain open.
 - **Few-fact customers.** An Operations question needs an allowed Operations fact. If none of a customer's top-3 drivers is an Operations fact, an AI Operations question is always dropped and the template is used.
 - **The 50% boundary.** At a displayed 50% the card says "more likely than not" even when the risk is just below 0.5 (e.g. 0.4996). This is deliberate, so the phrase matches the number shown.
 - **Still deferred.** The "Good finance question" prompt example (moving payments to another bank) is unchanged.
+
+## Follow-up: m6-narrative-10 (question citations, after the live `--limit 5` run)
+
+### What happened
+
+Your run used the default m6-test session. Of the 5 summaries, **2 fell back**. I read both rejected outputs in `artifacts\m6-rejected-20261127T134503Z.jsonl`.
+
+| Customer | Rejected output | Cause |
+|---|---|---|
+| `8543bea9…` | link + operations question valid; finance question about operating account balances cited `prediction.risk` | `question_audience` and `question_relevance` on the finance question rejected the whole draft, discarding the valid link and operations question. Usual combined flow is a **lower-risk** driver for this customer, so no balance or usual-flow fact was citable. |
+| `0040e1ec…` | the operations question cited `"feature.outbound_ count_mean_3m"` (a stray space); its finance question also cited `prediction.risk` | `evidence_references`, which you chose to keep as a whole-draft rejection. |
+
+### Changes
+
+| File | Change |
+|---|---|
+| `backend/churn_backend/ai_render.py` | New `question_allowed()`: the allowed references without `prediction.*`. New `question_references()`, per audience: <br>• **operations:** the allowed IDs in the card's Operations section; <br>• **finance:** allowed IDs among `feature.combined_flow_mean_12m_myr` and `feature.combined_flow_ratio_3m_to_12m`. <br>Usual flow stays excluded when it is a lower-risk driver, as you instructed. The provider payload carries `question_references`: the per-audience dict for summaries, and a flat list without `prediction.*` for RM client questions. The link keeps `allowed_references` unchanged. |
+| `backend/churn_backend/ai_output_audit.py` | `citation_scope` for questions (both purposes) uses the question set, so citing `prediction.*` fails. For a Finance question, the usual-flow ID counts as Finance evidence (decision A). `question_audience` now records a reason: <br>• `evidence` (valid audience, no fitting fact) is dropped item-level for **summaries**, like `question_relevance` and `citation_scope`, and the template fills that audience; <br>• `audience` (unknown or repeated audience) and `references` still reject the whole draft (decision B). <br>`evidence_references` is unchanged (whole draft). Discussion drafts are unchanged apart from the `prediction.*` ban (decision C): any failure still falls back to the standard questions. |
+| `backend/churn_backend/ai_contract.py` | `m6-narrative-10`. The summary reference instruction states which IDs fit each audience, that questions never cite prediction IDs, and that an audience with an empty list gets no question (the template fills it). It also says never to ask about a topic whose fact isn't listed. The RM instruction says to cite only `question_references`. |
+| `scripts/evaluate_m6.py` | The two client-question examples cited only `prediction.risk`. They now cite `feature.combined_flow_ratio_3m_to_12m` and `feature.outbound_failure_rate_3m`, which are allowed in every fixture. All 8 fixtures still validate (checked). |
+
+### Tests
+
+**New in `test_ai_render.py`**
+- **Live output 2, verbatim,** on input shaped like `8543bea9` (same top-3 and lower-risk drivers). It is now **accepted**: the link and the AI operations question are kept, the finance question is dropped with `['citation_scope', 'question_audience', 'question_relevance']`, and the template fills Finance.
+- **Live output 1, verbatim,** on input shaped like `0040e1ec`. It is still a whole fallback, with `evidence_references` at `questions[0]` and `citation_scope` at `questions[1]`.
+- Questions citing `prediction.risk` fail `citation_scope`: the item is dropped, and if it was the only item there is a full fallback. A link citing `prediction.risk` is still accepted.
+- A Finance question citing usual flow is accepted, and is dropped when usual flow is a lower-risk driver.
+- `question_references` in the provider payload, per purpose.
+
+**New in `test_ai_drafts.py`**
+- The live output 2 shape on the stored demo customer, through `generate()`: saved, finance question dropped, the marker word is not in storage or the response, rules recorded.
+- A repeated audience is still a whole-draft rejection. An unfitting-evidence finance question is dropped.
+
+**Extended (no assertion removed)**
+- The RM client-question fallback test also covers `[prediction.risk]`.
+- The old-cache test now covers both earlier keys: m6-narrative-8/render-8 and m6-narrative-9/render-9.
+
+**Expected strings changed:** the two `CONTRACT_VERSION` assertions, `m6-narrative-9` → `m6-narrative-10`.
+
+### Commands run
+
+`.\.venv\Scripts\python.exe scripts\check.py`
+
+| Suite | Result | Previously |
+|---|---|---|
+| Backend | `Ran 237 tests — OK (skipped=1)` | 230 |
+| Utility | `Ran 36 tests — OK (skipped=11)` | 36 |
+| Node | `tests 10 · fail 0` | 10 |
+| React | `Test Files 15 passed · Tests 136 passed (136)` | 136 |
+| Build | `✓ built in 263ms` | OK |
+
+### Confirmations
+
+- The diagnostics session-label fix is included: commit `cd8b5be`, before this one.
+- Every summary command above includes `--session m8-demo`.
+- The contract bump makes the drafts from the mistaken m6-test run stale as well. Re-run the dry run first: on m8-demo it should report `to generate: 206`.
+
+### Known limitations (added)
+
+- **Customers like `0040e1ec`/`8543bea9`:** usual flow is a lower-risk driver, so a Finance question can cite only the recent-vs-usual ratio. If the model asks about balances or deposits anyway, that question is dropped and the template is used.
+- **Malformed IDs:** an ID with a typo (e.g. a stray space) still rejects the whole draft, as you chose.
+

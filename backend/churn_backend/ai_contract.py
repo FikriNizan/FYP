@@ -1,7 +1,8 @@
 """Purpose-specific output bounds shared by SDK schema, instructions and validation."""
 from .validation import require, strict_json, ValidationError
 
-CONTRACT_VERSION='m6-narrative-9'  # m6-narrative-9: citations limited to allowed_references (27 Nov 2026).
+CONTRACT_VERSION='m6-narrative-10'  # m6-narrative-9: citations limited to allowed_references (27 Nov 2026);
+                                    # m6-narrative-10: questions never cite prediction.*; per-audience question_references.
 REFERENCE_MIN=1
 REFERENCE_MAX=4
 
@@ -102,17 +103,22 @@ def purpose_instruction(purpose):
 def reference_instruction(purpose='discussion'):
     if purpose=='discussion':
         return ('Reference contract: each question cites 1–3 unique bare fact IDs copied exactly from sections[].lines[].facts[].id '
-            'in evidence_ids, for the RM to see why it was asked. Cite only IDs listed in allowed_references; any other ID, '
-            'including signals that lowered the estimate, makes the question invalid. '
+            'in evidence_ids, for the RM to see why it was asked. Cite only IDs listed in question_references; any other ID, '
+            'including prediction IDs and signals that lowered the estimate, makes the question invalid. '
             'Question text never contains placeholders, fact names or values.')
     if purpose=='summary':
         return ('Reference contract: to name a fact, write its placeholder exactly, e.g. {{prediction.risk}}; the card replaces it with the '
             "fact's name, never its value. Cite every placeholder you use in that item's evidence_ids: unique bare IDs copied exactly "
             'from sections[].lines[].facts[].id. A non-empty link cites 2–3 facts from at least two different sections; an empty link has '
             'evidence_ids []. A question cites '+str(REFERENCE_MIN)+'–'+str(REFERENCE_MAX)+' facts. An operations question must cite at least '
-            'one operations fact, and a finance question at least one finance fact. Every item may cite only IDs listed in '
-            'allowed_references (the signals named in the bottom line, usual and recent combined flow, and the prediction); '
-            'an item citing any other ID, including signals that lowered the estimate, is discarded.')
+            'one operations fact, and a finance question at least one finance fact. The link may cite only IDs listed in '
+            'allowed_references (the signals named in the bottom line, usual and recent combined flow, and the prediction). '
+            'A question never cites prediction IDs: it may cite only the IDs in question_references for its audience '
+            '(finance: usual or recent combined flow, feature.combined_flow_mean_12m_myr or feature.combined_flow_ratio_3m_to_12m; '
+            'operations: the allowed signal facts in the operations section). If the list for an audience is empty, omit that '
+            'question; a standard question covers it. Never ask about balances, deposits, fees, logins or any other topic whose '
+            'fact is not listed for that audience. An item citing any other ID, including signals that lowered the estimate, '
+            'is discarded.')
     require(False,'Unknown AI output purpose')
 
 def question_metadata(raw,purpose):

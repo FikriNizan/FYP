@@ -32,6 +32,10 @@ def citation_scope(refs,allowed,lower):
     return dict(disallowed=outside,lower_risk=[r for r in outside if r in lower]) if outside else None
 
 
+def known_ids(sections):
+    return set().union(*sections.values())
+
+
 def lower_ids(evidence):
     return {prefix+d['feature'] for d in evidence['explanation']['lower_risk_drivers'] for prefix in ('feature.','signal.')}
 
@@ -64,11 +68,14 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
     """Summary contract (m6-narrative-6): one optional link note + at most one question per audience.
     The server renders every fact sentence; content, reference, question and length rules apply to
     everything the model wrote. A link must connect facts from different card sections, not list them."""
-    from .ai_render import plan, section_ids, allowed_references
+    from .ai_render import plan, section_ids, allowed_references, question_allowed, FINANCE_QUESTION_FACTS
     from .ai_contract import AUDIENCES
     bounds=limits_for('summary')
     sections=section_ids(plan(evidence))
     allowed,lower=set(allowed_references(evidence)),lower_ids(evidence)
+    asked=set(question_allowed(evidence))  # m6-narrative-10: questions never cite prediction.*.
+    # The usual-flow line sits in the bottom line but is Finance evidence for a Finance question.
+    audience_facts=dict(sections,finance=sections.get('finance',set())|(set(FINANCE_QUESTION_FACTS)&known_ids(sections)))
     known=set().union(*sections.values())
     section_of={fact_id:key for key,ids in sections.items() for fact_id in ids}
     safe_id=reference_labeler(evidence,token)
@@ -92,7 +99,7 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
     if set(parsed)!={'link','questions'}:
         issue('schema','$')
     words=0
-    def content_rules(text,refs,path,minimum,maximum):
+    def content_rules(text,refs,path,minimum,maximum,scope_ids):
         nonlocal words
         tokens=token.findall(text)
         valid_refs=isinstance(refs,list) and all(isinstance(r,str) for r in refs)
@@ -101,7 +108,7 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
             issue('evidence_references',path+'.evidence_ids',received_type=json_type(refs),
                 actual_count=len(refs) if isinstance(refs,list) else None,unknown_fact_ids=unknown,
                 duplicate_references=valid_refs and len(set(refs))!=len(refs))
-        elif (scope:=citation_scope(refs,allowed,lower)):
+        elif (scope:=citation_scope(refs,scope_ids,lower)):
             issue('citation_scope',path+'.evidence_ids',**scope)
         if any(t not in known for t in tokens):
             issue('unresolved_placeholder',path+'.text',unknown_fact_ids=[safe_id(t) for t in tokens if t not in known])
@@ -126,7 +133,7 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
                 if isinstance(link['evidence_ids'],list) else None)
     else:
         text,refs=link['text'],link['evidence_ids']
-        tokens,valid=content_rules(text,refs,'link',bounds['link_min_refs'],bounds['link_max_refs'])
+        tokens,valid=content_rules(text,refs,'link',bounds['link_min_refs'],bounds['link_max_refs'],allowed)
         if len(text.split())>bounds['link_words'] or len(text)>bounds['link_chars']:
             issue('link_length','link.text',maximum=bounds['link_words'])
         if valid and len({section_of[r] for r in refs})<2:
@@ -147,15 +154,21 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
             issue('question_fields',path,received_type=json_type(question))
             continue
         text,refs,audience=question['text'],question['evidence_ids'],question['audience']
-        _,valid_refs=content_rules(text,refs,path,REFERENCE_MIN,REFERENCE_MAX)
+        _,valid_refs=content_rules(text,refs,path,REFERENCE_MIN,REFERENCE_MAX,asked)
         if len(text.split())>bounds['question_words'] or len(text)>bounds['question_chars']:
             issue('question_length',path+'.text',maximum=bounds['question_words'])
         plain=token.sub('',text)
         # Summary questions ask about the situation or service, never for a value the card already shows.
         if not text.endswith('?') or not re.match(r'^(?:Has|Have|Is|Are|Could|Did|Does|Do|Can)\b',text):
             issue('verification_question',path+'.text')
-        if audience not in AUDIENCES or audience in seen or not valid_refs or not set(refs)&sections.get(audience,set()):
-            issue('question_audience',path+'.audience')
+        # reason (m6-narrative-10): 'evidence' (no cited fact fits a valid audience) is dropped item-level;
+        # an unknown or repeated audience, or invalid references, still rejects the whole draft.
+        if audience not in AUDIENCES or audience in seen:
+            issue('question_audience',path+'.audience',reason='audience')
+        elif not valid_refs:
+            issue('question_audience',path+'.audience',reason='references')
+        elif not set(refs)&audience_facts.get(audience,set()):
+            issue('question_audience',path+'.audience',reason='evidence')
         seen.add(audience)
         if valid_refs:
             for topic,identifiers in [('login|signing in',('login',)),('payment',('flow','failure','outbound')),
@@ -180,7 +193,7 @@ def inspect_notes(raw,evidence,token,quantity,prohibited,comparison):
 # failing item is dropped (never stored or shown) and every other item must have passed every rule.
 LINK_FIT_RULES={'link_sections','link_list_only','link_length','citation_scope'}
 QUESTION_FIT_RULES={'question_relevance','citation_scope'}  # citation_scope: m6-narrative-9 (27 Nov 2026).
-QUESTION_FIT=re.compile(r'questions\[(\d+)\]\.evidence_ids')
+QUESTION_FIT=re.compile(r'questions\[(\d+)\]\.(?:evidence_ids|audience)')
 
 
 def drop_unfit_items(errors,link,questions):
@@ -192,7 +205,8 @@ def drop_unfit_items(errors,link,questions):
         match=QUESTION_FIT.fullmatch(error['path'])
         if error['rule'] in LINK_FIT_RULES and error['path'].startswith('link'):
             dropped_link.append(error['rule'])
-        elif error['rule'] in QUESTION_FIT_RULES and match:
+        elif match and (error['rule'] in QUESTION_FIT_RULES
+                        or (error['rule']=='question_audience' and error.get('reason')=='evidence')):
             dropped_questions.setdefault(int(match[1]),[]).append(error['rule'])
         else:
             return None
@@ -224,10 +238,10 @@ def inspect_client_questions(raw,evidence,token,quantity,prohibited,comparison):
     """Client questions (m6-narrative-7): 2-3 open questions the RM can ask the client directly.
     Existing content rules apply, plus client-safe language and no requests for internal data.
     Open What/How questions are allowed, unlike internal summary questions."""
-    from .ai_render import plan, section_ids, allowed_references
+    from .ai_render import plan, section_ids, question_allowed
     bounds=limits_for('discussion')
     known=set().union(*section_ids(plan(evidence)).values())
-    allowed,lower=set(allowed_references(evidence)),lower_ids(evidence)
+    allowed,lower=set(question_allowed(evidence)),lower_ids(evidence)  # m6-narrative-10: no prediction.* in questions.
     safe_id=reference_labeler(evidence,token)
     errors=[]
     def issue(rule,path,**details):

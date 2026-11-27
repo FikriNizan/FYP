@@ -334,6 +334,23 @@ def allowed_references(evidence):
     return sorted(i for i in ids if i in facts)
 
 
+# m6-narrative-10: questions never cite the prediction itself; Finance questions may cite only usual or recent
+# combined flow (the usual-flow line counts as Finance evidence although it sits in the bottom line).
+FINANCE_QUESTION_FACTS = ('feature.combined_flow_mean_12m_myr', 'feature.combined_flow_ratio_3m_to_12m')
+
+
+def question_allowed(evidence):
+    """IDs any question (summary or RM client) may cite: the allowed references without prediction.*."""
+    return [i for i in allowed_references(evidence) if not i.startswith('prediction.')]
+
+
+def question_references(evidence):
+    """Per-audience IDs a summary question may cite; an empty list means omit that audience's question."""
+    allowed = set(question_allowed(evidence))
+    operations = section_ids(plan(evidence))['operations']
+    return dict(operations=sorted(allowed & operations), finance=sorted(allowed & set(FINANCE_QUESTION_FACTS)))
+
+
 def footnote(evidence, with_usual=True):
     """Forecast window and data cutoff, then the usual-flow baseline: the 12 months ending at the cutoff."""
     cutoff = evidence['identity']['cutoff']
@@ -484,5 +501,7 @@ def provider_payload(evidence):
                  if l.get('external', True)]))
     return dict(customer='Customer A', purpose=evidence['identity']['purpose'], cutoff=evidence['identity']['cutoff'], sections=sections,
                 allowed_references=allowed_references(evidence),
+                question_references=(question_references(evidence) if evidence['identity']['purpose'] == 'summary'
+                                     else question_allowed(evidence)),
                 limits='Signals show what the estimate weighed, not causes. Balances are exposures; fees and waivers are '
                        "historical estimates, not profit. Prioritisation is the committee's decision.")

@@ -425,5 +425,101 @@ class RenderTests(unittest.TestCase):
         self.assertNotIn('dropped', card)
         self.assertEqual(section(card, 'link')['items'][0]['source'], 'ai')
 
+    # m6-narrative-10 (27 Nov 2026): the two outputs rejected in the owner's live --limit 5 run (verbatim, pseudonymised),
+    # replayed on renderer input shaped like those customers' saved drivers (copies only; nothing saved is changed).
+    LIVE_REJECTED_2 = {'link': {'text': 'Login failure rate and the change in combined flow both relate to online banking use.',
+                                'evidence_ids': ['feature.login_failure_rate_3m', 'feature.combined_flow_ratio_3m_to_12m',
+                                                 'signal.login_failure_rate_3m']},
+                       'questions': [{'audience': 'operations', 'text': 'Has the customer reported trouble logging in to online banking?',
+                                      'evidence_ids': ['feature.login_failure_rate_3m']},
+                                     {'audience': 'finance', 'text': 'Is the customer planning any changes to its operating account balances?',
+                                      'evidence_ids': ['prediction.risk']}]}
+    LIVE_REJECTED_1 = {'link': {'text': 'Successful payments and combined flow both relate to how the customer executes its monthly transactions.',
+                                'evidence_ids': ['feature.outbound_count_mean_3m', 'feature.combined_flow_ratio_3m_to_12m',
+                                                 'signal.outbound_count_mean_3m']},
+                       'questions': [{'audience': 'operations',
+                                      'text': 'Has the customer reported any trouble with logging into online banking or completing payments?',
+                                      'evidence_ids': ['feature.outbound_ count_mean_3m']},
+                                     {'audience': 'finance',
+                                      'text': 'Is the customer planning any changes to its operating account balances or fixed deposits?',
+                                      'evidence_ids': ['prediction.risk']}]}
+    # Both customers: usual combined flow is a lower-risk driver, so it stays excluded.
+    SHAPED_2 = ([('session_duration_mean_3m_sec', 0.9), ('outbound_submitted_count_mean_3m', 0.7), ('login_failure_rate_3m', 0.5),
+                 ('inbound_count_mean_12m', 0.3)],
+                [('outbound_flow_mean_12m_myr', -0.45), ('combined_flow_mean_12m_myr', -0.4), ('non_fd_balance_myr', -0.3),
+                 ('inbound_share_3m', -0.2), ('outbound_zero_months_3m', -0.1)])
+    SHAPED_1 = ([('session_duration_mean_3m_sec', 0.9), ('outbound_count_mean_3m', 0.7), ('outbound_submitted_count_mean_3m', 0.5),
+                 ('inbound_count_mean_12m', 0.3)],
+                [('outbound_flow_mean_12m_myr', -0.45), ('combined_flow_mean_12m_myr', -0.4), ('combined_flow_mean_6m_myr', -0.3),
+                 ('non_fd_balance_myr', -0.2), ('combined_flow_mean_1m_myr', -0.1)])
+
+    def test_live_rejected_output_2_is_now_accepted_with_its_finance_question_dropped(self):
+        data = self.with_drivers(*self.SHAPED_2)
+        self.assertEqual(render.question_references(data), dict(operations=['feature.login_failure_rate_3m'],
+                                                                finance=['feature.combined_flow_ratio_3m_to_12m']))
+        with self.app.app_context():
+            card = ai.validate(json.dumps(self.LIVE_REJECTED_2), data)
+        self.assertEqual(section(card, 'link')['items'][0]['text'], self.LIVE_REJECTED_2['link']['text'])
+        self.assertEqual([(q['audience'], q['source'], q['text']) for q in card['questions']],
+                         [('operations', 'ai', 'Has the customer reported trouble logging in to online banking?'),
+                          ('finance', 'template', 'Could Finance confirm what the combined flow change means for balances and fees?')])
+        self.assertEqual(card['dropped'], [dict(item='question:1/finance',
+                                                rules=['citation_scope', 'question_audience', 'question_relevance'])])
+        self.assertNotIn('operating account balances?', text_of(card))
+
+    def test_live_rejected_output_1_with_a_malformed_reference_is_still_a_whole_fallback(self):
+        data = self.with_drivers(*self.SHAPED_1)
+        signal = dict(data['facts']['feature.outbound_count_mean_3m'], id='signal.outbound_count_mean_3m', kind='model_signal')
+        data['facts'][signal['id']] = signal  # As in the live customer, the driver also has a signal fact.
+        raw = json.dumps(self.LIVE_REJECTED_1)
+        with self.app.app_context():
+            failures = ai.audit_output(raw, data)['failures']
+            with self.assertRaises(ValidationError):
+                ai.validate(raw, data)
+        self.assertIn(('evidence_references', 'questions[0].evidence_ids'), {(f['rule'], f['path']) for f in failures})
+        self.assertIn(('citation_scope', 'questions[1].evidence_ids'), {(f['rule'], f['path']) for f in failures})
+
+    def test_questions_never_cite_the_prediction_but_the_link_still_may(self):
+        self.assertNotIn('prediction.risk', render.question_allowed(self.evidence))
+        self.assertIn('prediction.risk', render.allowed_references(self.evidence))
+        ops = dict(audience='operations', text='Has the customer reported trouble completing payments online?',
+                   evidence_ids=['feature.outbound_failure_rate_3m'])
+        risky = dict(ops, evidence_ids=['feature.outbound_failure_rate_3m', 'prediction.risk'])
+        link = dict(text='{{prediction.risk}} sits alongside {{feature.outbound_failure_rate_3m}} for this customer.',
+                    evidence_ids=['prediction.risk', 'feature.outbound_failure_rate_3m'])
+        with self.app.app_context():
+            failure = next(f for f in ai.audit_output(json.dumps(dict(link=link, questions=[risky])), self.evidence)['failures']
+                           if f['rule'] == 'citation_scope')
+            self.assertEqual((failure['path'], failure['disallowed']), ('questions[0].evidence_ids', ['prediction.risk']))
+            card = ai.validate(json.dumps(dict(link=link, questions=[risky])), self.evidence)
+            self.assertEqual(card['dropped'], [dict(item='question:0/operations', rules=['citation_scope'])])
+            self.assertEqual(section(card, 'link')['items'][0]['source'], 'ai')  # The link keeps prediction.* in its allowed set.
+            with self.assertRaises(ValidationError):  # A question citing only the prediction leaves nothing: full fallback.
+                ai.validate(json.dumps(dict(link=dict(text='', evidence_ids=[]), questions=[dict(ops, evidence_ids=['prediction.risk'])])),
+                            self.evidence)
+
+    def test_finance_questions_may_cite_usual_flow_unless_it_is_a_lower_risk_driver(self):
+        self.assertEqual(render.question_references(self.evidence),
+                         dict(operations=['feature.outbound_failure_rate_3m'],
+                              finance=['feature.combined_flow_mean_12m_myr', 'feature.combined_flow_ratio_3m_to_12m']))
+        finance = dict(audience='finance', text='Has the customer told the relationship team about changes to its business needs?',
+                       evidence_ids=['feature.combined_flow_mean_12m_myr'])
+        raw = json.dumps(dict(link=dict(text='', evidence_ids=[]), questions=[finance]))
+        with self.app.app_context():
+            card = ai.validate(raw, self.evidence)  # Bottom-line usual flow counts as Finance evidence (owner decision A).
+            self.assertEqual([(q['audience'], q['source']) for q in card['questions']], [('operations', 'template'), ('finance', 'ai')])
+            with self.assertRaises(ValidationError):  # Lower-risk usual flow: citation_scope, dropped, nothing left.
+                ai.validate(raw, self.with_drivers(*self.SHAPED_2))
+
+    def test_provider_payload_lists_question_references_per_purpose(self):
+        payload = render.provider_payload(self.evidence)
+        self.assertEqual(payload['question_references'], render.question_references(self.evidence))
+        discussion = copy.deepcopy(self.evidence)
+        discussion['identity']['purpose'] = 'discussion'
+        payload = render.provider_payload(discussion)
+        self.assertEqual(payload['question_references'], render.question_allowed(self.evidence))
+        self.assertFalse([i for i in payload['question_references'] if i.startswith('prediction.')])
+        self.assertEqual(payload['customer'], 'Customer A')
+
 if __name__ == '__main__':
     unittest.main()

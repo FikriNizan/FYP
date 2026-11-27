@@ -17,9 +17,9 @@ from churn_backend.validation import sigmoid
 SUMMARY_NOTES=repo.encode(dict(link=dict(  # m6-narrative-6: one link note citing two card sections.
     text="{{prediction.risk}} and {{signal.combined_flow_ratio_3m_to_12m}} both belong in this customer's review discussion.",
     evidence_ids=['prediction.risk','signal.combined_flow_ratio_3m_to_12m']),questions=[]))
-CLIENT_QUESTIONS=repo.encode(dict(questions=[  # m6-narrative-7: on-demand client questions.
-    dict(text='How has business activity been for you lately, and do you expect any changes ahead?',evidence_ids=['prediction.risk']),
-    dict(text='Is our online banking still meeting your team\'s day-to-day needs?',evidence_ids=['prediction.risk'])]))
+CLIENT_QUESTIONS=repo.encode(dict(questions=[  # m6-narrative-7; m6-narrative-10: questions never cite prediction.*.
+    dict(text='How has business activity been for you lately, and do you expect any changes ahead?',evidence_ids=['feature.combined_flow_ratio_3m_to_12m']),
+    dict(text='Is our online banking still meeting your team\'s day-to-day needs?',evidence_ids=['feature.outbound_failure_rate_3m'])]))
 
 
 def build_examples(app):
