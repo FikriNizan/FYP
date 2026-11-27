@@ -1091,7 +1091,8 @@ class DraftTests(unittest.TestCase):
     def test_drafts_cached_under_the_previous_versions_are_not_served(self):
         from churn_backend import ai_render
         for contract,render_version in [('m6-narrative-8','render-8'),('m6-narrative-9','render-9'),
-                                        ('m6-narrative-10','render-9')]:  # Every earlier key (m6-narrative-10: superseded).
+                                        ('m6-narrative-10','render-9'),('m6-narrative-11','render-9')]:
+            # Every earlier key (m6-narrative-10 superseded; m6-narrative-11/render-9 superseded by render-10).
             with self.subTest(contract=contract):
                 with patch.object(ai,'VERSION',contract),patch.object(ai_render,'VERSION',render_version):
                     with patch.object(ai.Gemini,'generate',return_value=self.notes()):
@@ -1099,7 +1100,7 @@ class DraftTests(unittest.TestCase):
                     self.assertEqual(self.client.get(self.url).json['state'],'saved')
                 current=self.client.get(self.url).json
                 self.assertEqual((current['state'],current['draft'],current['source_type']),('evidence_changed',None,'deterministic'))
-        self.assertEqual((ai.VERSION,ai_render.VERSION),('m6-narrative-11','render-9'))
+        self.assertEqual((ai.VERSION,ai_render.VERSION),('m6-narrative-11','render-10'))
 
     def test_item_drop_diagnostic_counts_without_text(self):
         from flask import g

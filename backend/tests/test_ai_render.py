@@ -608,6 +608,28 @@ class RenderTests(unittest.TestCase):
                        'never put IDs in the link text', 'never copy a fact name that contains a number']:
             self.assertIn(phrase, text)
 
+    # render-10 (27 Nov 2026): labels that contain commas make a comma-separated list ambiguous.
+    def test_signal_list_uses_commas_without_comma_labels_and_semicolons_with_them(self):
+        self.assertEqual(render.joined(['a']), 'a')
+        self.assertEqual(render.joined(['a', 'b']), 'a and b')
+        self.assertEqual(render.joined(['a', 'b', 'c']), 'a, b and c')
+        self.assertEqual(render.joined(['a', 'b, c', 'd']), 'a; b, c; and d')
+        self.assertEqual(render.joined(['a, b', 'c']), 'a, b; and c')
+        self.assertEqual(render.joined(['a', 'b, c']), 'a; and b, c')
+        self.assertEqual(render.joined(['successful payments, 3 months']), 'successful payments, 3 months')  # One item: no separator.
+
+    def test_bottom_line_signal_list_with_a_comma_label_reads_as_three_items(self):
+        data = self.with_drivers([('outbound_submitted_count_mean_3m', 0.9), ('outbound_count_mean_3m', 0.7),
+                                  ('estimated_fee_mean_3m_myr', 0.5)])
+        line = section(ai.fallback(data), 'bottom_line')['items'][2]['text']
+        self.assertEqual(line, 'Strongest signals raising the estimate: payments submitted per month; successful payments, 3 months; '
+                               'and estimated monthly fees (details in Signals to investigate).')
+        plain = self.with_drivers([('session_duration_mean_3m_sec', 0.9), ('outbound_failure_rate_3m', 0.6), ('login_failure_rate_3m', 0.4)])
+        self.assertEqual(section(ai.fallback(plain), 'bottom_line')['items'][2]['text'],
+                         'Strongest signals raising the estimate: average online session length, payment failure rate and login '
+                         'failure rate (details in Signals to investigate).')  # No comma label: style unchanged.
+        self.assertEqual(render.VERSION, 'render-10')
+
 def render_link_rules():
     """Rules that may appear on a dropped link without rejecting the draft (m6-narrative-11)."""
     from churn_backend.ai_output_audit import LINK_FIT_RULES

@@ -75,3 +75,72 @@ The sentence is now split across two elements; its text is the same.
 - **Splitting depends on the first `": "`.** A future server sentence with an earlier `": "` would split there. All current bottom-line sentences have exactly one, at the intended place.
 - **`::first-letter` and leading punctuation.** It uppercases the first letter only. A value starting with a digit (e.g. "56.7%") or the currency "RM" is unaffected.
 - **Pair order.** Within the pair, cells keep the server's item order. For real cards that is flag (left, or first when stacked at ≤639px), then usual flow. The test fixture deliberately lists usual flow first, to prove placement comes from `evidence_ids`.
+
+## Follow-up: visual-check fixes (render-10)
+
+Your m8-demo screenshot showed three problems: the CSS leak, the trailing full stops and the ambiguous comma list.
+
+### Is the bottom-line text stored or re-rendered?
+
+**Stored.** When a draft is accepted, `generate()` stores the whole rendered card (`render_summary()` output, bottom line included) in `ai_drafts.content_json`. On view, `_load()` serves that stored card; only the deterministic fallback is re-rendered.
+
+So the `joined()` wording fix needs **`render-10`**:
+- The render version is part of the cache key, so the 205 stored m6-narrative-11 / render-9 April drafts in m8-demo are superseded.
+- Until you re-run, the Summary tab shows the live fallback, which already uses the new wording.
+- `CONTRACT_VERSION` stays `m6-narrative-11`.
+
+### Changes
+
+| File | Change |
+|---|---|
+| `frontend/src/workspace-architect.css` | `.fact-grid dl.fact { display:block }` and `.fact-grid dd { text-align:left }`. The global `dl`/`dd` rules (two-column grid, right-aligned `dd`) in `workspace.css:146–148`, and the same rules in `styles.css`, were reaching the grid; the scoped class selectors override them. The global rules are unchanged. |
+| `frontend/src/components/CustomerSummary.jsx` | Display only: one trailing `.` is dropped from a fact value ("RM 137,601." → "RM 137,601"). Stored text and plain-text cells are unchanged. |
+| `backend/churn_backend/ai_render.py` | `joined()`: if any label contains a comma, items are separated by semicolons: `a; b, c; and d`, and for two items `a, b; and c`. Otherwise the style is unchanged: `a, b and c`. `VERSION = 'render-10'`. Word counts don't change. |
+
+### Tests
+
+**New (backend, `test_ai_render.py`)**
+- `test_signal_list_uses_commas_without_comma_labels_and_semicolons_with_them`: 1, 2 and 3 items with and without comma labels.
+- `test_bottom_line_signal_list_with_a_comma_label_reads_as_three_items`: your example becomes "payments submitted per month; successful payments, 3 months; and estimated monthly fees". A list without comma labels is unchanged.
+
+**New (React):** `drops one trailing full stop from fact values for display only, leaving the stored text unchanged`. It checks:
+- "RM 137,601." shows as "RM 137,601";
+- a value without a full stop is unchanged;
+- only one full stop is dropped ("..." → "..");
+- plain cells keep their text;
+- the stored item text still ends with ".".
+
+**Changed expectations (intentional; display now drops the trailing full stop)**
+- `shows the server bottom line and footnote only; …`: the signals `dd` is now `payment failure rate (details in Signals to investigate)`, without the trailing `.`.
+- `splits each bottom-line sentence …`:
+  - the risk `dd` is now `56.7%, more likely than not`;
+  - the signals `dd` is now without the `.`;
+  - the text-unchanged check is now `label + ': ' + value + '.'` equals the stored sentence.
+- `test_ai_drafts.py` old-cache test: `('m6-narrative-11','render-9')` is added as a superseded key, and the current-version assertion is now `('m6-narrative-11','render-10')`.
+
+### Commands run
+
+`.\.venv\Scripts\python.exe scripts\check.py`
+
+| Suite | Result | Previously |
+|---|---|---|
+| Backend | `Ran 244 tests — OK (skipped=1)` | 242 (+2) |
+| Utility | `Ran 36 tests — OK (skipped=11)` | 36 |
+| Node | `tests 10 · fail 0` | 10 |
+| React | `Test Files 15 passed (15) · Tests 142 passed (142)` | 141 (+1) |
+| Build | `✓ built in 278ms` | OK |
+
+### Re-run for the demo (owner, live)
+
+1. Dry run; expect `to generate: 206`:
+   ```PowerShell
+   .\.venv\Scripts\python.exe scripts\generate_summaries.py --session m8-demo --batch-id bf0e828cdd426ae496ff36bd207acfcd02dccd928eebd14eea5027ce45c9204a --dry-run
+   ```
+2. Live, in your own terminal with the variables set:
+   ```PowerShell
+   .\.venv\Scripts\python.exe scripts\generate_summaries.py --session m8-demo --batch-id bf0e828cdd426ae496ff36bd207acfcd02dccd928eebd14eea5027ce45c9204a --limit 206 --keep-rejected
+   ```
+- Read the final `Outcomes: … | fallback F` line for fallbacks.
+- If it prints `Stopped: daily quota exhausted`, run the same command the next day; stored customers are skipped.
+
+Then repeat the visual check above. Labels should sit above their values, values should be left-aligned with no trailing full stop, and lists containing a comma label should use semicolons.

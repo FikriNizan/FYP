@@ -40,7 +40,8 @@ export function splitFact(text) {
 function Fact({ item, kind }) {
   const parts = splitFact(item.text), badge = item.source === 'ai' && <span className="ai-badge">AI note</span>;
   if (!parts) return <p className={'fact ' + kind}>{badge}{item.text}</p>;
-  return <dl className={'fact ' + kind}><dt>{badge}{parts.label}</dt><dd>{parts.value}</dd></dl>;
+  // Display only: one trailing full stop is dropped from the value ("RM 137,601." -> "RM 137,601"); stored text is unchanged.
+  return <dl className={'fact ' + kind}><dt>{badge}{parts.label}</dt><dd>{parts.value.replace(/\.$/, '')}</dd></dl>;
 }
 
 export function factCells(items) {

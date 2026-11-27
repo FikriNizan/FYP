@@ -11,11 +11,12 @@ from decimal import Decimal, ROUND_HALF_UP
 from . import briefings
 from .ai_evidence import DICTIONARY, period
 
-VERSION = 'render-9'  # render-5: Finance 'contribution at stake' sentence (RaR/FSL); render-6: stage-2 wording;
+VERSION = 'render-10'  # render-5: Finance 'contribution at stake' sentence (RaR/FSL); render-6: stage-2 wording;
                       # render-7: check B owner rule (2026-11-22) and 'Combined flow' terminology;
                       # render-8: FD earnings net of SRR (2026-11-23) and check B 'fixed deposits' wording;
                       # render-9: plain bottom line (likelihood, threshold meaning, top-3 signals, rounded usual flow,
-                      # dated footnote) and 'Based on' for summary questions (2026-11-27).
+                      # dated footnote) and 'Based on' for summary questions (2026-11-27);
+                      # render-10: semicolons in the top-3 signals list when a label contains a comma (2026-11-27).
 TOKEN = re.compile(r'\{\{([a-zA-Z0-9_.]+)\}\}')
 CARD_SECTIONS = ('bottom_line', 'operations', 'finance', 'weighed')
 AUDIENCE_ORDER = ('operations', 'finance')
@@ -322,7 +323,13 @@ def in_sentence(label):
 
 
 def joined(labels):
-    return labels[0] if len(labels) == 1 else ', '.join(labels[:-1]) + ' and ' + labels[-1]
+    """'a, b and c'; when any label itself contains a comma (e.g. 'successful payments, 3 months'), items are
+    separated by semicolons so the list stays unambiguous: 'a; b, c; and d' (two items: 'a, b; and c')."""
+    if len(labels) == 1:
+        return labels[0]
+    if any(',' in label for label in labels):
+        return '; '.join(labels[:-1]) + '; and ' + labels[-1]
+    return ', '.join(labels[:-1]) + ' and ' + labels[-1]
 
 
 def allowed_references(evidence):

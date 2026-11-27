@@ -132,7 +132,7 @@ it('shows the server bottom line and footnote only; the card sections stay in th
   // Layout (27 Nov 2026): the sentence is split at its first ': ' into a dt label and a dd value; its text is unchanged.
   const signals=screen.getByText('Strongest signals raising the estimate');
   expect(signals.tagName).toBe('DT');
-  expect(signals.closest('dl').querySelector('dd').textContent).toBe('payment failure rate (details in Signals to investigate).');
+  expect(signals.closest('dl').querySelector('dd').textContent).toBe('payment failure rate (details in Signals to investigate)');  // Trailing '.' dropped for display.
   expect(screen.getByText('Prediction for May–Jul 2024, based on data up to 30 Apr 2024.')).toBeTruthy();
   for(const text of ['Operations fact.','Finance fact.','Weighed fact.',"Prioritisation is the committee's decision.",'Bottom line','What the model weighed'])
     expect(view.container.textContent).not.toContain(text);
@@ -200,16 +200,34 @@ it('splits each bottom-line sentence at its first ": " into a label and a value 
   const risk=cells()[0];
   expect(risk.tagName).toBe('DL');
   expect(risk.querySelector('dt').textContent).toBe('Estimated chance that average monthly combined flow (Collection + Disbursement) over May–Jul 2024 falls to half or less of its usual level');
-  expect(risk.querySelector('dd').textContent).toBe('56.7%, more likely than not.');
+  expect(risk.querySelector('dd').textContent).toBe('56.7%, more likely than not');  // Trailing '.' dropped for display.
   // Only the first ': ' splits; the value keeps its own text (first-letter capitalisation is CSS only).
   const signals=cells().find(c=>c.textContent.startsWith('Strongest'));
-  expect(signals.querySelector('dd').textContent).toBe('payment failure rate (details in Signals to investigate).');
+  expect(signals.querySelector('dd').textContent).toBe('payment failure rate (details in Signals to investigate)');
   for(const cell of cells().filter(c=>c.tagName==='DL'))
-    expect(bottomItems.map(i=>i.text)).toContain(cell.querySelector('dt').textContent+': '+cell.querySelector('dd').textContent);
+    expect(bottomItems.map(i=>i.text)).toContain(cell.querySelector('dt').textContent+': '+cell.querySelector('dd').textContent+'.');
   // A sentence without ': ' is plain text in a full-width cell.
   const plain=screen.getByText('No signal raised the estimate notably.');
   expect(plain.tagName).toBe('P');
   expect(plain.className).toBe('fact wide');
+});
+
+it('drops one trailing full stop from fact values for display only, leaving the stored text unchanged',async()=>{
+  const items=[
+    {text:'Usual monthly combined flow (12-month average): RM 137,601.',source:'evidence',evidence_ids:['feature.combined_flow_mean_12m_myr']},
+    {text:'Label without a full stop: value with no full stop',source:'evidence',evidence_ids:[]},
+    {text:'Label with two: value ending in an ellipsis...',source:'evidence',evidence_ids:[]},
+    {text:'No signal raised the estimate notably.',source:'evidence',evidence_ids:[]}];
+  const card=layoutCard(items);
+  api.aiDraft.mockResolvedValue(stored(card));
+  summaryView('dots');
+  await screen.findByText('Usual monthly combined flow (12-month average)');
+  const value=label=>screen.getByText(label).closest('dl').querySelector('dd').textContent;
+  expect(value('Usual monthly combined flow (12-month average)')).toBe('RM 137,601');
+  expect(value('Label without a full stop')).toBe('value with no full stop');
+  expect(value('Label with two')).toBe('value ending in an ellipsis..');  // Only one full stop is dropped.
+  expect(screen.getByText('No signal raised the estimate notably.').tagName).toBe('P');  // Plain cells keep their text.
+  expect(card.sections.find(s=>s.id==='bottom_line').items[0].text).toBe('Usual monthly combined flow (12-month average): RM 137,601.');
 });
 
 it('places bottom-line cells by evidence_ids: hero, the flag and usual-flow pair, then the rest',async()=>{
